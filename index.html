@@ -165,17 +165,17 @@
         
         // Plantilla del mensaje, usando los valores del formulario
         const plantillaHTML = `
-  <div class="product-card">
-        <div class="product-image-section">
+      <div class="product-image-section">
             <img src="${imagenUrl}" alt="${nombre}">
         </div>
         <div class="product-details-section elementor">
             <h3>${nombre}</h3>
             <p class="product-description">${descripcion}</p>
-            <p class="product-price">${precio}</p>
-            <button class="add-to-cart-btn" onclick="addToCart('${nombre}')">+</button>
+            <p class="product-price">$${precio}</p>
+            <button class="add-to-cart-btn" onclick="abrirVentanaProteina();">+</button>
         </div>
     </div>
+
 `;
 
         // Codificar el mensaje para que sea válido en una URL
