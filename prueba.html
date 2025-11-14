@@ -52,20 +52,36 @@
       }
 
       // Registrar el Service Worker (para mostrar notificaciones de forma fiable)
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
-          .then(() => log('[SW] Registrado'))
-          .catch(err => log(`[SW] Error al registrar: ${err && err.message ? err.message : err}`));
-        // Esperar a que el SW esté listo para mostrar notificaciones de forma fiable
-        navigator.serviceWorker.ready
-          .then(() => log('[SW] Listo'))
-          .catch(err => log(`[SW] Error en ready: ${err && err.message ? err.message : err}`));
+      async function registerSWWithFallback() {
+        if (!('serviceWorker' in navigator)) {
+          log('[SW] No soportado en este navegador');
+          return;
+        }
+        try {
+          // Ruta esperada en producción (Netlify/Vite: public => raíz)
+          await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+          log('[SW] Registrado en /firebase-messaging-sw.js');
+        } catch (e1) {
+          log(`[SW] Falló registro raíz, probando /public/firebase-messaging-sw.js: ${e1 && e1.message ? e1.message : e1}`);
+          try {
+            await navigator.serviceWorker.register('/public/firebase-messaging-sw.js', { scope: '/' });
+            log('[SW] Registrado en /public/firebase-messaging-sw.js');
+          } catch (e2) {
+            log(`[SW] Error al registrar (ambas rutas): ${e2 && e2.message ? e2.message : e2}`);
+          }
+        }
+        try {
+          await navigator.serviceWorker.ready;
+          log('[SW] Listo');
+        } catch (err) {
+          log(`[SW] Error en ready: ${err && err.message ? err.message : err}`);
+        }
         if (!window.isSecureContext) {
           log('[SW] Advertencia: origen sin HTTPS. En móviles, las notificaciones requieren HTTPS.');
         }
-      } else {
-        log('[SW] No soportado en este navegador');
       }
+      registerSWWithFallback();
+      
 
       // Inicializar Firebase
       const firebaseConfig = {
