@@ -252,12 +252,11 @@
       document.getElementById('btnNotificarPrueba').addEventListener('click', async () => {
         log('[Notificar-Prueba] Click recibido');
         try {
-          const permiso = await Notification.requestPermission();
-          if (permiso !== 'granted') {
-            alert('Permite notificaciones para recibir avisos.');
-            log('[Notificar-Prueba] Permiso denegado');
-            return;
-          }
+          // No bloquear el envío por permisos de notificación
+          try {
+            const permiso = await Notification.requestPermission();
+            log(`[Notificar-Prueba] Estado permiso: ${permiso}`);
+          } catch {}
           const payload = {
             titulo: 'Aviso de Taxis (Prueba)',
             mensaje: 'Notificación enviada desde prueba.html 🚖',
@@ -311,12 +310,11 @@
       async function sendToClient(targetClientId) {
         log(`[Notificar-Dirigido] Enviando a ${String(targetClientId).slice(-5)}`);
         try {
-          const permiso = await Notification.requestPermission();
-          if (permiso !== 'granted') {
-            alert('Permite notificaciones para recibir avisos.');
-            log('[Notificar-Dirigido] Permiso denegado');
-            return;
-          }
+          // No bloquear el envío por permisos de notificación
+          try {
+            const permiso = await Notification.requestPermission();
+            log(`[Notificar-Dirigido] Estado permiso: ${permiso}`);
+          } catch {}
           const payload = {
             titulo: 'Aviso de Taxis (Dirigido)',
             mensaje: 'Notificación enviada a un dispositivo específico 🚖',
