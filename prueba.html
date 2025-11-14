@@ -40,6 +40,17 @@
       const deviceListEl = document.getElementById('deviceList');
       const log = (msg) => { console.log(msg); logsEl.textContent += `\n${msg}`; };
 
+      // Reaccionar a mensajes del Service Worker (por ejemplo, clic en notificación)
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          const data = event && event.data;
+          if (data && data.type === 'PLAY_SOUND') {
+            playBeep();
+            log('[SW] Mensaje recibido: reproducir sonido');
+          }
+        });
+      }
+
       // Registrar el Service Worker (para mostrar notificaciones de forma fiable)
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
