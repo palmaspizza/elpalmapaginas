@@ -23,6 +23,7 @@
       <p>Esta página envía y recibe notificaciones usando un canal compartido en Firebase.</p>
       <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
         <button id="btnActivarSonido" title="Habilita sonido local al recibir notificaciones">Activar sonido personalizado</button>
+        <button id="btnProbarSonido" title="Reproduce el sonido para comprobar">Probar sonido</button>
         <input id="deviceNameInput" type="text" placeholder="Nombre del dispositivo" style="padding:8px; border-radius:8px; border:1px solid #444; background:#000; color:#fff;" />
         <button id="btnRegistrarDispositivo" title="Registrar este dispositivo para envío dirigido">Registrar dispositivo</button>
         <select id="deviceSelector" style="padding:8px; border-radius:8px; border:1px solid #444; background:#000; color:#ffde59; min-width:220px;">
@@ -110,6 +111,15 @@
       let sonidoHabilitado = false;
       const audioSrc = '/iPhone%20Notification%20%20Sound%20Effect%20-%20Perfect%20Sounds.mp3';
       let notifAudio = null;
+      // Diagnóstico: comprobar que el MP3 está accesible
+      async function verifyAudioAsset() {
+        try {
+          const res = await fetch(audioSrc, { method: 'HEAD', cache: 'no-store' });
+          log(`[Audio] MP3 accesible: estado ${res.status}`);
+        } catch (e) {
+          log(`[Audio] MP3 no accesible desde este origen: ${e && e.message ? e.message : e}`);
+        }
+      }
       function initAudio() {
         try {
           // Crear audio HTML para reproducir el MP3
@@ -178,6 +188,15 @@
         }
       }
       document.getElementById('btnActivarSonido').addEventListener('click', initAudio);
+      document.getElementById('btnProbarSonido').addEventListener('click', () => {
+        initAudio();
+        setTimeout(() => {
+          playBeep();
+          log('[Audio] Prueba de sonido ejecutada');
+        }, 120);
+      });
+      // Lanzar el chequeo del recurso de audio al cargar
+      verifyAudioAsset();
 
       // Gestión de identificación y registro del dispositivo
       function ensureClientId() {
