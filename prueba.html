@@ -22,7 +22,7 @@
       <h1>Prueba de Notificaciones Globales</h1>
       <p>Esta página envía y recibe notificaciones usando un canal compartido en Firebase.</p>
       <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
-        <button id="btnActivarSonido" title="Habilita sonido local al recibir notificaciones">Activar sonido</button>
+        <button id="btnActivarSonido" title="Habilita sonido local al recibir notificaciones">Activar sonido personalizado</button>
         <input id="deviceNameInput" type="text" placeholder="Nombre del dispositivo" style="padding:8px; border-radius:8px; border:1px solid #444; background:#000; color:#fff;" />
         <button id="btnRegistrarDispositivo" title="Registrar este dispositivo para envío dirigido">Registrar dispositivo</button>
         <select id="deviceSelector" style="padding:8px; border-radius:8px; border:1px solid #444; background:#000; color:#ffde59; min-width:220px;">
@@ -81,12 +81,33 @@
       // Audio: habilitar y reproducir un beep al recibir notificaciones
       let audioCtx = null;
       let sonidoHabilitado = false;
+      const audioSrc = '/iPhone%20Notification%20%20Sound%20Effect%20-%20Perfect%20Sounds.mp3';
+      let notifAudio = null;
       function initAudio() {
         try {
-          audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-          audioCtx.resume();
-          sonidoHabilitado = true;
-          log('[Audio] Sonido habilitado');
+          // Crear audio HTML para reproducir el MP3
+          if (!notifAudio) {
+            notifAudio = new Audio(audioSrc);
+            notifAudio.preload = 'auto';
+            notifAudio.loop = false;
+            notifAudio.volume = 1.0;
+          }
+          // Desbloquear reproducción con una interacción del usuario
+          notifAudio.currentTime = 0;
+          notifAudio.play()
+            .then(() => {
+              notifAudio.pause();
+              notifAudio.currentTime = 0;
+              sonidoHabilitado = true;
+              log('[Audio] Sonido personalizado habilitado');
+            })
+            .catch(e => {
+              // Fallback: habilitar WebAudio por si el HTMLAudio falla
+              audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+              audioCtx.resume();
+              sonidoHabilitado = true;
+              log(`[Audio] HTMLAudio bloqueado, uso fallback WebAudio: ${e && e.message ? e.message : e}`);
+            });
         } catch (e) {
           log(`[Audio] Error al habilitar sonido: ${e && e.message ? e.message : e}`);
         }
@@ -94,17 +115,37 @@
       function playBeep() {
         if (!sonidoHabilitado) return;
         try {
-          const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'sine';
-          o.frequency.value = 880; // Hz
-          g.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-          o.connect(g).connect(ctx.destination);
-          o.start();
-          o.stop(ctx.currentTime + 0.5);
+          if (notifAudio) {
+            notifAudio.currentTime = 0;
+            notifAudio.play().catch(err => {
+              log(`[Audio] Error al reproducir MP3: ${err && err.message ? err.message : err}`);
+              // Fallback WebAudio
+              const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+              const o = ctx.createOscillator();
+              const g = ctx.createGain();
+              o.type = 'sine';
+              o.frequency.value = 880;
+              g.gain.setValueAtTime(0.0001, ctx.currentTime);
+              g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+              g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+              o.connect(g).connect(ctx.destination);
+              o.start();
+              o.stop(ctx.currentTime + 0.5);
+            });
+          } else {
+            // Si por alguna razón no existe el audio, usar WebAudio
+            const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sine';
+            o.frequency.value = 880;
+            g.gain.setValueAtTime(0.0001, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+            o.connect(g).connect(ctx.destination);
+            o.start();
+            o.stop(ctx.currentTime + 0.5);
+          }
         } catch (e) {
           log(`[Audio] Error al reproducir beep: ${e && e.message ? e.message : e}`);
         }
