@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prueba | Notificaciones Globales</title>
+    <style>
+      body { background: #111; color: #eee; font-family: system-ui, sans-serif; }
+      .container { max-width: 720px; margin: 40px auto; padding: 24px; border: 1px solid #333; border-radius: 12px; background: #1b1b1b; }
+      h1 { margin-top: 0; color: #ffde59; }
+      button { padding: 10px 16px; border-radius: 8px; border: 2px solid #ffde59; background: #000; color: #ffde59; cursor: pointer; font-weight: 600; }
+      button:hover { filter: brightness(1.2); }
+      .hint { color: #aaa; font-size: 14px; margin-top: 12px; }
+      .log { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; color: #9cd3ff; margin-top: 12px; white-space: pre-wrap; }
+    </style>
+    <!-- SDK de Firebase (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Prueba de Notificaciones Globales</h1>
+      <p>Esta página envía y recibe notificaciones usando un canal compartido en Firebase.</p>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+        <button id="btnActivarSonido" title="Habilita sonido local al recibir notificaciones">Activar sonido</button>
+        <input id="deviceNameInput" type="text" placeholder="Nombre del dispositivo" style="padding:8px; border-radius:8px; border:1px solid #444; background:#000; color:#fff;" />
+        <button id="btnRegistrarDispositivo" title="Registrar este dispositivo para envío dirigido">Registrar dispositivo</button>
+        <select id="deviceSelector" style="padding:8px; border-radius:8px; border:1px solid #444; background:#000; color:#ffde59; min-width:220px;">
+          <option value="all">Todos los dispositivos</option>
+        </select>
+        <button id="btnNotificarPrueba">Notificar (Prueba)</button>
+      </div>
+      <div id="deviceList" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+      <p class="hint">Abre esta página en dos navegadores o dispositivos. Pulsa el botón para que ambos reciban la notificación.</p>
+      <div id="logs" class="log"></div>
+    </div>
+
+    <script>
+      const logsEl = document.getElementById('logs');
+      const deviceListEl = document.getElementById('deviceList');
+      const log = (msg) => { console.log(msg); logsEl.textContent += `\n${msg}`; };
+
+      // Registrar el Service Worker (para mostrar notificaciones de forma fiable)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          .then(() => log('[SW] Registrado'))
+          .catch(err => log(`[SW] Error al registrar: ${err && err.message ? err.message : err}`));
+      } else {
+        log('[SW] No soportado en este navegador');
+      }
+
+      // Inicializar Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyDGKaUNwsZcbR-ZiX7EFaIe-GNJuMU4J1Y",
+        authDomain: "comedorelnano.firebaseapp.com",
+        databaseURL: "https://comedorelnano-default-rtdb.firebaseio.com",
+        projectId: "comedorelnano",
+        storageBucket: "comedorelnano.firebasestorage.app",
+        messagingSenderId: "97043404893",
+        appId: "1:97043404893:web:239bf2c53ae336519ed5b4",
+        measurementId: "G-1MYL204D0P"
+      };
+      try {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        window.notificacionesRef = firebase.database().ref('notificaciones');
+        window.devicesRef = firebase.database().ref('devices');
+        log('[Firebase] Inicializado y canal listo');
+      } catch (e) {
+        log(`[Firebase] Error al inicializar: ${e && e.message ? e.message : e}`);
+      }
+
+      // Audio: habilitar y reproducir un beep al recibir notificaciones
+      let audioCtx = null;
+      let sonidoHabilitado = false;
+      function initAudio() {
+        try {
+          audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+          audioCtx.resume();
+          sonidoHabilitado = true;
+          log('[Audio] Sonido habilitado');
+        } catch (e) {
+          log(`[Audio] Error al habilitar sonido: ${e && e.message ? e.message : e}`);
+        }
+      }
+      function playBeep() {
+        if (!sonidoHabilitado) return;
+        try {
+          const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = 880; // Hz
+          g.gain.setValueAtTime(0.0001, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+          o.connect(g).connect(ctx.destination);
+          o.start();
+          o.stop(ctx.currentTime + 0.25);
+        } catch (e) {
+          log(`[Audio] Error al reproducir beep: ${e && e.message ? e.message : e}`);
+        }
+      }
+      document.getElementById('btnActivarSonido').addEventListener('click', initAudio);
+
+      // Gestión de identificación y registro del dispositivo
+      function ensureClientId() {
+        let id = localStorage.getItem('clientId');
+        if (!id) {
+          id = 'dev_' + Math.random().toString(36).slice(2) + '_' + Date.now();
+          localStorage.setItem('clientId', id);
+        }
+        return id;
+      }
+      const clientId = ensureClientId();
+      const deviceNameInput = document.getElementById('deviceNameInput');
+      deviceNameInput.value = localStorage.getItem('deviceName') || '';
+
+      async function registerDevice() {
+        const name = deviceNameInput.value.trim() || `Dispositivo ${clientId.slice(-5)}`;
+        localStorage.setItem('deviceName', name);
+        const payload = {
+          name,
+          clientId,
+          userAgent: navigator.userAgent,
+          lastSeen: Date.now()
+        };
+        await window.devicesRef.child(clientId).set(payload);
+        log(`[Device] Registrado: ${name} (${clientId})`);
+      }
+      document.getElementById('btnRegistrarDispositivo').addEventListener('click', registerDevice);
+
+      // Presencia: actualizar lastSeen periódicamente
+      setInterval(() => {
+        try { window.devicesRef.child(clientId).update({ lastSeen: Date.now() }); } catch {}
+      }, 30000);
+
+      // Popular selector de dispositivos
+      const deviceSelector = document.getElementById('deviceSelector');
+      function upsertOption(dev) {
+        const id = dev.clientId;
+        let opt = deviceSelector.querySelector(`option[value="${id}"]`);
+        const label = `${dev.name || 'Sin nombre'} (${String(id).slice(-5)})`;
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = label;
+          deviceSelector.appendChild(opt);
+        } else {
+          opt.textContent = label;
+        }
+      }
+      window.devicesRef.on('child_added', snap => { const dev = snap.val(); if (dev) { upsertOption(dev); upsertDeviceRow(dev); } });
+      window.devicesRef.on('child_changed', snap => { const dev = snap.val(); if (dev) { upsertOption(dev); upsertDeviceRow(dev); } });
+
+      // Enviar notificación global
+      document.getElementById('btnNotificarPrueba').addEventListener('click', async () => {
+        log('[Notificar-Prueba] Click recibido');
+        try {
+          const permiso = await Notification.requestPermission();
+          if (permiso !== 'granted') {
+            alert('Permite notificaciones para recibir avisos.');
+            log('[Notificar-Prueba] Permiso denegado');
+            return;
+          }
+          const payload = {
+            titulo: 'Aviso de Taxis (Prueba)',
+            mensaje: 'Notificación enviada desde prueba.html 🚖',
+            url: location.href,
+            timestamp: Date.now(),
+            targetClientId: deviceSelector.value === 'all' ? null : deviceSelector.value
+          };
+          await window.notificacionesRef.push(payload);
+          log('[Notificar-Prueba] Notificación publicada en Firebase');
+        } catch (err) {
+          log(`[Notificar-Prueba] Error al publicar: ${err && err.message ? err.message : err}`);
+          alert('No se pudo publicar la notificación global.');
+        }
+      });
+
+      // Escuchar y mostrar notificaciones recibidas
+      window.notificacionesRef.limitToLast(50).on('child_added', async (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        // Filtrar si la notificación es dirigida a otro dispositivo
+        if (data.targetClientId && data.targetClientId !== clientId) {
+          return;
+        }
+        try {
+          const reg = await navigator.serviceWorker.getRegistration();
+          const opciones = {
+            body: data.mensaje || '',
+            icon: 'https://i.ibb.co/m5WDvjFm/imagen-2025-10-22-173714897.png',
+            badge: 'https://i.ibb.co/m5WDvjFm/imagen-2025-10-22-173714897.png',
+            tag: 'taxi-reserva-aviso',
+            renotify: true,
+            requireInteraction: true,
+            silent: false,
+            data: { url: data.url || location.href, ts: data.timestamp || Date.now() },
+            vibrate: [200, 100, 200]
+          };
+          if (reg && reg.showNotification) {
+            reg.showNotification(data.titulo || 'TAXIS | Prueba', opciones);
+          } else {
+            new Notification(data.titulo || 'TAXIS | Prueba', opciones);
+          }
+          // Intentar reproducir sonido local
+          playBeep();
+          log('[Prueba] Notificación mostrada');
+        } catch (err) {
+          log(`[Prueba] Error mostrando notificación: ${err && err.message ? err.message : err}`);
+        }
+      });
+
+      // Enviar dirigido a un clientId específico
+      async function sendToClient(targetClientId) {
+        log(`[Notificar-Dirigido] Enviando a ${String(targetClientId).slice(-5)}`);
+        try {
+          const permiso = await Notification.requestPermission();
+          if (permiso !== 'granted') {
+            alert('Permite notificaciones para recibir avisos.');
+            log('[Notificar-Dirigido] Permiso denegado');
+            return;
+          }
+          const payload = {
+            titulo: 'Aviso de Taxis (Dirigido)',
+            mensaje: 'Notificación enviada a un dispositivo específico 🚖',
+            url: location.href,
+            timestamp: Date.now(),
+            targetClientId
+          };
+          await window.notificacionesRef.push(payload);
+          log('[Notificar-Dirigido] Notificación publicada');
+        } catch (err) {
+          log(`[Notificar-Dirigido] Error: ${err && err.message ? err.message : err}`);
+        }
+      }
+
+      // Render de filas por dispositivo con botón "Enviar"
+      function upsertDeviceRow(dev) {
+        const id = dev.clientId;
+        const rowId = `device-row-${id}`;
+        let row = document.getElementById(rowId);
+        const label = `${dev.name || 'Sin nombre'} (${String(id).slice(-5)})` + (id === clientId ? ' • Este' : '');
+        if (!row) {
+          row = document.createElement('div');
+          row.id = rowId;
+          row.style.display = 'flex';
+          row.style.alignItems = 'center';
+          row.style.justifyContent = 'space-between';
+          row.style.gap = '12px';
+          row.style.padding = '8px 12px';
+          row.style.border = '1px solid #333';
+          row.style.borderRadius = '8px';
+          row.style.background = '#0f0f0f';
+
+          const nameEl = document.createElement('div');
+          nameEl.textContent = label;
+          nameEl.style.color = '#ffde59';
+
+          const sendBtn = document.createElement('button');
+          sendBtn.textContent = 'Enviar';
+          sendBtn.style.padding = '6px 12px';
+          sendBtn.style.borderRadius = '8px';
+          sendBtn.style.border = '2px solid #ffde59';
+          sendBtn.style.background = '#000';
+          sendBtn.style.color = '#ffde59';
+          sendBtn.style.cursor = 'pointer';
+          sendBtn.addEventListener('click', () => sendToClient(id));
+
+          row.appendChild(nameEl);
+          row.appendChild(sendBtn);
+          deviceListEl.appendChild(row);
+        } else {
+          const nameEl = row.firstChild;
+          if (nameEl) nameEl.textContent = label;
+        }
+      }
+    </script>
+  </body>
+</html>
