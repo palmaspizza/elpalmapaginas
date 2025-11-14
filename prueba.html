@@ -42,9 +42,16 @@
 
       // Registrar el Service Worker (para mostrar notificaciones de forma fiable)
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
           .then(() => log('[SW] Registrado'))
           .catch(err => log(`[SW] Error al registrar: ${err && err.message ? err.message : err}`));
+        // Esperar a que el SW esté listo para mostrar notificaciones de forma fiable
+        navigator.serviceWorker.ready
+          .then(() => log('[SW] Listo'))
+          .catch(err => log(`[SW] Error en ready: ${err && err.message ? err.message : err}`));
+        if (!window.isSecureContext) {
+          log('[SW] Advertencia: origen sin HTTPS. En móviles, las notificaciones requieren HTTPS.');
+        }
       } else {
         log('[SW] No soportado en este navegador');
       }
@@ -93,11 +100,11 @@
           o.type = 'sine';
           o.frequency.value = 880; // Hz
           g.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+          g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
           o.connect(g).connect(ctx.destination);
           o.start();
-          o.stop(ctx.currentTime + 0.25);
+          o.stop(ctx.currentTime + 0.5);
         } catch (e) {
           log(`[Audio] Error al reproducir beep: ${e && e.message ? e.message : e}`);
         }
@@ -188,7 +195,7 @@
           return;
         }
         try {
-          const reg = await navigator.serviceWorker.getRegistration();
+          const reg = await navigator.serviceWorker.ready; // En móviles, usar siempre showNotification desde el SW
           const opciones = {
             body: data.mensaje || '',
             icon: 'https://i.ibb.co/m5WDvjFm/imagen-2025-10-22-173714897.png',
@@ -200,11 +207,11 @@
             data: { url: data.url || location.href, ts: data.timestamp || Date.now() },
             vibrate: [200, 100, 200]
           };
-          if (reg && reg.showNotification) {
-            reg.showNotification(data.titulo || 'TAXIS | Prueba', opciones);
-          } else {
-            new Notification(data.titulo || 'TAXIS | Prueba', opciones);
+          if (!reg || !reg.showNotification) {
+            log('[Prueba] SW no listo para mostrar notificaciones. Asegura HTTPS y registro del SW.');
+            return;
           }
+          reg.showNotification(data.titulo || 'TAXIS | Prueba', opciones);
           // Intentar reproducir sonido local
           playBeep();
           log('[Prueba] Notificación mostrada');
