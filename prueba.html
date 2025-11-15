@@ -347,7 +347,8 @@
             mensaje: 'Notificación enviada desde prueba.html 🚖',
             url: location.href,
             timestamp: Date.now(),
-            targetClientId: deviceSelector.value === 'all' ? null : deviceSelector.value
+            targetClientId: deviceSelector.value === 'all' ? null : deviceSelector.value,
+            senderClientId: clientId
           };
           await window.notificacionesRef.push(payload);
           log('[Notificar-Prueba] Notificación publicada en Firebase');
@@ -363,6 +364,10 @@
         if (!data) return;
         // Filtrar si la notificación es dirigida a otro dispositivo
         if (data.targetClientId && data.targetClientId !== clientId) {
+          return;
+        }
+        // Excluir al emisor en envíos globales ("los demás dispositivos")
+        if (!data.targetClientId && data.senderClientId && data.senderClientId === clientId) {
           return;
         }
         try {
