@@ -43,11 +43,13 @@
       <div id="deviceList" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
       <p class="hint">Abre esta página en dos navegadores o dispositivos. Pulsa el botón para que ambos reciban la notificación.</p>
       <div id="logs" class="log"></div>
+      <div id="inlineToasts" style="position:fixed; bottom:16px; left:16px; right:16px; display:flex; flex-direction:column; gap:8px; z-index:9999;"></div>
     </div>
 
     <script>
       const logsEl = document.getElementById('logs');
       const deviceListEl = document.getElementById('deviceList');
+      const inlineToastsEl = document.getElementById('inlineToasts');
       const soundBannerEl = document.getElementById('soundBanner');
       const btnHabilitarSonido = document.getElementById('btnHabilitarSonido');
       const log = (msg) => { console.log(msg); logsEl.textContent += `\n${msg}`; };
@@ -216,6 +218,34 @@
           }
         } catch (e) {
           log(`[Audio] Error al reproducir beep: ${e && e.message ? e.message : e}`);
+        }
+      }
+
+      // Fallback visible en página activa: toast inline
+      function showInlineToast(title, body) {
+        try {
+          const card = document.createElement('div');
+          card.style.background = '#222';
+          card.style.color = '#fff';
+          card.style.border = '1px solid #ffde59';
+          card.style.borderRadius = '10px';
+          card.style.boxShadow = '0 6px 20px rgba(0,0,0,.4)';
+          card.style.padding = '12px 14px';
+          const h = document.createElement('div');
+          h.textContent = title || 'Aviso';
+          h.style.fontWeight = '700';
+          h.style.color = '#ffde59';
+          const p = document.createElement('div');
+          p.textContent = body || '';
+          p.style.marginTop = '4px';
+          p.style.fontSize = '14px';
+          card.appendChild(h);
+          card.appendChild(p);
+          inlineToastsEl.appendChild(card);
+          try { playBeep(); } catch {}
+          setTimeout(() => { card.remove(); }, 8000);
+        } catch (e) {
+          log(`[Toast] Error creando toast inline: ${e && e.message ? e.message : e}`);
         }
       }
       document.getElementById('btnActivarSonido').addEventListener('click', initAudio);
@@ -400,23 +430,29 @@
           };
           if (!reg || !reg.showNotification) {
             log('[Prueba] SW no listo; usando fallback Notification API en página activa');
+            let mostrado = false;
             if (Notification.permission === 'granted') {
               try {
                 new Notification(data.titulo || 'TAXIS | Prueba', opciones);
+                mostrado = true;
               } catch (nfErr) {
                 log(`[Prueba] Fallback Notification API falló: ${nfErr && nfErr.message ? nfErr.message : nfErr}`);
-                return;
               }
             } else {
-              log('[Prueba] Permiso notificaciones no es "granted"; no se puede mostrar fallback.');
-              return;
+              log('[Prueba] Permiso notificaciones no es "granted"; se mostrará toast inline.');
+            }
+            if (!mostrado) {
+              showInlineToast(data.titulo || 'TAXIS | Prueba', data.mensaje || '');
             }
           } else {
-            reg.showNotification(data.titulo || 'TAXIS | Prueba', opciones);
+            reg.showNotification(data.titulo || 'TAXIS | Prueba', opciones).catch(err => {
+              log(`[Prueba] showNotification falló: ${err && err.message ? err.message : err}`);
+              showInlineToast(data.titulo || 'TAXIS | Prueba', data.mensaje || '');
+            });
           }
           // Intentar reproducir sonido local
-          playBeep();
-          log('[Prueba] Notificación mostrada');
+          try { playBeep(); } catch {}
+          log('[Prueba] Notificación mostrada (o toast inline)');
         } catch (err) {
           log(`[Prueba] Error mostrando notificación: ${err && err.message ? err.message : err}`);
         }
