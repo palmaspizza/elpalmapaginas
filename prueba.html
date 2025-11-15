@@ -16,6 +16,7 @@
     <!-- SDK de Firebase (compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-messaging-compat.js"></script>
   </head>
   <body>
     <div class="container">
@@ -24,6 +25,7 @@
       <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
         <button id="btnActivarSonido" title="Habilita sonido local al recibir notificaciones">Activar sonido personalizado</button>
         <button id="btnProbarSonido" title="Reproduce el sonido para comprobar">Probar sonido</button>
+        <button id="btnActivarPush" title="Guardar token FCM para push real">Activar push (FCM)</button>
         <input id="deviceNameInput" type="text" placeholder="Nombre del dispositivo" style="padding:8px; border-radius:8px; border:1px solid #444; background:#000; color:#fff;" />
         <button id="btnRegistrarDispositivo" title="Registrar este dispositivo para envío dirigido">Registrar dispositivo</button>
         <select id="deviceSelector" style="padding:8px; border-radius:8px; border:1px solid #444; background:#000; color:#ffde59; min-width:220px;">
@@ -107,6 +109,13 @@
         }
         window.notificacionesRef = firebase.database().ref('notificaciones');
         window.devicesRef = firebase.database().ref('devices');
+        // Preparar FCM (Messaging) en la página
+        try {
+          window.messaging = firebase.messaging();
+          log('[FCM] Messaging listo (foreground)');
+        } catch (eMsg) {
+          log(`[FCM] Messaging no disponible en esta página: ${eMsg && eMsg.message ? eMsg.message : eMsg}`);
+        }
         log('[Firebase] Inicializado y canal listo');
       } catch (e) {
         log(`[Firebase] Error al inicializar: ${e && e.message ? e.message : e}`);
@@ -115,7 +124,7 @@
       // Audio: habilitar y reproducir un beep al recibir notificaciones
       let audioCtx = null;
       let sonidoHabilitado = false;
-      const audioSrc = '/iPhone-Notification(mp3cut.net).mp3';
+      const audioSrc = '/iPhone%20Notification%20%20Sound%20Effect%20-%20Perfect%20Sounds.mp3';
       let notifAudio = null;
       // Diagnóstico: comprobar que el MP3 está accesible
       async function verifyAudioAsset() {
@@ -201,6 +210,76 @@
           log('[Audio] Prueba de sonido ejecutada');
         }, 120);
       });
+      // Activar push (FCM): obtener token y guardarlo
+      const VAPID_PUBLIC_KEY = 'REEMPLAZAR_CON_TU_VAPID_PUBLIC_KEY';
+      async function activarPushFCM() {
+        log('[FCM] Iniciando activación de push');
+        if (!window.messaging) {
+          alert('FCM Messaging no está disponible en esta página.');
+          log('[FCM] Messaging no disponible');
+          return;
+        }
+        if (!('serviceWorker' in navigator)) {
+          alert('Este navegador no soporta Service Worker requerido por FCM.');
+          log('[FCM] SW no soportado');
+          return;
+        }
+        try {
+          const permiso = await Notification.requestPermission();
+          log(`[FCM] Permiso de notificación: ${permiso}`);
+          if (permiso !== 'granted') {
+            alert('Debes permitir notificaciones para activar push.');
+            return;
+          }
+        } catch {}
+        if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.includes('REEMPLAZAR')) {
+          alert('Configura VAPID_PUBLIC_KEY para obtener el token de FCM.');
+          log('[FCM] Falta VAPID_PUBLIC_KEY, no se puede obtener token');
+          return;
+        }
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const token = await window.messaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+          if (!token) {
+            log('[FCM] No se obtuvo token (null)');
+            alert('No se pudo obtener token FCM.');
+            return;
+          }
+          log(`[FCM] Token obtenido: ${String(token).slice(0, 12)}…`);
+          await firebase.database().ref('fcmTokens').child(clientId).set({
+            token,
+            clientId,
+            deviceName: localStorage.getItem('deviceName') || null,
+            userAgent: navigator.userAgent,
+            createdAt: Date.now()
+          });
+          log('[FCM] Token guardado en Realtime Database (fcmTokens)');
+          alert('Push (FCM) activado: token guardado.');
+        } catch (e) {
+          log(`[FCM] Error activando push: ${e && e.message ? e.message : e}`);
+          alert('Error activando push (FCM). Revisa la consola.');
+        }
+      }
+      document.getElementById('btnActivarPush').addEventListener('click', activarPushFCM);
+      // Auto-desbloqueo con cualquier interacción del usuario (click/touch/tecla)
+      const autoUnlock = () => { if (!sonidoHabilitado) { initAudio(); log('[Audio] Auto-desbloqueo por interacción'); } };
+      window.addEventListener('pointerdown', autoUnlock, { once: true });
+      window.addEventListener('keydown', autoUnlock, { once: true });
+      window.addEventListener('touchstart', autoUnlock, { once: true });
+      // Si la página está visible cuando llega una notificación, reforzar beep
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && sonidoHabilitado) {
+          // pequeño refuerzo al volver al frente
+          setTimeout(() => playBeep(), 100);
+        }
+      });
+      // FCM en foreground (si está disponible): reproducir sonido y loguear
+      if (window.messaging && window.messaging.onMessage) {
+        window.messaging.onMessage((payload) => {
+          log(`[FCM] Mensaje en foreground: ${payload && payload.notification ? payload.notification.title : ''}`);
+          try { playBeep(); } catch {}
+        });
+      }
       // Lanzar el chequeo del recurso de audio al cargar
       verifyAudioAsset();
 
