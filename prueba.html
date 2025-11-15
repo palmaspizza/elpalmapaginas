@@ -65,12 +65,12 @@
           await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
           log('[SW] Registrado en /firebase-messaging-sw.js');
         } catch (e1) {
-          log(`[SW] Falló registro raíz, probando  firebase-messaging-sw.js: ${e1 && e1.message ? e1.message : e1}`);
+          log(`[SW] Falló registro raíz, probando /public/firebase-messaging-sw.js: ${e1 && e1.message ? e1.message : e1}`);
           try {
-            await navigator.serviceWorker.register(' firebase-messaging-sw.js', { scope: '/' });
-            log('[SW] Registrado en  firebase-messaging-sw.js');
+            await navigator.serviceWorker.register('/public/firebase-messaging-sw.js', { scope: '/' });
+            log('[SW] Registrado en /public/firebase-messaging-sw.js');
           } catch (e2) {
-            log(`[SW] Falló  , probando relativo firebase-messaging-sw.js: ${e2 && e2.message ? e2.message : e2}`);
+            log(`[SW] Falló /public/, probando relativo firebase-messaging-sw.js: ${e2 && e2.message ? e2.message : e2}`);
             try {
               await navigator.serviceWorker.register('firebase-messaging-sw.js', { scope: '/' });
               log('[SW] Registrado en firebase-messaging-sw.js (relativo)');
@@ -347,7 +347,8 @@
             mensaje: 'Notificación enviada desde prueba.html 🚖',
             url: location.href,
             timestamp: Date.now(),
-            targetClientId: deviceSelector.value === 'all' ? null : deviceSelector.value
+            targetClientId: deviceSelector.value === 'all' ? null : deviceSelector.value,
+            senderClientId: clientId
           };
           await window.notificacionesRef.push(payload);
           log('[Notificar-Prueba] Notificación publicada en Firebase');
@@ -379,10 +380,21 @@
             vibrate: [200, 100, 200]
           };
           if (!reg || !reg.showNotification) {
-            log('[Prueba] SW no listo para mostrar notificaciones. Asegura HTTPS y registro del SW.');
-            return;
+            log('[Prueba] SW no listo; usando fallback Notification API en página activa');
+            if (Notification.permission === 'granted') {
+              try {
+                new Notification(data.titulo || 'TAXIS | Prueba', opciones);
+              } catch (nfErr) {
+                log(`[Prueba] Fallback Notification API falló: ${nfErr && nfErr.message ? nfErr.message : nfErr}`);
+                return;
+              }
+            } else {
+              log('[Prueba] Permiso notificaciones no es "granted"; no se puede mostrar fallback.');
+              return;
+            }
+          } else {
+            reg.showNotification(data.titulo || 'TAXIS | Prueba', opciones);
           }
-          reg.showNotification(data.titulo || 'TAXIS | Prueba', opciones);
           // Intentar reproducir sonido local
           playBeep();
           log('[Prueba] Notificación mostrada');
@@ -405,7 +417,8 @@
             mensaje: 'Notificación enviada a un dispositivo específico 🚖',
             url: location.href,
             timestamp: Date.now(),
-            targetClientId
+            targetClientId,
+            senderClientId: clientId
           };
           await window.notificacionesRef.push(payload);
           log('[Notificar-Dirigido] Notificación publicada');
