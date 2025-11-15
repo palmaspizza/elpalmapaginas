@@ -120,6 +120,7 @@
         }
         window.notificacionesRef = firebase.database().ref('notificaciones');
         window.devicesRef = firebase.database().ref('devices');
+        window.fcmTokensRef = firebase.database().ref('fcmTokens');
         // Preparar FCM (Messaging) en la página
         try {
           window.messaging = firebase.messaging();
@@ -127,7 +128,7 @@
         } catch (eMsg) {
           log(`[FCM] Messaging no disponible en esta página: ${eMsg && eMsg.message ? eMsg.message : eMsg}`);
         }
-        log('[Firebase] Inicializado y canal listo');
+        log('[Firebase] Inicializado y canal listo (devices, notificaciones, fcmTokens)');
       } catch (e) {
         log(`[Firebase] Error al inicializar: ${e && e.message ? e.message : e}`);
       }
@@ -366,6 +367,7 @@
 
       // Popular selector de dispositivos
       const deviceSelector = document.getElementById('deviceSelector');
+      const pushMap = {}; // clientId => true/false según token FCM
       function upsertOption(dev) {
         const id = dev.clientId;
         let opt = deviceSelector.querySelector(`option[value="${id}"]`);
@@ -381,6 +383,20 @@
       }
       window.devicesRef.on('child_added', snap => { const dev = snap.val(); if (dev) { upsertOption(dev); upsertDeviceRow(dev); } });
       window.devicesRef.on('child_changed', snap => { const dev = snap.val(); if (dev) { upsertOption(dev); upsertDeviceRow(dev); } });
+
+      // Estado de push por dispositivo (presencia de token en fcmTokens)
+      function updateRowPushStatus(id) {
+        try {
+          const el = document.getElementById(`push-status-${id}`);
+          if (!el) return;
+          const on = !!pushMap[id];
+          el.textContent = `Push: ${on ? 'activado' : 'desactivado'}`;
+          el.style.color = on ? '#30d158' : '#ff453a';
+        } catch {}
+      }
+      window.fcmTokensRef.on('child_added', snap => { pushMap[snap.key] = true; updateRowPushStatus(snap.key); });
+      window.fcmTokensRef.on('child_changed', snap => { pushMap[snap.key] = true; updateRowPushStatus(snap.key); });
+      window.fcmTokensRef.on('child_removed', snap => { pushMap[snap.key] = false; updateRowPushStatus(snap.key); });
 
       // Enviar notificación global
       document.getElementById('btnNotificarPrueba').addEventListener('click', async () => {
@@ -504,6 +520,12 @@
           nameEl.textContent = label;
           nameEl.style.color = '#ffde59';
 
+          const statusEl = document.createElement('div');
+          statusEl.id = `push-status-${id}`;
+          statusEl.style.fontSize = '12px';
+          statusEl.style.color = pushMap[id] ? '#30d158' : '#ff453a';
+          statusEl.textContent = `Push: ${pushMap[id] ? 'activado' : 'desactivado'}`;
+
           const sendBtn = document.createElement('button');
           sendBtn.textContent = 'Enviar';
           sendBtn.style.padding = '6px 12px';
@@ -514,12 +536,46 @@
           sendBtn.style.cursor = 'pointer';
           sendBtn.addEventListener('click', () => sendToClient(id));
 
+          // Botón de prueba local para el propio dispositivo
+          let selfBtn = null;
+          if (id === clientId) {
+            selfBtn = document.createElement('button');
+            selfBtn.id = `self-send-${id}`;
+            selfBtn.textContent = 'Probar aquí';
+            selfBtn.style.padding = '6px 12px';
+            selfBtn.style.borderRadius = '8px';
+            selfBtn.style.border = '2px solid #ffde59';
+            selfBtn.style.background = '#000';
+            selfBtn.style.color = '#ffde59';
+            selfBtn.style.cursor = 'pointer';
+            selfBtn.title = 'Envía una notificación dirigida a este mismo dispositivo';
+            selfBtn.addEventListener('click', () => sendToClient(id));
+          }
+
           row.appendChild(nameEl);
+          row.appendChild(statusEl);
           row.appendChild(sendBtn);
+          if (selfBtn) row.appendChild(selfBtn);
           deviceListEl.appendChild(row);
         } else {
           const nameEl = row.firstChild;
           if (nameEl) nameEl.textContent = label;
+          updateRowPushStatus(id);
+          // Asegurar botón de prueba local existe para el propio dispositivo
+          if (id === clientId && !document.getElementById(`self-send-${id}`)) {
+            const selfBtn = document.createElement('button');
+            selfBtn.id = `self-send-${id}`;
+            selfBtn.textContent = 'Probar aquí';
+            selfBtn.style.padding = '6px 12px';
+            selfBtn.style.borderRadius = '8px';
+            selfBtn.style.border = '2px solid #ffde59';
+            selfBtn.style.background = '#000';
+            selfBtn.style.color = '#ffde59';
+            selfBtn.style.cursor = 'pointer';
+            selfBtn.title = 'Envía una notificación dirigida a este mismo dispositivo';
+            selfBtn.addEventListener('click', () => sendToClient(id));
+            row.appendChild(selfBtn);
+          }
         }
       }
     </script>
