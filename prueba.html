@@ -33,6 +33,7 @@
         </select>
         <button id="btnNotificarPrueba">Notificar (Prueba)</button>
       </div>
+      <div id="soundStatus" class="hint">Sonido: No habilitado. Pulsa “Activar sonido personalizado”.</div>
       <div id="deviceList" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
       <p class="hint">Abre esta página en dos navegadores o dispositivos. Pulsa el botón para que ambos reciban la notificación.</p>
       <div id="logs" class="log"></div>
@@ -152,6 +153,7 @@
               notifAudio.currentTime = 0;
               sonidoHabilitado = true;
               log('[Audio] Sonido personalizado habilitado');
+              updateSoundUI();
             })
             .catch(e => {
               // Fallback: habilitar WebAudio por si el HTMLAudio falla
@@ -159,10 +161,18 @@
               audioCtx.resume();
               sonidoHabilitado = true;
               log(`[Audio] HTMLAudio bloqueado, uso fallback WebAudio: ${e && e.message ? e.message : e}`);
+              updateSoundUI();
             });
         } catch (e) {
           log(`[Audio] Error al habilitar sonido: ${e && e.message ? e.message : e}`);
         }
+      }
+      function updateSoundUI() {
+        const el = document.getElementById('soundStatus');
+        if (!el) return;
+        el.textContent = sonidoHabilitado
+          ? 'Sonido: habilitado. Se reproducirá cuando llegue la notificación con la página activa.'
+          : 'Sonido: No habilitado. Pulsa “Activar sonido personalizado”.';
       }
       function playBeep() {
         if (!sonidoHabilitado) return;
@@ -261,11 +271,24 @@
         }
       }
       document.getElementById('btnActivarPush').addEventListener('click', activarPushFCM);
-      // Auto-desbloqueo con cualquier interacción del usuario (click/touch/tecla)
-      const autoUnlock = () => { if (!sonidoHabilitado) { initAudio(); log('[Audio] Auto-desbloqueo por interacción'); } };
-      window.addEventListener('pointerdown', autoUnlock, { once: true });
-      window.addEventListener('keydown', autoUnlock, { once: true });
-      window.addEventListener('touchstart', autoUnlock, { once: true });
+      // Auto-desbloqueo persistente con cualquier interacción hasta habilitar
+      function attachAutoUnlock() {
+        const handler = () => {
+          if (!sonidoHabilitado) {
+            initAudio();
+            log('[Audio] Auto-desbloqueo por interacción');
+          }
+          if (sonidoHabilitado) {
+            window.removeEventListener('pointerdown', handler);
+            window.removeEventListener('keydown', handler);
+            window.removeEventListener('touchstart', handler);
+          }
+        };
+        window.addEventListener('pointerdown', handler, { passive: true });
+        window.addEventListener('keydown', handler, { passive: true });
+        window.addEventListener('touchstart', handler, { passive: true });
+      }
+      attachAutoUnlock();
       // Si la página está visible cuando llega una notificación, reforzar beep
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && sonidoHabilitado) {
