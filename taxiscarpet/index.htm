@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TAXIS | Notificaciones</title>
+<link rel="icon" href="https://i.ibb.co/m5WDvjFm/imagen-2025-10-22-173714897.png" type="image/x-icon">
+<style>
+body { margin:0; font-family: system-ui, Arial, sans-serif; background:#111; color:#fff }
+.wrap { max-width: 720px; margin: 0 auto; padding: 16px }
+.fila { display:flex; gap:8px; align-items:center; margin-bottom:10px }
+input, button { padding:8px 10px; border-radius:6px; border:1px solid #333; background:#1a1a1a; color:#fff }
+button { cursor:pointer }
+.panel { background:#181818; border:1px solid #222; border-radius:8px; padding:12px; margin:12px 0 }
+.usuario, .item { padding:6px 8px; border-bottom:1px solid #222 }
+.titulo { font-weight:600 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Sistema de Notificaciones en Tiempo Real</h2>
+  <div class="panel">
+    <div class="fila">
+      <input id="nombreUsuario" placeholder="Nombre de usuario">
+      <button id="registrarBtn">Registrar</button>
+      <button id="permisoBtn">Permiso</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="fila">
+      <input id="mensajeInput" placeholder="Escribe la notificación">
+      <button id="enviarBtn">Enviar</button>
+    </div>
+    <div style="margin-top:8px">
+      <button id="cargarUsuariosBtn">Cargar usuarios del servidor</button>
+    </div>
+    <div id="listaUsuariosSrv" style="max-height:400px; overflow:auto; margin-top:8px"></div>
+    <div style="margin-top:8px">
+      <button id="enviarSeleccionadosBtn">Enviar a seleccionados</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="titulo">Usuarios</div>
+    <div id="usuarios" style="max-height:400px; overflow:auto"></div>
+  </div>
+  <div class="panel">
+    <div class="titulo">Feed</div>
+    <div id="feed"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDGKaUNwsZcbR-ZiX7EFaIe-GNJuMU4J1Y",
+  authDomain: "comedorelnano.firebaseapp.com",
+  databaseURL: "https://comedorelnano-default-rtdb.firebaseio.com",
+  projectId: "comedorelnano",
+  storageBucket: "comedorelnano.firebasestorage.app",
+  messagingSenderId: "97043404893",
+  appId: "1:97043404893:web:239bf2c53ae336519ed5b4",
+  measurementId: "G-1MYL204D0P"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const messaging = firebase.messaging();
+
+let swReg = null;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/firebase-messaging-sw.js').then(r=>{ swReg = r; });
+}
+
+function playBeep() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 880;
+  gain.gain.value = 0.05;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  setTimeout(() => { osc.stop(); ctx.close(); }, 700);
+}
+
+navigator.serviceWorker.addEventListener('message', e => {
+  if (e && e.data && e.data.type === 'PLAY_SOUND') playBeep();
+});
+
+messaging.onMessage(payload => {
+  playBeep();
+});
+
+const VAPID_KEY = 'BNXIbdtlf5McBXdCosekhLOJ3QXGvTYNqBQLMDqAS8KVNCkKry0DiiE0GSoKyNCLcy5xe_2Jiczb4B7DhU2M-H8';
+
+const nombreInput = document.getElementById('nombreUsuario');
+const registrarBtn = document.getElementById('registrarBtn');
+const permisoBtn = document.getElementById('permisoBtn');
+const usuariosDiv = document.getElementById('usuarios');
+const mensajeInput = document.getElementById('mensajeInput');
+const enviarBtn = document.getElementById('enviarBtn');
+const feedDiv = document.getElementById('feed');
+const cargarUsuariosBtn = document.getElementById('cargarUsuariosBtn');
+const listaUsuariosSrv = document.getElementById('listaUsuariosSrv');
+const enviarSeleccionadosBtn = document.getElementById('enviarSeleccionadosBtn');
+const permisoEstado = document.createElement('div');
+permisoEstado.style.marginTop = '8px';
+permisoEstado.textContent = `Permiso: ${Notification.permission}`;
+document.querySelectorAll('.panel')[0].appendChild(permisoEstado);
+const soporteEstado = document.createElement('div');
+soporteEstado.style.marginTop = '6px';
+document.querySelectorAll('.panel')[0].appendChild(soporteEstado);
+
+function entornoSoportaPush(){
+  const httpsOK = window.isSecureContext || location.hostname === 'localhost';
+  const swOK = 'serviceWorker' in navigator;
+  const pushOK = 'PushManager' in window;
+  const notifOK = 'Notification' in window;
+  return { httpsOK, swOK, pushOK, notifOK, ok: httpsOK && swOK && pushOK && notifOK };
+}
+function actualizarSoporte(){
+  const s = entornoSoportaPush();
+  soporteEstado.textContent = `Soporte Push → https:${s.httpsOK} sw:${s.swOK} push:${s.pushOK} notif:${s.notifOK}`;
+}
+actualizarSoporte();
+
+permisoBtn.onclick = async () => {
+  const p = await Notification.requestPermission();
+  permisoEstado.textContent = `Permiso: ${p}`;
+};
+
+registrarBtn.onclick = async () => {
+  const name = (nombreInput.value || '').trim() || 'Usuario';
+  const permiso = await Notification.requestPermission();
+  if (permiso !== 'granted') return;
+  const reg = await navigator.serviceWorker.ready;
+  try {
+    const soporte = entornoSoportaPush();
+    if (!soporte.ok) {
+      alert('Tu entorno no soporta Web Push en esta URL. Usa HTTPS o localhost, navegador real (no vista previa), y en iPhone instala como app.');
+      return;
+    }
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) { alert('No se pudo obtener token. Revisa HTTPS y VAPID.'); return; }
+    await fetch('/.netlify/functions/guardar-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, token })
+    });
+    db.ref('usuarios-simple').push({ name, ts: Date.now() });
+    alert('Registrado correctamente');
+    cargarUsuariosServidor();
+  } catch (e) {
+    alert(`Error registrando Push: ${e && e.message ? e.message : e}`);
+  }
+};
+
+// La lista principal de usuarios se carga desde el servidor (incluye tokens)
+
+enviarBtn.onclick = async () => {
+  const texto = (mensajeInput.value || '').trim();
+  if (!texto) return;
+  await fetch('/.netlify/functions/enviar-notificaciones', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ titulo: 'Aviso', mensaje: texto })
+  });
+  db.ref('notificaciones').push({ titulo: 'Aviso', mensaje: texto, ts: Date.now() });
+  mensajeInput.value = '';
+};
+
+function agregarAlFeed(titulo, cuerpo) {
+  const d = document.createElement('div');
+  d.className = 'item';
+  d.textContent = `${titulo} — ${cuerpo}`;
+  feedDiv.prepend(d);
+}
+
+const mostrados = new Set();
+db.ref('notificaciones').limitToLast(25).on('child_added', snap => {
+  const v = snap.val() || {};
+  const k = snap.key;
+  if (mostrados.has(k)) return;
+  mostrados.add(k);
+  agregarAlFeed(v.titulo || 'Aviso', v.mensaje || '');
+  playBeep();
+});
+
+async function cargarUsuariosServidor() {
+  const resp = await fetch('/.netlify/functions/usuarios');
+  const json = await resp.json();
+  const list = (json && json.usuarios) || [];
+  listaUsuariosSrv.innerHTML = '';
+  usuariosDiv.innerHTML = '';
+  list.forEach(u => {
+    const div = document.createElement('div');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = u.token;
+    const label = document.createElement('span');
+    label.textContent = ` ${u.name}`;
+    const btn = document.createElement('button');
+    btn.textContent = 'Enviar';
+    btn.style.marginLeft = '8px';
+    btn.onclick = async ()=>{
+      const texto = (mensajeInput.value || '').trim();
+      if (!texto) return;
+      await fetch('/.netlify/functions/enviar-notificaciones', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: 'Aviso', mensaje: texto, tokens: [u.token] })
+      });
+      db.ref('notificaciones').push({ titulo: 'Aviso', mensaje: texto, ts: Date.now() });
+      mensajeInput.value = '';
+    };
+    div.appendChild(cb);
+    div.appendChild(label);
+    div.appendChild(btn);
+    listaUsuariosSrv.appendChild(div);
+    const div2 = document.createElement('div');
+    const cb2 = document.createElement('input');
+    cb2.type = 'checkbox';
+    cb2.value = u.token;
+    const label2 = document.createElement('span');
+    label2.textContent = ` ${u.name}`;
+    const btn2 = document.createElement('button');
+    btn2.textContent = 'Enviar';
+    btn2.style.marginLeft = '8px';
+    btn2.onclick = btn.onclick;
+    div2.appendChild(cb2);
+    div2.appendChild(label2);
+    div2.appendChild(btn2);
+    usuariosDiv.appendChild(div2);
+  });
+}
+
+cargarUsuariosBtn.onclick = cargarUsuariosServidor;
+setInterval(cargarUsuariosServidor, 5000);
+// Cargar inmediatamente al abrir
+cargarUsuariosServidor();
+
+enviarSeleccionadosBtn.onclick = async () => {
+  const texto = (mensajeInput.value || '').trim();
+  if (!texto) return;
+  const checks = Array.from(listaUsuariosSrv.querySelectorAll('input[type="checkbox"]'));
+  const tokens = checks.filter(c => c.checked).map(c => c.value);
+  if (!tokens.length) { alert('Selecciona al menos un usuario'); return; }
+  await fetch('/.netlify/functions/enviar-notificaciones', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ titulo: 'Aviso', mensaje: texto, tokens })
+  });
+  db.ref('notificaciones').push({ titulo: 'Aviso', mensaje: texto, ts: Date.now() });
+  mensajeInput.value = '';
+};
+</script>
+</body>
+</html>
