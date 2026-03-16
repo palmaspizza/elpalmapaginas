@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Winnie Prod | Beats</title>
+  <title>Winny Prod | Beats</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -976,7 +976,7 @@
   <!-- Header - SOLO CARRITO VISIBLE -->
   <header class="header-fixed">
     <a href="#" class="logo" id="logoPress">
-      <span>Winnie</span> Prod
+      <span>Winny</span> Prod
       <div class="press-progress" id="pressProgress"></div>
     </a>
     <div class="nav-icons">
@@ -1256,7 +1256,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const beatsRef = ref(db, 'winnie_beats');
+    const beatsRef = ref(db, 'Winny_beats');
 
     let beats = [];
     let beatsFiltrados = [];
@@ -1276,10 +1276,10 @@
 
     // Recuperar carrito del localStorage
     try {
-      const stored = JSON.parse(localStorage.getItem('winnie_cart') || '[]');
+      const stored = JSON.parse(localStorage.getItem('Winny_cart') || '[]');
       if (Array.isArray(stored)) carrito = stored;
     } catch (e) {
-      localStorage.removeItem('winnie_cart');
+      localStorage.removeItem('Winny_cart');
     }
 
     onValue(beatsRef, (snapshot) => {
@@ -1585,7 +1585,7 @@
         }
 
         if (id) {
-          await set(ref(db, 'winnie_beats/' + id), data);
+          await set(ref(db, 'Winny_beats/' + id), data);
         } else {
           await push(beatsRef, data);
         }
@@ -1643,7 +1643,7 @@
 
     window.borrarBeat = (id) => {
       accionPendiente = () => {
-        remove(ref(db, 'winnie_beats/' + id));
+        remove(ref(db, 'Winny_beats/' + id));
         cerrarModal('modalConfirm');
       };
       
@@ -1838,7 +1838,7 @@
 
     function guardarCarrito() {
       try {
-        localStorage.setItem('winnie_cart', JSON.stringify(carrito));
+        localStorage.setItem('Winny_cart', JSON.stringify(carrito));
       } catch (e) {
         console.error('Error guardando carrito', e);
       }
@@ -1948,7 +1948,7 @@
       const name = document.getElementById('customerName').value.trim();
       const email = document.getElementById('customerEmail').value.trim();
 
-      let msg = `🎵 *PEDIDO WINNIE PROD* 🎵\n\n`;
+      let msg = `🎵 *PEDIDO Winny PROD* 🎵\n\n`;
       msg += `👤 *Cliente:* ${name}\n`;
       msg += `*BEATS SELECCIONADOS:*\n\n`;
       
