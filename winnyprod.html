@@ -7,13 +7,15 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
-      --primary: #000000;
+      --primary: #1a1a1a;
       --secondary: #ffffff;
-      --accent: #04437e; /* Lila suave */
+      --accent: #04437e; 
       --accent-light: #53c3d6;
-      --accent-bg: #e5ebf5;
-      --border: #e5e5e5;
-      --gray: #f5f5f5;
+      --accent-bg: #f0f4f8;
+      --border: #e1e8ed;
+      --gray: #718096;
+      --card-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      --card-hover-shadow: 0 20px 35px rgba(0,0,0,0.1);
     }
 
     * { 
@@ -24,7 +26,7 @@
     }
 
     body { 
-      background: var(--secondary); 
+      background: #f7fafc; 
       color: var(--primary);
       min-height: 100vh;
     }
@@ -35,11 +37,12 @@
       flex-wrap: wrap;
       gap: 15px;
       margin-bottom: 40px;
-      background: blue;
+      background: white;
       padding: 25px;
-      border-radius: 20px;
+      border-radius: 16px;
       align-items: center;
-      box-shadow: 0 4px 15px rgba(177, 156, 217, 0.1);
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border);
     }
 
     .search-box {
@@ -51,7 +54,7 @@
     .search-box input {
       width: 100%;
       padding: 14px 20px 14px 45px;
-      border: 2px solid transparent;
+      border: 2px solid var(--border);
       border-radius: 12px;
       background: white;
       font-size: 1rem;
@@ -69,7 +72,7 @@
     .search-box input:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(177, 156, 217, 0.1);
+      box-shadow: 0 0 0 4px rgba(4, 67, 126, 0.1);
     }
 
     .filter-group {
@@ -80,7 +83,7 @@
 
     .filter-select {
       padding: 12px 18px;
-      border: 2px solid transparent;
+      border: 2px solid var(--border);
       border-radius: 12px;
       background: white;
       font-size: 0.9rem;
@@ -102,8 +105,8 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 2px;
-      background: var(--accent);
+      height: 3px;
+      background: #000000;
       overflow: hidden;
     }
 
@@ -114,15 +117,30 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, var(--accent-light), transparent);
-      animation: flow 2s infinite linear;
+      background: linear-gradient(90deg, transparent, #ffffff, transparent);
+      animation: flow 2.5s infinite linear;
     }
 
     @keyframes flow {
       0% { left: -100%; }
       100% { left: 100%; }
     }
+/* Animación para btn-accent */
+@keyframes pulsoAccent {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15); /* se agranda */
+  }
+  100% {
+    transform: scale(1); /* vuelve al tamaño normal */
+  }
+}
 
+.btn-accent {
+  animation: pulsoAccent 1.2s ease-in-out infinite;
+}
     /* Header */
     .header-fixed { 
       position: fixed; 
@@ -130,11 +148,13 @@
       left: 0; 
       right: 0; 
       z-index: 1000; 
-      background: var(--secondary);
-      padding: 25px 5%;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 20px 5%;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.05);
     }
 
     .logo { 
@@ -145,35 +165,13 @@
       letter-spacing: -1px;
       cursor: pointer;
       user-select: none;
-      -webkit-user-select: none;
       position: relative;
       transition: all 0.3s;
-    }
-
-    .logo:hover {
-      color: var(--accent);
     }
 
     .logo span { 
       color: var(--accent);
       font-weight: 900;
-      position: relative;
-    }
-
-    .logo span::after {
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      width: 100%;
-      height: 3px;
-      background: var(--accent);
-      transform: scaleX(0);
-      transition: transform 0.3s;
-    }
-
-    .logo:hover span::after {
-      transform: scaleX(1);
     }
 
     .press-progress {
@@ -193,8 +191,8 @@
     }
     
     .icon-btn { 
-      background: none; 
-      border: none; 
+      background: white; 
+      border: 1px solid var(--border); 
       color: var(--primary); 
       font-size: 1.2rem; 
       cursor: pointer; 
@@ -206,21 +204,21 @@
       justify-content: center;
       border-radius: 50%;
       position: relative;
-      border: 2px solid transparent;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     .icon-btn:hover { 
       background: var(--accent-bg);
       color: var(--accent);
       border-color: var(--accent);
-      transform: scale(1.1);
+      transform: translateY(-2px);
     }
 
     .badge { 
       position: absolute; 
       top: -5px; 
       right: -5px; 
-      background: var(--accent); 
+      background: #000000; 
       color: white;
       font-size: 0.7rem; 
       padding: 3px 6px; 
@@ -228,14 +226,14 @@
       font-weight: 800;
       min-width: 20px;
       text-align: center;
-      box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
     /* Loader */
     #loader { 
       position: fixed; 
       inset: 0; 
-      background: var(--accent-bg); 
+      background: rgba(255,255,255,0.95); 
       display: flex; 
       align-items: center; 
       justify-content: center; 
@@ -247,7 +245,7 @@
       font-size: 0.9rem; 
       letter-spacing: 0.3em; 
       text-transform: uppercase;
-      color: var(--accent);
+      color: #000000;
       font-weight: 700;
       animation: pulse 1.5s infinite;
     }
@@ -268,27 +266,27 @@
     .grid { 
       display: grid; 
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
-      gap: 40px; 
+      gap: 35px; 
     }
 
     .card { 
       background: var(--secondary); 
-      border-radius: 16px;
+      border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(255, 59, 48, 0.08);
-      transition: all 0.3s ease;
+      box-shadow: var(--card-shadow);
+      transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
       position: relative;
-      border: 2px solid transparent;
+      border: 1px solid var(--border);
     }
 
     .card:hover { 
-      transform: translateY(-10px);
-      box-shadow: 0 15px 50px rgba(255, 59, 48, 0.15);
+      transform: translateY(-8px);
+      box-shadow: var(--card-hover-shadow);
       border-color: var(--accent-light);
     }
 
     .card-img { 
-      height: 280px; 
+      height: 300px; 
       width: 100%;
       position: relative;
       overflow: hidden;
@@ -298,11 +296,11 @@
       width: 100%; 
       height: 100%; 
       object-fit: cover; 
-      transition: transform 0.5s;
+      transition: transform 0.6s;
     }
 
     .card:hover .card-img img { 
-      transform: scale(1.08);
+      transform: scale(1.05);
     }
 
     /* Play button */
@@ -311,37 +309,32 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 60px;
-      height: 60px;
-      background: var(--accent);
+      width: 65px;
+      height: 65px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(5px);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
-      font-size: 1.3rem;
+      color: var(--primary);
+      font-size: 1.4rem;
       cursor: pointer;
       transition: all 0.3s;
-      border: 4px solid white;
-      box-shadow: 0 6px 25px rgba(255, 59, 48, 0.5);
+      border: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       z-index: 5;
     }
 
     .play-btn:hover { 
-      transform: translate(-50%, -50%) scale(1.15);
-      box-shadow: 0 10px 35px rgba(255, 59, 48, 0.6);
-      background: #ff2d20;
+      transform: translate(-50%, -50%) scale(1.1);
+      background: var(--primary);
+      color: white;
     }
 
     .play-btn.playing {
-      background: white;
-      color: var(--accent);
-      animation: pulse-play 1.2s infinite;
-    }
-
-    @keyframes pulse-play {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.5); }
-      50% { box-shadow: 0 0 0 15px rgba(255, 59, 48, 0); }
+      background: var(--accent);
+      color: white;
     }
 
     /* Price tag */
@@ -349,300 +342,427 @@
       position: absolute;
       top: 15px;
       left: 15px;
-      background: var(--accent);
+      background: #000000;
       color: white;
-      padding: 10px 18px;
-      border-radius: 25px;
+      padding: 8px 16px;
+      border-radius: 10px;
       font-weight: 800;
-      font-size: 1rem;
+      font-size: 0.9rem;
       z-index: 5;
       letter-spacing: 0.5px;
-      box-shadow: 0 4px 20px rgba(255, 59, 48, 0.4);
-      border: 2px solid white;
-    }
-
-    .price-usd {
-      position: absolute;
-      top: 60px;
-      left: 15px;
-      background: white;
-      color: var(--accent);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-weight: 700;
-      font-size: 0.8rem;
-      z-index: 5;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      border: 2px solid var(--accent);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
 
     .card-info { 
       padding: 25px; 
-      background: linear-gradient(to bottom, transparent, var(--accent-bg));
+      background: white;
     }
 
     .card-info h3 { 
       margin: 0 0 10px 0; 
-      font-size: 1.4rem;
+      font-size: 1.25rem;
       font-weight: 800;
       color: var(--primary);
       letter-spacing: -0.5px;
+      text-transform: uppercase;
     }
 
-    .card-info p { 
-      color: #555; 
-      font-size: 0.95rem;
-      line-height: 1.5;
+    .beat-meta-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-bottom: 20px;
     }
 
-    /* Audio visualizer bars */
-    .visualizer {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 4px;
-      opacity: 0;
-      transition: opacity 0.3s;
-      z-index: 5;
+    .meta-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--gray);
+      background: var(--accent-bg);
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
     }
 
-    .visualizer.active {
-      opacity: 1;
-    }
-
-    .bar {
-      width: 5px;
-      background: var(--accent);
-      border-radius: 3px;
-      animation: dance 0.5s ease-in-out infinite alternate;
-    }
-
-    .bar:nth-child(1) { animation-delay: 0s; height: 15px; }
-    .bar:nth-child(2) { animation-delay: 0.1s; height: 28px; }
-    .bar:nth-child(3) { animation-delay: 0.2s; height: 20px; }
-    .bar:nth-child(4) { animation-delay: 0.3s; height: 25px; }
-    .bar:nth-child(5) { animation-delay: 0.4s; height: 18px; }
-
-    @keyframes dance {
-      from { transform: scaleY(0.4); }
-      to { transform: scaleY(1); }
-    }
-
-    /* Add to cart button */
     .btn-add-cart {
       width: 100%;
-      padding: 16px;
-      background: var(--primary);
+      padding: 15px;
+      background: #000000;
       color: white;
       border: none;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.1em;
       cursor: pointer;
       transition: all 0.3s;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      gap: 10px;
+      border-radius: 12px;
     }
 
     .btn-add-cart:hover {
       background: var(--accent);
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(255, 59, 48, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
 
-    .btn-add-cart:active {
-      transform: scale(0.97);
-    }
-
-    /* Admin Controls - OCULTOS POR DEFECTO */
+    /* Admin Controls */
     .admin-controls {
       position: absolute;
       top: 15px;
       right: 15px;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       z-index: 10;
       opacity: 0;
       transition: opacity 0.3s;
-      pointer-events: none;
     }
 
-    .admin-controls.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .card:hover .admin-controls.active {
-      opacity: 1;
-    }
+    .admin-controls.active { opacity: 1; }
 
     .admin-btn {
-      width: 38px;
-      height: 38px;
+      width: 35px;
+      height: 35px;
       border: none;
-      border-radius: 50%;
+      border-radius: 10px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 0.9rem;
       transition: all 0.2s;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
 
-    .admin-btn.edit { 
-      background: white; 
-      color: var(--accent);
-      border: 2px solid var(--accent);
-    }
-    .admin-btn.edit:hover { 
-      background: var(--accent);
-      color: white;
-      transform: scale(1.1);
-    }
-    
-    .admin-btn.delete { 
-      background: var(--accent); 
-      color: white; 
-    }
-    .admin-btn.delete:hover { 
-      background: #ff2d20;
-      transform: scale(1.1);
-    }
+    .admin-btn.edit { color: var(--accent); }
+    .admin-btn.delete { color: #e53e3e; }
+    .admin-btn:hover { transform: scale(1.1); background: var(--accent-bg); }
 
     /* Modals */
     .modal { 
       display: none; 
       position: fixed; 
       inset: 0; 
-      background: rgba(255, 240, 240, 0.98); 
+      background: rgba(0, 0, 0, 0.7); 
       z-index: 2000; 
       align-items: center; 
       justify-content: center; 
       padding: 20px;
+      backdrop-filter: blur(5px);
     }
 
     .modal.active { display: flex; }
 
     .modal-content { 
       background: var(--secondary); 
-      border: 2px solid var(--accent);
-      padding: 45px; 
+      padding: 40px; 
       width: 100%;
-      max-width: 600px; 
+      max-width: 550px; 
       max-height: 90vh; 
       overflow-y: auto;
-      box-shadow: 0 25px 80px rgba(255, 59, 48, 0.15);
-      border-radius: 20px;
-    }
-
-    .modal-header {
-      margin-bottom: 35px;
-      border-bottom: 2px solid var(--accent);
-      padding-bottom: 20px;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     }
 
     .modal-header h2 {
-      margin: 0;
-      font-size: 1.8rem;
+      font-size: 1.5rem;
       font-weight: 800;
-      letter-spacing: -1px;
-      color: var(--accent);
+      margin-bottom: 25px;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
     }
 
     .form-group {
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
     .form-group label {
       display: block;
       font-size: 0.75rem;
-      font-weight: 800;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.15em;
-      margin-bottom: 12px;
-      color: var(--accent);
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      color: var(--gray);
     }
 
     .form-group input,
+    .form-group select,
     .form-group textarea {
       width: 100%;
-      padding: 16px;
+      padding: 14px;
       border: 2px solid var(--border);
       font-size: 1rem;
-      transition: all 0.3s;
-      background: var(--secondary);
-      color: var(--primary);
-      border-radius: 10px;
+      border-radius: 12px;
+      transition: all 0.2s;
     }
 
-    .form-group input:focus,
-    .form-group textarea:focus {
+    .form-group input:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.1);
     }
 
-    .form-group textarea {
-      resize: vertical;
-      min-height: 100px;
+    /* Number Control */
+    .number-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent-bg);
+      padding: 8px;
+      border-radius: 12px;
     }
 
-    /* File inputs */
-    .file-input-wrapper {
+    .number-btn {
+      width: 35px;
+      height: 35px;
+      border: none;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .number-display {
+      font-weight: 800;
+      font-size: 1.1rem;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    /* Buttons */
+    .btn-accent {
+      width: 100%;
+      padding: 16px;
+      background: #000000;
+      color: white;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.3s;
+      border-radius: 12px;
+    }
+
+    .btn-accent:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      color: var(--primary);
+      border: 2px solid var(--border);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    /* Cart UI */
+    .cart-header-accent {
+      background: #000000;
+      color: white;
+      padding: 30px;
+      border-radius: 20px 20px 0 0;
+      text-align: center;
+      margin: -40px -40px 30px -40px;
+    }
+
+    .cart-item { 
+      display: grid; 
+      grid-template-columns: 70px 1fr auto; 
+      gap: 15px; 
+      padding: 15px 0; 
+      border-bottom: 1px solid var(--border); 
+      align-items: center; 
+    }
+
+    .cart-img-min { width: 60px; height: 60px; border-radius: 10px; object-fit: cover; }
+
+    .cart-total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin: 25px 0;
+      padding-top: 20px;
+      border-top: 2px solid #000000;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: var(--card-shadow);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container { margin-top: 100px; }
+      .grid { grid-template-columns: 1fr; }
+      .header-fixed { padding: 15px 5%; }
+    }
+
+    /* --- NUEVOS ESTILOS PROFESIONALES --- */
+
+    /* Formatos MP3/WAV */
+    .format-selection {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin: 25px 0;
+    }
+
+    .format-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       position: relative;
       overflow: hidden;
-      display: inline-block;
+    }
+
+    .format-btn:hover {
+      border-color: var(--accent);
+      background: #fafcfe;
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    }
+
+    .format-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 10px 25px rgba(4, 67, 126, 0.25);
+    }
+
+    .format-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      z-index: 1;
+    }
+
+    .format-name {
+      font-weight: 900;
+      font-size: 1.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .format-desc {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .format-price {
+      font-weight: 900;
+      font-size: 1.4rem;
+      letter-spacing: -0.5px;
+      z-index: 1;
+    }
+
+    /* Áreas de Carga de Archivos */
+    .file-input-wrapper {
+      position: relative;
       width: 100%;
+      margin-top: 10px;
     }
 
     .file-input-wrapper input[type=file] {
       position: absolute;
-      left: -9999px;
+      width: 0.1px;
+      height: 0.1px;
+      opacity: 0;
+      overflow: hidden;
+      z-index: -1;
     }
 
     .file-input-label {
-      display: block;
-      padding: 20px;
-      border: 3px dashed var(--accent-light);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 35px 20px;
+      border: 2px dashed var(--border);
       text-align: center;
       cursor: pointer;
-      transition: all 0.3s;
-      color: var(--accent);
-      font-size: 0.95rem;
-      border-radius: 12px;
-      background: var(--accent-bg);
-      font-weight: 600;
+      transition: all 0.3s ease;
+      color: var(--gray);
+      font-size: 0.9rem;
+      border-radius: 20px;
+      background: #ffffff;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .file-input-label:hover {
       border-color: var(--accent);
-      background: white;
-      transform: scale(1.02);
+      background: var(--accent-bg);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .file-input-label i {
+      font-size: 2.2rem;
+      margin-bottom: 15px;
+      color: var(--accent-light);
+      transition: all 0.3s;
+    }
+
+    .file-input-label:hover i {
+      transform: scale(1.1);
+      color: var(--accent);
     }
 
     .file-input-label.has-file {
-      border-color: var(--accent);
-      background: white;
+      border: 2px solid var(--accent);
+      background: #f0f7ff;
       color: var(--accent);
       border-style: solid;
     }
 
+    /* Previews de Archivos */
     .preview-container {
-      margin-top: 15px;
-      padding: 15px;
-      background: var(--accent-bg);
-      border-radius: 12px;
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 20px;
       display: none;
-      border: 2px solid var(--accent-light);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      animation: slideDown 0.4s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .preview-container.active {
@@ -651,322 +771,122 @@
 
     .preview-container img {
       width: 100%;
-      max-height: 200px;
+      max-height: 280px;
       object-fit: cover;
-      border-radius: 8px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
 
     .preview-container audio {
       width: 100%;
-    }
-
-    /* Botones */
-    .btn-accent {
-      width: 100%;
-      padding: 18px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      font-size: 0.9rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      cursor: pointer;
-      transition: all 0.3s;
+      height: 45px;
       margin-top: 15px;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(255, 59, 48, 0.3);
+      filter: invert(0.1);
     }
 
-    .btn-accent:hover {
-      background: #ff2d20;
-      box-shadow: 0 10px 35px rgba(255, 59, 48, 0.4);
-      transform: translateY(-3px);
-    }
-
-    .btn-secondary {
-      width: 100%;
-      padding: 16px;
-      background: transparent;
-      color: var(--accent);
-      border: 2px solid var(--accent);
-      font-size: 0.9rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      cursor: pointer;
-      transition: all 0.3s;
-      margin-top: 12px;
-      border-radius: 12px;
-    }
-
-    .btn-secondary:hover {
-      background: var(--accent);
-      color: white;
-    }
-
-    /* Modal Login */
-    .modal-login {
-      text-align: center;
-    }
-
-    .modal-login h2 {
-      margin-bottom: 10px;
-      color: var(--accent);
-    }
-
-    .modal-login p {
-      color: #666;
-      margin-bottom: 30px;
-      font-size: 0.9rem;
-    }
-
-    .login-icon {
-      font-size: 3rem;
-      color: var(--accent);
-      margin-bottom: 20px;
-    }
-
-    /* Cart Modal */
-    .cart-header-accent {
-      background: var(--accent);
-      color: white;
-      padding: 25px;
-      border-radius: 16px 16px 0 0;
-      text-align: center;
-      margin: -45px -45px 30px -45px;
-    }
-
-    .cart-item { 
-      display: grid; 
-      grid-template-columns: 80px 1fr auto; 
-      gap: 18px; 
-      padding: 20px 0; 
-      border-bottom: 2px solid var(--accent-bg); 
-      align-items: center; 
-    }
-
-    .cart-img-min { 
-      width: 70px; 
-      height: 70px; 
-      object-fit: cover; 
-      border-radius: 12px;
-      border: 2px solid var(--accent-light);
-    }
-
-    .cart-item-info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .cart-item-format {
-      display: inline-block;
-      background: var(--accent);
-      color: white;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      margin-top: 4px;
-    }
-
-    .qty-controls { 
-      display: flex; 
-      align-items: center; 
-      gap: 12px; 
-      background: var(--accent-bg); 
-      padding: 8px; 
-      border-radius: 10px; 
-    }
-
-    .btn-qty { 
-      width: 32px; 
-      height: 32px; 
-      border: none; 
-      background: var(--accent); 
-      color: white; 
-      border-radius: 8px; 
-      cursor: pointer;
-      font-size: 1.1rem;
-      display: flex;
+    /* Botón Eliminar Carrito */
+    .btn-delete-item { 
+      color: #e53e3e; 
+      background: #fff5f5; 
+      border: 1px solid #fed7d7; 
+      cursor: pointer; 
+      font-size: 0.75rem;
+      padding: 10px 15px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      transition: all 0.2s;
-    }
-
-    .btn-qty:hover {
-      background: #ff2d20;
-      transform: scale(1.1);
-    }
-
-    .btn-qty:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .qty-input { 
-      width: 40px; 
-      text-align: center; 
-      border: none; 
-      background: transparent; 
+      margin-top: 12px;
       font-weight: 800;
-      font-size: 1rem;
-      color: var(--accent);
-    }
-
-    .btn-delete-item { 
-      color: var(--accent); 
-      background: none; 
-      border: none; 
-      cursor: pointer; 
-      font-size: 0.8rem;
-      text-decoration: underline;
-      margin-top: 8px;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      font-weight: 700;
     }
 
-    .cart-total {
-      display: flex;
-      justify-content: space-between;
-      font-size: 1.5rem;
-      font-weight: 800;
-      margin: 30px 0;
-      padding-top: 25px;
-      border-top: 3px solid var(--accent);
-      color: var(--accent);
-    }
-
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 100px 20px;
-      border: 3px dashed var(--accent-light);
-      border-radius: 20px;
-      background: var(--accent-bg);
-    }
-
-    .empty-state h3 {
-      font-size: 1.4rem;
-      font-weight: 800;
-      margin-bottom: 15px;
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      color: var(--accent);
-    }
-
-    .empty-state p {
-      color: #666;
-      font-size: 1rem;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .container { margin-top: 100px; padding: 0 20px; }
-      .grid { grid-template-columns: 1fr; gap: 30px; }
-      .modal-content { padding: 30px; }
-      .header-fixed { padding: 20px; }
-      .logo { font-size: 1.4rem; }
-    }
-
-    /* Animaciones */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .card { animation: fadeIn 0.6s ease-out; }
-
-    /* Flying animation for cart */
-    .flying-item {
-      position: fixed;
-      z-index: 2500;
-      pointer-events: none;
-      font-size: 2rem;
-      color: var(--accent);
-    }
-
-    /* Modal selección de formato */
-    .format-selection {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      margin: 20px 0;
-    }
-
-    .format-btn {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .format-btn:hover {
-      border-color: var(--accent);
-      background: var(--accent-bg);
-      transform: translateY(-2px);
-    }
-
-    .format-btn.selected {
-      border-color: var(--accent);
-      background: var(--accent);
+    .btn-delete-item:hover {
+      background: #e53e3e;
       color: white;
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px rgba(229, 62, 62, 0.2);
     }
 
-    .format-info {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
+    .btn-delete-item i {
+      font-size: 0.9rem;
+      margin-right: 8px;
     }
 
-    .format-name {
-      font-weight: 800;
-      font-size: 1.1rem;
-      text-transform: uppercase;
-    }
-
-    .format-desc {
-      font-size: 0.85rem;
-      opacity: 0.8;
-      margin-top: 4px;
-    }
-
-    .format-price {
-      font-weight: 800;
-      font-size: 1.3rem;
-    }
-
-    .price-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-    }
-
-    .price-row .form-group {
-      margin-bottom: 0;
-    }
-
+    /* Visualizador de Precios Pro */
     .price-preview {
-      background: var(--accent-bg);
-      padding: 15px;
-      border-radius: 10px;
+      background: #1a1a1a;
+      color: white;
+      padding: 18px;
+      border-radius: 16px;
       margin-top: 15px;
-      font-weight: 700;
-      color: var(--accent);
+      font-weight: 800;
+      font-size: 0.9rem;
+      text-align: center;
+      letter-spacing: 0.05em;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Ventana de Aviso Reproducción Segundo Plano */
+    #noticeBackground {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 5000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      animation: fadeInNotice 0.3s ease;
+    }
+
+    .notice-content {
+      max-width: 600px;
+    }
+
+    .notice-content i {
+      font-size: 4rem;
+      color: var(--accent-light);
+      margin-bottom: 30px;
+      display: block;
+      animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .notice-content h2 {
+      color: white;
+      font-size: 1.8rem;
+      font-weight: 800;
+      line-height: 1.3;
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
+    }
+
+    @keyframes fadeInNotice {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes bounceIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.05); opacity: 1; }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); }
     }
   </style>
 </head>
 <body>
+
+  <!-- Aviso Reproducción Segundo Plano -->
+  <div id="noticeBackground">
+    <div class="notice-content">
+      <i class="fas fa-headphones-alt"></i>
+      <h2>¡Puedes escuchar este beat en segundo plano aunque salgas del navegador!</h2>
+    </div>
+  </div>
 
   <!-- Loader -->
   <div id="loader">
@@ -999,11 +919,14 @@
       <div class="filter-group">
         <select id="genreFilter" class="filter-select" onchange="filtrarBeats()">
           <option value="">Todos los estilos</option>
-          <option value="trap">Trap</option>
-          <option value="hiphop">Hiphop</option>
-          <option value="reggaeton">Reggaeton</option>
-          <option value="tech">Tech</option>
-          <option value="techno">Techno</option>
+          <option value="Trap">Trap</option>
+          <option value="Hip Hop">Hip Hop</option>
+          <option value="Reggaeton">Reggaeton</option>
+          <option value="Drill">Drill</option>
+          <option value="R&B">R&B</option>
+          <option value="Afrobeats">Afrobeats</option>
+          <option value="Lo-Fi">Lo-Fi</option>
+          <option value="Pop">Pop</option>
         </select>
         <select id="priceFilter" class="filter-select" onchange="filtrarBeats()">
           <option value="">Ordenar por precio</option>
@@ -1084,6 +1007,30 @@
         </div>
       </div>
 
+      <div id="infoBeatYoutubeContainer" style="margin-bottom: 25px; display: none;">
+        <a id="infoBeatYoutubeBtn" href="" target="_blank" style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          width: 100%;
+          padding: 16px;
+          background: #FF0000;
+          color: white;
+          text-decoration: none;
+          border-radius: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          font-size: 0.9rem;
+          transition: all 0.3s;
+          box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        ">
+          <i class="fab fa-youtube" style="font-size: 1.5rem;"></i>
+          Ver en YouTube
+        </a>
+      </div>
+
       <button class="btn-accent" id="btnLoQuiero">LO QUIERO</button>
       <button class="btn-secondary" onclick="cerrarModal('modalInfoBeat')">Volver</button>
     </div>
@@ -1127,79 +1074,127 @@
   <div class="modal" id="modalBeat">
     <div class="modal-content">
       <div class="modal-header">
-         <button class="btn-secondary" onclick="cerrarModal('modalBeat')">   <i class="fas fa-edit"></i>EDITAR O ELIMINAR <i class="fas fa-trash"></i><b style="color: black !important;">| BEAT</b> </button>
-        <h2 id="modalTitle">Nuevo <b style="color: black !important;">| BEAT</b></h2>
+   <button class="btn-accent" onclick="cerrarModal('modalBeat')" >
+              <i class="fas fa-edit"></i>Editar o Eliminar<i class="fas fa-trash"></i><b>| Beat</b>
+            </button>   
+        <h2 id="modalTitle">Nuevo Beat</h2>
       </div>
       
       <input type="hidden" id="beatId">
       
-      <!-- IMAGEN DESDE ARCHIVO -->
-      <div class="form-group">
-        <label>Imagen de Portada</label>
-        <div class="file-input-wrapper">
-          <input type="file" id="beatFotoFile" accept="image/*">
-          <label for="beatFotoFile" class="file-input-label" id="fotoLabel">
-            <i class="fas fa-image" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>
-            Arrastra o haz click para subir la imagen
-          </label>
-        </div>
-        <div class="preview-container" id="fotoPreview">
-          <img id="previewImg" src="" alt="Preview">
-        </div>
-        <input type="hidden" id="beatFoto">
-      </div>
-
       <div class="form-group">
         <label>Nombre del Beat</label>
-        <input type="text" id="beatNombre" placeholder="Ej: Dark Trap Beat 2024">
+        <input type="text" id="beatNombre" placeholder="Ej: Dark Night">
       </div>
 
       <div class="form-group">
-        <label>Género / Estilo</label>
-        <select id="beatGenero" class="filter-select" style="width: 100%; border: 2px solid var(--border);">
-          <option value="trap">Trap</option>
-          <option value="hiphop">Hiphop</option>
-          <option value="reggaeton">Reggaeton</option>
-          <option value="tech">Tech</option>
-          <option value="techno">Techno</option>
+        <label>Type Beat (Estilo)</label>
+        <select id="beatGenero" style="width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem;">
+          <option value="">Selecciona un estilo</option>
+          <option value="Trap">Trap</option>
+          <option value="Hip Hop">Hip Hop</option>
+          <option value="Reggaeton">Reggaeton</option>
+          <option value="Drill">Drill</option>
+          <option value="R&B">R&B</option>
+          <option value="Dancehall">Dancehall</option>
+          <option value="Afrobeats">Afrobeats</option>
+          <option value="Boom Bap">Boom Bap</option>
+          <option value="Lo-Fi">Lo-Fi</option>
+          <option value="Pop">Pop</option>
+          <option value="House">House</option>
+          <option value="Techno">Techno</option>
+          <option value="Jersey Club">Jersey Club</option>
+          <option value="Pluggnb">Pluggnb</option>
+          <option value="Rage">Rage</option>
         </select>
       </div>
 
-      <!-- PRECIOS MP3 Y WAV -->
-      <div class="form-group">
-        <label>Precios</label>
-        <div class="price-row">
-          <div class="form-group">
-            <label style="font-size: 0.65rem; color: #666;">MP3 (CLP)</label>
-            <input type="text" id="beatPrecioMP3" placeholder="15.000" oninput="formatearPrecioInput(this); actualizarPreviewPrecios()">
-          </div>
-          <div class="form-group">
-            <label style="font-size: 0.65rem; color: #666;">WAV (CLP)</label>
-            <input type="text" id="beatPrecioWAV" placeholder="25.000" oninput="formatearPrecioInput(this); actualizarPreviewPrecios()">
-          </div>
+      <div class="price-row">
+        <div class="form-group">
+          <label>Precio MP3 (CLP)</label>
+          <input type="text" id="beatPrecioMP3" oninput="formatearPrecioInput(this); actualizarPreviewPrecios()" placeholder="0">
         </div>
+        <div class="form-group">
+          <label>Precio WAV (CLP)</label>
+          <input type="text" id="beatPrecioWAV" oninput="formatearPrecioInput(this); actualizarPreviewPrecios()" placeholder="0">
+        </div>
+      </div>
+
+      <div class="form-group">
         <div class="price-preview" id="previewPrecios">
           MP3: $0 CLP ($0 USD) | WAV: $0 CLP ($0 USD)
         </div>
       </div>
 
       <div class="form-group">
+        <label>Key</label>
+        <input type="text" id="beatKey" placeholder="Ej: Am, C#m">
+      </div>
+
+      <div class="form-group">
+        <label>BPM</label>
+        <div class="number-control">
+          <button class="number-btn" onclick="cambiarValorManual('beatBpm', -1)">-</button>
+          <input type="number" id="beatBpm" value="140" style="text-align:center; font-weight:700; border:none; background:transparent; width:60px;">
+          <button class="number-btn" onclick="cambiarValorManual('beatBpm', 1)">+</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Duración (Minutos:Segundos)</label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div class="number-control" style="flex:1;">
+            <button class="number-btn" onclick="cambiarValorManual('beatDurMin', -1)">-</button>
+            <input type="number" id="beatDurMin" value="2" min="0" oninput="actualizarDisplayManual('beatDurMin')" style="width:100%; text-align:center; border:none; background:transparent; font-weight:800; font-size:1.1rem;">
+            <button class="number-btn" onclick="cambiarValorManual('beatDurMin', 1)">+</button>
+          </div>
+          <span style="font-weight:700;">:</span>
+          <div class="number-control" style="flex:1;">
+            <button class="number-btn" onclick="cambiarValorManual('beatDurSec', -5)">-</button>
+            <input type="number" id="beatDurSec" value="30" min="0" max="59" oninput="actualizarDisplayManual('beatDurSec')" style="width:100%; text-align:center; border:none; background:transparent; font-weight:800; font-size:1.1rem;">
+            <button class="number-btn" onclick="cambiarValorManual('beatDurSec', 5)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label>Descripción</label>
-        <textarea id="beatDesc" placeholder="Estilo, BPM, mood..."></textarea>
+        <textarea id="beatDesc" placeholder="Estilo, mood..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Link de YouTube (Opcional)</label>
+        <input type="text" id="beatYoutube" placeholder="https://www.youtube.com/watch?v=...">
       </div>
 
       <!-- AUDIO DESDE ARCHIVO -->
       <div class="form-group">
-        <label>Archivo de Audio (MP3/WAV)</label>
+        <label>Archivo de Audio</label>
         <div class="file-input-wrapper">
-          <input type="file" id="beatAudio" accept="audio/mp3,audio/wav,audio/mpeg,audio/wave">
+          <input type="file" id="beatAudio" accept="audio/*">
           <label for="beatAudio" class="file-input-label" id="audioLabel">
-            <i class="fas fa-music" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i><h1 style="color: black;">CAMBIAR BEAT</h1>
-            Arrastra o haz click para subir el beat
+            <i class="fas fa-music" style="display:block; font-size:1.5rem; margin-bottom:10px; color:var(--primary);"></i>
+            Subir Beat
           </label>
         </div>
         <div class="preview-container" id="audioPreview">
           <audio id="previewPlayer" controls></audio>
+        </div>
+      </div>
+
+      <!-- IMAGEN DESDE ARCHIVO -->
+      <div class="form-group">
+        <label>Imagen de Portada</label>
+        <div class="file-input-wrapper">
+          <input type="file" id="beatFotoFile" accept="image/*">
+          <label for="beatFotoFile" class="file-input-label" id="fotoLabel">
+            <i class="fas fa-image" style="display:block; font-size:1.5rem; margin-bottom:10px; color:var(--primary);"></i>
+            Subir Portada
+          </label>
+        </div>
+        <input type="hidden" id="beatFoto">
+        <div class="preview-container" id="fotoPreview">
+          <img id="previewImg" src="" alt="Preview">
         </div>
       </div>
 
@@ -1224,8 +1219,8 @@
 
       <div style="margin-bottom: 20px;">
         <div class="form-group">
-          <label>Tu Nombre</label>
-          <input type="text" id="customerName" placeholder="Tu Nombre">
+          <label style="color: black";>Tu Nombre</label>
+          <input style="border: 2px solid red ;" type="text" id="customerName" placeholder="Tu Nombre">
         </div>
         <div hidden class="form-group">
           <label>Email</label>
@@ -1318,7 +1313,9 @@
 
       beatsFiltrados = beats.filter(beat => {
         const matchesSearch = beat.nombre.toLowerCase().includes(search);
-        const matchesGenre = !genre || beat.genero === genre;
+        // Compatibilidad con Type Beat
+        const beatGenre = (beat.genero || '').toLowerCase();
+        const matchesGenre = !genre || beatGenre.includes(genre.toLowerCase());
         return matchesSearch && matchesGenre;
       });
 
@@ -1430,6 +1427,10 @@
         preview.pause();
         preview.src = '';
       }
+      if (id === 'modalInfoBeat') {
+        document.getElementById('infoBeatYoutubeContainer').style.display = 'none';
+        document.getElementById('infoBeatYoutubeBtn').href = '';
+      }
     };
 
     // Formatear precio con puntos automáticos
@@ -1473,7 +1474,7 @@
         const reader = new FileReader();
         reader.onloadend = function() {
           fotoLabel.classList.add('has-file');
-          fotoLabel.innerHTML = `<i class="fas fa-check" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>${file.name}`;
+          fotoLabel.innerHTML = `<i class="fas fa-check-circle"></i> CAMBIAR PORTADA<br><span style="font-size:0.7rem; opacity:0.7;">${file.name}</span>`;
           previewImg.src = reader.result;
           fotoPreview.classList.add('active');
           fotoHidden.value = reader.result;
@@ -1497,7 +1498,7 @@
         }
         
         audioLabel.classList.add('has-file');
-        audioLabel.innerHTML = `<i class="fas fa-check" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>${file.name}`;
+        audioLabel.innerHTML = `<i class="fas fa-check-circle"></i> CAMBIAR BEAT<br><span style="font-size:0.7rem; opacity:0.7;">${file.name}</span>`;
         
         const url = URL.createObjectURL(file);
         previewPlayer.src = url;
@@ -1505,25 +1506,63 @@
       }
     });
 
+    window.cambiarValorManual = (id, delta) => {
+      const input = document.getElementById(id);
+      let val = parseInt(input.value) + delta;
+      
+      if (id === 'beatDurSec') {
+        if (val < 0) val = 55;
+        if (val > 55) val = 0;
+      } else if (id === 'beatBpm') {
+        if (val < 40) val = 40;
+        if (val > 250) val = 250;
+      } else {
+        if (val < 0) val = 0;
+      }
+      
+      input.value = val;
+    };
+
+    window.actualizarDisplayManual = (id) => {
+      const input = document.getElementById(id);
+      let val = parseInt(input.value) || 0;
+      
+      if (id === 'beatDurSec') {
+        if (val < 0) val = 0;
+        if (val > 59) val = 59;
+      } else {
+        if (val < 0) val = 0;
+      }
+      input.value = val;
+    };
+
     function limpiarFormulario() {
       document.getElementById('beatId').value = '';
       document.getElementById('beatNombre').value = '';
-      document.getElementById('beatGenero').value = 'trap';
+      document.getElementById('beatGenero').value = '';
       document.getElementById('beatPrecioMP3').value = '';
       document.getElementById('beatPrecioWAV').value = '';
       document.getElementById('previewPrecios').textContent = 'MP3: $0 CLP ($0 USD) | WAV: $0 CLP ($0 USD)';
+      
+      // Nuevos campos
+      document.getElementById('beatKey').value = '';
+      document.getElementById('beatBpm').value = 140;
+      document.getElementById('beatDurMin').value = 2;
+      document.getElementById('beatDurSec').value = 30;
+
       document.getElementById('beatDesc').value = '';
+      document.getElementById('beatYoutube').value = '';
       
       fotoInput.value = '';
       fotoLabel.classList.remove('has-file');
-      fotoLabel.innerHTML = `<i class="fas fa-image" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>Arrastra o haz click para subir la imagen`;
+      fotoLabel.innerHTML = `<i class="fas fa-image"></i> SUBIR PORTADA`;
       fotoPreview.classList.remove('active');
       previewImg.src = '';
       fotoHidden.value = '';
       
       audioInput.value = '';
       audioLabel.classList.remove('has-file');
-      audioLabel.innerHTML = `<i class="fas fa-music" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>Arrastra o haz click para subir el beat`;
+      audioLabel.innerHTML = `<i class="fas fa-music"></i> SUBIR BEAT`;
       audioPreview.classList.remove('active');
       previewPlayer.src = '';
       
@@ -1534,10 +1573,16 @@
       const id = document.getElementById('beatId').value;
       const foto = fotoHidden.value;
       const nombre = document.getElementById('beatNombre').value.trim();
-      const genero = document.getElementById('beatGenero').value;
+      const genero = document.getElementById('beatGenero').value.trim();
       const precioMP3 = parsePrecio(document.getElementById('beatPrecioMP3').value);
       const precioWAV = parsePrecio(document.getElementById('beatPrecioWAV').value);
+      const key = document.getElementById('beatKey').value.trim();
+      const bpm = document.getElementById('beatBpm').value;
+      const durMin = document.getElementById('beatDurMin').value;
+      const durSec = document.getElementById('beatDurSec').value;
+      const duracion = `${durMin}:${durSec.padStart(2, '0')}`;
       const descripcion = document.getElementById('beatDesc').value.trim();
+      const youtube = document.getElementById('beatYoutube').value.trim();
       const audioFile = audioInput.files[0];
 
       if (!nombre) {
@@ -1580,7 +1625,11 @@
           precioWAV: precioWAV,
           precioMP3USD: parseFloat((precioMP3 / USD_TO_CLP).toFixed(2)),
           precioWAVUSD: parseFloat((precioWAV / USD_TO_CLP).toFixed(2)),
+          key: key,
+          bpm: bpm,
+          duracion: duracion,
           descripcion: descripcion,
+          youtube: youtube,
           fecha: new Date().toISOString()
         };
 
@@ -1628,22 +1677,33 @@
         previewImg.src = beat.foto;
         fotoPreview.classList.add('active');
         fotoLabel.classList.add('has-file');
-        fotoLabel.innerHTML = `<i class="fas fa-image" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>CAMBIAR IMAGEN`;
+        fotoLabel.innerHTML = `<i class="fas fa-check-circle"></i> CAMBIAR PORTADA`;
       }
       
       document.getElementById('beatNombre').value = beat.nombre || '';
-      document.getElementById('beatGenero').value = beat.genero || 'trap';
+      document.getElementById('beatGenero').value = beat.genero || '';
       
       // Formatear precios con puntos
       document.getElementById('beatPrecioMP3').value = beat.precioMP3 ? beat.precioMP3.toLocaleString('es-CL') : '';
       document.getElementById('beatPrecioWAV').value = beat.precioWAV ? beat.precioWAV.toLocaleString('es-CL') : '';
       actualizarPreviewPrecios();
+
+      // Nuevos campos
+      document.getElementById('beatKey').value = beat.key || '';
+      document.getElementById('beatBpm').value = beat.bpm || 140;
+      
+      if (beat.duracion) {
+        const parts = beat.duracion.split(':');
+        document.getElementById('beatDurMin').value = parts[0];
+        document.getElementById('beatDurSec').value = parts[1];
+      }
       
       document.getElementById('beatDesc').value = beat.descripcion || '';
+      document.getElementById('beatYoutube').value = beat.youtube || '';
 
       if (beat.audio) {
         audioLabel.classList.add('has-file');
-        audioLabel.innerHTML = `<i class="fas fa-music" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>${beat.audioName || 'Audio guardado'}`;
+        audioLabel.innerHTML = `<i class="fas fa-check-circle"></i> CAMBIAR BEAT`;
         previewPlayer.src = beat.audio;
         audioPreview.classList.add('active');
       }
@@ -1687,10 +1747,6 @@
           prevBtn.innerHTML = '<i class="fas fa-play"></i>';
           prevBtn.classList.remove('playing');
         }
-        const prevCard = document.querySelector(`[data-beat="${audioActual}"]`).closest('.card');
-        if (prevCard) {
-          prevCard.querySelector('.visualizer').classList.remove('active');
-        }
       }
 
       // Si es el mismo beat que está sonando -> PAUSAR
@@ -1700,16 +1756,12 @@
           audioPlayerActual.pause();
           btn.innerHTML = '<i class="fas fa-play"></i>';
           btn.classList.remove('playing');
-          const card = btn.closest('.card');
-          card.querySelector('.visualizer').classList.remove('active');
           return;
         } else {
           // Está pausado, entonces reanudar
           audioPlayerActual.play();
           btn.innerHTML = '<i class="fas fa-pause"></i>';
           btn.classList.add('playing');
-          const card = btn.closest('.card');
-          card.querySelector('.visualizer').classList.add('active');
           return;
         }
       }
@@ -1723,17 +1775,27 @@
       audioPlayerActual = new Audio(beat.audio);
       audioPlayerActual.play();
       
+      // MOSTRAR AVISO DE SEGUNDO PLANO
+      const notice = document.getElementById('noticeBackground');
+      if (notice) {
+        notice.style.display = 'flex';
+        setTimeout(() => {
+          notice.style.opacity = '0';
+          setTimeout(() => {
+            notice.style.display = 'none';
+            notice.style.opacity = '1';
+          }, 300);
+        }, 4500);
+      }
+
       btn.innerHTML = '<i class="fas fa-pause"></i>';
       btn.classList.add('playing');
-      const card = btn.closest('.card');
-      card.querySelector('.visualizer').classList.add('active');
       audioActual = id;
       beatActual = beat;
       
       audioPlayerActual.onended = () => {
         btn.innerHTML = '<i class="fas fa-play"></i>';
         btn.classList.remove('playing');
-        card.querySelector('.visualizer').classList.remove('active');
         if (audioActual === id) {
           audioActual = null;
           beatActual = null;
@@ -1745,7 +1807,6 @@
         if (audioActual === id) {
           btn.innerHTML = '<i class="fas fa-play"></i>';
           btn.classList.remove('playing');
-          card.querySelector('.visualizer').classList.remove('active');
         }
       };
     };
@@ -1920,14 +1981,15 @@
                   $${item.precioCLP.toLocaleString('es-CL')} CLP 
                   <span style="color:#999; font-weight:400;">($${item.precioUSD} USD)</span>
                 </div>
-                <button class="btn-delete-item" onclick="borrarDelCarrito(${i})">Eliminar</button>
+                <button class="btn-delete-item" onclick="borrarDelCarrito(${i})">
+                  <i class="fas fa-trash"></i> Eliminar
+                </button>
               </div>
               <div style="text-align:right;">
                 <div style="font-weight:800; font-size:1.2rem; color:var(--accent);">
                   $${subtotalCLP.toLocaleString('es-CL')}
                 </div>
                 <div style="font-size:0.8rem; color:#999;">$${subtotalUSD.toFixed(2)} USD</div>
-                <div style="font-size:0.75rem; color:#666; margin-top:5px;">Cantidad: 1</div>
               </div>
             </div>
           `;
@@ -1999,10 +2061,29 @@
 
       document.getElementById('infoBeatNombre').textContent = beat.nombre;
       document.getElementById('infoBeatFoto').src = beat.foto || 'https://via.placeholder.com/400x400/1a1a1a/ffffff?text=No+Cover';
-      document.getElementById('infoBeatGenero').textContent = beat.genero || 'No especificado';
+      
+      let metaHtml = `<span>${beat.genero || 'Type Beat'}</span>`;
+      if (beat.bpm) metaHtml += `<span> | ${beat.bpm} BPM</span>`;
+      if (beat.key) metaHtml += `<span> | ${beat.key}</span>`;
+      if (beat.duracion) metaHtml += `<span> | ${beat.duracion}</span>`;
+      
+      document.getElementById('infoBeatGenero').innerHTML = metaHtml;
       document.getElementById('infoBeatDesc').textContent = beat.descripcion || 'Sin descripción';
       document.getElementById('infoBeatPrecioMP3').textContent = formatPriceCLP(beat.precioMP3);
       document.getElementById('infoBeatPrecioWAV').textContent = formatPriceCLP(beat.precioWAV);
+
+      // YouTube Link
+      const youtubeUrl = beat.youtube;
+      const youtubeContainer = document.getElementById('infoBeatYoutubeContainer');
+      const youtubeBtn = document.getElementById('infoBeatYoutubeBtn');
+      
+      if (youtubeUrl && youtubeUrl.trim() !== "") {
+        youtubeBtn.href = youtubeUrl;
+        youtubeContainer.style.display = 'block';
+      } else {
+        youtubeBtn.href = '';
+        youtubeContainer.style.display = 'none';
+      }
 
       const btnLoQuiero = document.getElementById('btnLoQuiero');
       btnLoQuiero.onclick = () => {
@@ -2040,8 +2121,6 @@
           precioDisplay = `Desde ${formatPriceCLP(precioMin)}`;
         }
         
-        const precioUSDDisplay = beat.precioMP3USD ? `$${beat.precioMP3USD} USD` : 'Gratis';
-
         const adminHtml = `
           <div class="admin-controls ${isAdmin ? 'active' : ''}">
             <button class="admin-btn edit" onclick="editarBeat('${beat.id}')" title="Editar">
@@ -2059,27 +2138,22 @@
           <div class="card">
             ${adminHtml}
             <div class="price-tag">${precioDisplay}</div>
-            <div class="price-usd">${precioUSDDisplay}</div>
             <div class="card-img">
               <img src="${beat.foto}" alt="${beat.nombre}" onerror="this.src='https://via.placeholder.com/400x400/1a1a1a/ffffff?text=No+Cover'">
               <button class="play-btn" data-beat="${beat.id}" onclick="togglePlay('${beat.id}', this)" style="${tieneAudio}">
                 <i class="fas fa-play"></i>
               </button>
-              <div class="visualizer">
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-              </div>
             </div>
             <div class="card-info">
               <h3>${beat.nombre}</h3>
-              <div style="font-size: 0.8rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 10px;">
-                ${beat.genero || 'Beat'}
+              <div class="beat-meta-tags">
+                <span class="meta-tag">${beat.genero || 'Type Beat'}</span>
+                ${beat.bpm ? `<span class="meta-tag">${beat.bpm} BPM</span>` : ''}
+                ${beat.key ? `<span class="meta-tag">${beat.key}</span>` : ''}
+                ${beat.duracion ? `<span class="meta-tag">${beat.duracion}</span>` : ''}
               </div>
               <button class="btn-add-cart" onclick="verInfo('${beat.id}')">
-                <i class="fas fa-info-circle"></i> VER INFO
+                VER INFO
               </button>
             </div>
           </div>
