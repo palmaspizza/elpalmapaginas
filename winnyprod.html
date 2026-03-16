@@ -1013,6 +1013,16 @@
       </div>
     </div>
 
+    <!-- Contador visible en la página --> 
+    <div id="contadorBeats" style=" 
+      text-align:center; 
+      font-size:1.5rem; 
+      font-weight:800; 
+      color:#04437e; 
+      margin:20px 0;"> 
+      0 BEATS 
+    </div> 
+
     <div class="grid" id="listaBeats"></div>
     
     <div class="empty-state" id="emptyState" style="display:none;">
@@ -1092,7 +1102,7 @@
       </div>
 
       <div class="format-selection">
-        <button class="format-btn" id="btnMP3" onclick="seleccionarFormato('MP3')">
+        <button class="format-btn" id="btnMP3" onclick="seleccionarFormato('MP3');reproducirBeatAgregado()">
           <div class="format-info">
             <span class="format-name">MP3</span>
             <span class="format-desc">Calidad estándar 320kbps</span>
@@ -1100,7 +1110,7 @@
           <span class="format-price" id="precioMP3"></span>
         </button>
         
-        <button class="format-btn" id="btnWAV" onclick="seleccionarFormato('WAV')">
+        <button class="format-btn" id="btnWAV" onclick="seleccionarFormato('WAV');reproducirBeatAgregado()">
           <div class="format-info">
             <span class="format-name">WAV</span>
             <span class="format-desc">Calidad sin pérdida (Lossless)</span>
@@ -1193,7 +1203,7 @@
         </div>
       </div>
 
-      <button class="btn-accent" onclick="guardarBeat()">Guardar Beat</button>
+      <button id="btnGuardarBeat" class="btn-accent" onclick="guardarBeat()">Guardar Beat</button>
       <button class="btn-secondary" onclick="cerrarModal('modalBeat')">Cancelar</button>
     </div>
   </div>
@@ -1293,6 +1303,7 @@
       beatsFiltrados = [...beats];
       filtrarBeats();
       actualizarCarritoUI();
+      actualizarContadorBeats();
       
       // Solo ocultar automáticamente si no estamos guardando un beat
       if (!isSaving) {
@@ -2076,88 +2087,103 @@
       });
     }
 
+    window.actualizarContadorBeats = () => {
+      const totalBeats = beats.length;
+      const counterEl = document.getElementById("contadorBeats");
+      if (counterEl) {
+        counterEl.innerText = `${totalBeats} BEATS`;
+      }
+    };
+
+    window.verificarLimiteBeats = () => {
+      const totalBeats = beats.length;
+      const limite = 250;       // límite aproximado del plan gratuito 
+      const alertaMinima = 240;   // como pidió el usuario "240 o más"
+
+      if (totalBeats >= alertaMinima) { 
+        const restantes = Math.max(0, limite - totalBeats); 
+        mostrarAlerta(`QUEDAN ${restantes} BEATS DISPONIBLES. 
+        ELIMINA AL MENOS 10 BEATS PARA NO QUEDARTE SIN ALMACENAMIENTO EN EL PLAN GRATUITO.`); 
+      } 
+      
+      actualizarContadorBeats();
+    };
+
+    window.mostrarAlerta = (mensaje) => {
+      const overlay = document.createElement("div"); 
+      overlay.style.position = "fixed"; 
+      overlay.style.top = "0"; 
+      overlay.style.left = "0"; 
+      overlay.style.width = "100%"; 
+      overlay.style.height = "100%"; 
+      overlay.style.background = "rgba(0,0,0,0.85)"; 
+      overlay.style.color = "white"; 
+      overlay.style.display = "flex"; 
+      overlay.style.flexDirection = "column"; 
+      overlay.style.alignItems = "center"; 
+      overlay.style.justifyContent = "center"; 
+      overlay.style.fontSize = "1.5rem"; 
+      overlay.style.zIndex = "9999"; 
+      overlay.style.textAlign = "center"; 
+      overlay.style.padding = "20px"; 
+    
+      const mensajeDiv = document.createElement("div"); 
+      mensajeDiv.innerText = mensaje; 
+    
+      const botonOk = document.createElement("button"); 
+      botonOk.innerText = "Ok"; 
+      botonOk.style.marginTop = "20px"; 
+      botonOk.style.padding = "10px 20px"; 
+      botonOk.style.fontSize = "1rem"; 
+      botonOk.style.fontWeight = "800"; 
+      botonOk.style.background = "#04437e"; 
+      botonOk.style.color = "white"; 
+      botonOk.style.border = "none"; 
+      botonOk.style.borderRadius = "8px"; 
+      botonOk.style.cursor = "pointer"; 
+    
+      botonOk.addEventListener("click", () => { 
+        document.body.removeChild(overlay); 
+      }); 
+    
+      overlay.appendChild(mensajeDiv); 
+      overlay.appendChild(botonOk); 
+    
+      document.body.appendChild(overlay); 
+    };
+
     window.onclick = (e) => {
       if (e.target.classList.contains('modal')) {
         e.target.classList.remove('active');
       }
     };
 
+    // Función para reproducir el audio al agregar al carrito
+    window.reproducirBeatAgregado = () => {
+      // Crear un objeto de audio con el archivo
+      const audio = new Audio("beatagregadosong.mp3");
+
+      // Reinicia desde el inicio cada vez que se llama
+      audio.currentTime = 0;
+
+      // Reproduce el archivo
+      audio.play()
+        .then(() => {
+          console.log("Reproduciendo beatagregadosong.mp3");
+        })
+        .catch(error => {
+          console.error("Error al reproducir el audio:", error);
+        });
+    };
+
     actualizarCarritoUI();
+    actualizarContadorBeats();
+
+    // Integrar la verificación al botón GUARDAR BEAT ya existente 
+    const btnGuardar = document.getElementById("btnGuardarBeat");
+    if (btnGuardar) {
+      btnGuardar.addEventListener("click", verificarLimiteBeats); 
+    }
   </script>
-  <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, push, onValue } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-
- 
-  // Guardar beat con audio + portada
-  async function guardarBeat() {
-    const nombre = document.getElementById("beatNombre").value;
-    const genero = document.getElementById("beatGenero").value;
-    const desc = document.getElementById("beatDesc").value;
-    const precioMP3 = document.getElementById("beatPrecioMP3").value;
-    const precioWAV = document.getElementById("beatPrecioWAV").value;
-
-    const archivoAudio = document.getElementById("beatAudio").files[0];
-    const archivoImagen = document.getElementById("beatFotoFile").files[0];
-
-    if (!archivoAudio) {
-      alert("Debes subir un archivo de audio");
-      return;
-    }
-
-    // Subir audio
-    const audioRef = storageRef(storage, `beats/${archivoAudio.name}`);
-    await uploadBytes(audioRef, archivoAudio);
-    const urlAudio = await getDownloadURL(audioRef);
-
-    // Subir imagen
-    let urlImagen = "";
-    if (archivoImagen) {
-      const imgRef = storageRef(storage, `beats_portadas/${archivoImagen.name}`);
-      await uploadBytes(imgRef, archivoImagen);
-      urlImagen = await getDownloadURL(imgRef);
-    }
-
-    // Guardar en DB
-    const nuevoBeat = { nombre, genero, descripcion: desc, precioMP3, precioWAV, urlAudio, urlImagen };
-    push(beatsRef, nuevoBeat);
-    alert("Beat guardado correctamente");
-  }
-
-  // Renderizar beats desde DB
-  onValue(beatsRef, snapshot => {
-    const cont = document.getElementById("listaBeats");
-    cont.innerHTML = "";
-    if (!snapshot.exists()) {
-      document.getElementById("emptyState").style.display = "block";
-      return;
-    }
-    document.getElementById("emptyState").style.display = "none";
-
-    snapshot.forEach(child => {
-      const beat = child.val();
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <div class="card-img">
-          <img src="${beat.urlImagen || 'default.jpg'}" alt="${beat.nombre}">
-          <button class="play-btn" onclick="new Audio('${beat.urlAudio}').play()">
-            <i class="fas fa-play"></i>
-          </button>
-          <span class="price-tag">$${beat.precioMP3}</span>
-          <span class="price-usd">$${beat.precioWAV}</span>
-        </div>
-        <div class="card-info">
-          <h3>${beat.nombre}</h3>
-          <p>${beat.descripcion || ''}</p>
-        </div>
-      `;
-      cont.appendChild(card);
-    });
-  });
-</script>
 </body>
 </html>
