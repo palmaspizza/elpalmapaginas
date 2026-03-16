@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winnie Prod | Beats</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #000000;
+      --secondary: #ffffff;
+      --accent: #04437e; /* Lila suave */
+      --accent-light: #53c3d6;
+      --accent-bg: #f3e5f5;
+      --border: #e5e5e5;
+      --gray: #f5f5f5;
+    }
+
+    * { 
+      box-sizing: border-box; 
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      background: var(--secondary); 
+      color: var(--primary);
+      min-height: 100vh;
+    }
+
+    /* Search and Filters */
+    .filters-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 40px;
+      background: var(--accent-bg);
+      padding: 25px;
+      border-radius: 20px;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(177, 156, 217, 0.1);
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 250px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 14px 20px 14px 45px;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      background: white;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    .search-box i {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent);
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(177, 156, 217, 0.1);
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-select {
+      padding: 12px 18px;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      background: white;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      color: var(--primary);
+      min-width: 150px;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Animación de flujo en el header */
+    .flow-line {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--accent);
+      overflow: hidden;
+    }
+
+    .flow-line::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--accent-light), transparent);
+      animation: flow 2s infinite linear;
+    }
+
+    @keyframes flow {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Header */
+    .header-fixed { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      z-index: 1000; 
+      background: var(--secondary);
+      padding: 25px 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo { 
+      font-size: 1.6rem; 
+      font-weight: 800; 
+      color: var(--primary);
+      text-decoration: none; 
+      letter-spacing: -1px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .logo:hover {
+      color: var(--accent);
+    }
+
+    .logo span { 
+      color: var(--accent);
+      font-weight: 900;
+      position: relative;
+    }
+
+    .logo span::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transition: transform 0.3s;
+    }
+
+    .logo:hover span::after {
+      transform: scaleX(1);
+    }
+
+    .press-progress {
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.1s linear;
+      border-radius: 2px;
+    }
+
+    .nav-icons { 
+      display: flex; 
+      gap: 20px; 
+    }
+    
+    .icon-btn { 
+      background: none; 
+      border: none; 
+      color: var(--primary); 
+      font-size: 1.2rem; 
+      cursor: pointer; 
+      transition: all 0.3s;
+      width: 45px;
+      height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      position: relative;
+      border: 2px solid transparent;
+    }
+
+    .icon-btn:hover { 
+      background: var(--accent-bg);
+      color: var(--accent);
+      border-color: var(--accent);
+      transform: scale(1.1);
+    }
+
+    .badge { 
+      position: absolute; 
+      top: -5px; 
+      right: -5px; 
+      background: var(--accent); 
+      color: white;
+      font-size: 0.7rem; 
+      padding: 3px 6px; 
+      border-radius: 12px; 
+      font-weight: 800;
+      min-width: 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);
+    }
+
+    /* Loader */
+    #loader { 
+      position: fixed; 
+      inset: 0; 
+      background: var(--accent-bg); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 3000; 
+      flex-direction: column;
+    }
+
+    .loader-text { 
+      font-size: 0.9rem; 
+      letter-spacing: 0.3em; 
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse { 
+      0%, 100% { opacity: 0.4; transform: scale(1); } 
+      50% { opacity: 1; transform: scale(1.05); } 
+    }
+
+    /* Main Container */
+    .container { 
+      max-width: 1200px; 
+      margin: 120px auto 60px; 
+      padding: 0 5%;
+    }
+
+    /* Grid de Beats */
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+      gap: 40px; 
+    }
+
+    .card { 
+      background: var(--secondary); 
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(255, 59, 48, 0.08);
+      transition: all 0.3s ease;
+      position: relative;
+      border: 2px solid transparent;
+    }
+
+    .card:hover { 
+      transform: translateY(-10px);
+      box-shadow: 0 15px 50px rgba(255, 59, 48, 0.15);
+      border-color: var(--accent-light);
+    }
+
+    .card-img { 
+      height: 280px; 
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-img img { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover; 
+      transition: transform 0.5s;
+    }
+
+    .card:hover .card-img img { 
+      transform: scale(1.08);
+    }
+
+    /* Play button */
+    .play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 4px solid white;
+      box-shadow: 0 6px 25px rgba(255, 59, 48, 0.5);
+      z-index: 5;
+    }
+
+    .play-btn:hover { 
+      transform: translate(-50%, -50%) scale(1.15);
+      box-shadow: 0 10px 35px rgba(255, 59, 48, 0.6);
+      background: #ff2d20;
+    }
+
+    .play-btn.playing {
+      background: white;
+      color: var(--accent);
+      animation: pulse-play 1.2s infinite;
+    }
+
+    @keyframes pulse-play {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.5); }
+      50% { box-shadow: 0 0 0 15px rgba(255, 59, 48, 0); }
+    }
+
+    /* Price tag */
+    .price-tag {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: var(--accent);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 25px;
+      font-weight: 800;
+      font-size: 1rem;
+      z-index: 5;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 20px rgba(255, 59, 48, 0.4);
+      border: 2px solid white;
+    }
+
+    .price-usd {
+      position: absolute;
+      top: 60px;
+      left: 15px;
+      background: white;
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      z-index: 5;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border: 2px solid var(--accent);
+    }
+
+    .card-info { 
+      padding: 25px; 
+      background: linear-gradient(to bottom, transparent, var(--accent-bg));
+    }
+
+    .card-info h3 { 
+      margin: 0 0 10px 0; 
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+    }
+
+    .card-info p { 
+      color: #555; 
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    /* Audio visualizer bars */
+    .visualizer {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 5;
+    }
+
+    .visualizer.active {
+      opacity: 1;
+    }
+
+    .bar {
+      width: 5px;
+      background: var(--accent);
+      border-radius: 3px;
+      animation: dance 0.5s ease-in-out infinite alternate;
+    }
+
+    .bar:nth-child(1) { animation-delay: 0s; height: 15px; }
+    .bar:nth-child(2) { animation-delay: 0.1s; height: 28px; }
+    .bar:nth-child(3) { animation-delay: 0.2s; height: 20px; }
+    .bar:nth-child(4) { animation-delay: 0.3s; height: 25px; }
+    .bar:nth-child(5) { animation-delay: 0.4s; height: 18px; }
+
+    @keyframes dance {
+      from { transform: scaleY(0.4); }
+      to { transform: scaleY(1); }
+    }
+
+    /* Add to cart button */
+    .btn-add-cart {
+      width: 100%;
+      padding: 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .btn-add-cart:hover {
+      background: var(--accent);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255, 59, 48, 0.4);
+    }
+
+    .btn-add-cart:active {
+      transform: scale(0.97);
+    }
+
+    /* Admin Controls - OCULTOS POR DEFECTO */
+    .admin-controls {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .admin-controls.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .card:hover .admin-controls.active {
+      opacity: 1;
+    }
+
+    .admin-btn {
+      width: 38px;
+      height: 38px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+    }
+
+    .admin-btn.edit { 
+      background: white; 
+      color: var(--accent);
+      border: 2px solid var(--accent);
+    }
+    .admin-btn.edit:hover { 
+      background: var(--accent);
+      color: white;
+      transform: scale(1.1);
+    }
+    
+    .admin-btn.delete { 
+      background: var(--accent); 
+      color: white; 
+    }
+    .admin-btn.delete:hover { 
+      background: #ff2d20;
+      transform: scale(1.1);
+    }
+
+    /* Modals */
+    .modal { 
+      display: none; 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(255, 240, 240, 0.98); 
+      z-index: 2000; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 20px;
+    }
+
+    .modal.active { display: flex; }
+
+    .modal-content { 
+      background: var(--secondary); 
+      border: 2px solid var(--accent);
+      padding: 45px; 
+      width: 100%;
+      max-width: 600px; 
+      max-height: 90vh; 
+      overflow-y: auto;
+      box-shadow: 0 25px 80px rgba(255, 59, 48, 0.15);
+      border-radius: 20px;
+    }
+
+    .modal-header {
+      margin-bottom: 35px;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--accent);
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 16px;
+      border: 2px solid var(--border);
+      font-size: 1rem;
+      transition: all 0.3s;
+      background: var(--secondary);
+      color: var(--primary);
+      border-radius: 10px;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    /* File inputs */
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+
+    .file-input-label {
+      display: block;
+      padding: 20px;
+      border: 3px dashed var(--accent-light);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      color: var(--accent);
+      font-size: 0.95rem;
+      border-radius: 12px;
+      background: var(--accent-bg);
+      font-weight: 600;
+    }
+
+    .file-input-label:hover {
+      border-color: var(--accent);
+      background: white;
+      transform: scale(1.02);
+    }
+
+    .file-input-label.has-file {
+      border-color: var(--accent);
+      background: white;
+      color: var(--accent);
+      border-style: solid;
+    }
+
+    .preview-container {
+      margin-top: 15px;
+      padding: 15px;
+      background: var(--accent-bg);
+      border-radius: 12px;
+      display: none;
+      border: 2px solid var(--accent-light);
+    }
+
+    .preview-container.active {
+      display: block;
+    }
+
+    .preview-container img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .preview-container audio {
+      width: 100%;
+    }
+
+    /* Botones */
+    .btn-accent {
+      width: 100%;
+      padding: 18px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 15px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(255, 59, 48, 0.3);
+    }
+
+    .btn-accent:hover {
+      background: #ff2d20;
+      box-shadow: 0 10px 35px rgba(255, 59, 48, 0.4);
+      transform: translateY(-3px);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 16px;
+      background: transparent;
+      color: var(--accent);
+      border: 2px solid var(--accent);
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 12px;
+      border-radius: 12px;
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* Modal Login */
+    .modal-login {
+      text-align: center;
+    }
+
+    .modal-login h2 {
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+
+    .modal-login p {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+
+    .login-icon {
+      font-size: 3rem;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    /* Cart Modal */
+    .cart-header-accent {
+      background: var(--accent);
+      color: white;
+      padding: 25px;
+      border-radius: 16px 16px 0 0;
+      text-align: center;
+      margin: -45px -45px 30px -45px;
+    }
+
+    .cart-item { 
+      display: grid; 
+      grid-template-columns: 80px 1fr auto; 
+      gap: 18px; 
+      padding: 20px 0; 
+      border-bottom: 2px solid var(--accent-bg); 
+      align-items: center; 
+    }
+
+    .cart-img-min { 
+      width: 70px; 
+      height: 70px; 
+      object-fit: cover; 
+      border-radius: 12px;
+      border: 2px solid var(--accent-light);
+    }
+
+    .cart-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .cart-item-format {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .qty-controls { 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      background: var(--accent-bg); 
+      padding: 8px; 
+      border-radius: 10px; 
+    }
+
+    .btn-qty { 
+      width: 32px; 
+      height: 32px; 
+      border: none; 
+      background: var(--accent); 
+      color: white; 
+      border-radius: 8px; 
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+
+    .btn-qty:hover {
+      background: #ff2d20;
+      transform: scale(1.1);
+    }
+
+    .btn-qty:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .qty-input { 
+      width: 40px; 
+      text-align: center; 
+      border: none; 
+      background: transparent; 
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+
+    .btn-delete-item { 
+      color: var(--accent); 
+      background: none; 
+      border: none; 
+      cursor: pointer; 
+      font-size: 0.8rem;
+      text-decoration: underline;
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+    }
+
+    .cart-total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 30px 0;
+      padding-top: 25px;
+      border-top: 3px solid var(--accent);
+      color: var(--accent);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 100px 20px;
+      border: 3px dashed var(--accent-light);
+      border-radius: 20px;
+      background: var(--accent-bg);
+    }
+
+    .empty-state h3 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+    }
+
+    .empty-state p {
+      color: #666;
+      font-size: 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container { margin-top: 100px; padding: 0 20px; }
+      .grid { grid-template-columns: 1fr; gap: 30px; }
+      .modal-content { padding: 30px; }
+      .header-fixed { padding: 20px; }
+      .logo { font-size: 1.4rem; }
+    }
+
+    /* Animaciones */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card { animation: fadeIn 0.6s ease-out; }
+
+    /* Flying animation for cart */
+    .flying-item {
+      position: fixed;
+      z-index: 2500;
+      pointer-events: none;
+      font-size: 2rem;
+      color: var(--accent);
+    }
+
+    /* Modal selección de formato */
+    .format-selection {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .format-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .format-btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+      transform: translateY(-2px);
+    }
+
+    .format-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: white;
+    }
+
+    .format-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .format-name {
+      font-weight: 800;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+    }
+
+    .format-desc {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .format-price {
+      font-weight: 800;
+      font-size: 1.3rem;
+    }
+
+    .price-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .price-row .form-group {
+      margin-bottom: 0;
+    }
+
+    .price-preview {
+      background: var(--accent-bg);
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loader -->
+  <div id="loader">
+    <div class="loader-text">Cargando Beats</div>
+  </div>
+
+  <!-- Header - SOLO CARRITO VISIBLE -->
+  <header class="header-fixed">
+    <a href="#" class="logo" id="logoPress">
+      <span>Winnie</span> Prod
+      <div class="press-progress" id="pressProgress"></div>
+    </a>
+    <div class="nav-icons">
+      <button class="icon-btn" onclick="abrirModal('modalCarrito')" title="Carrito" id="cartBtn">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="badge" id="cartCount">0</span>
+      </button>
+    </div>
+    <div class="flow-line"></div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Search and Filters -->
+    <div class="filters-container">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Busca un beat por nombre..." oninput="filtrarBeats()">
+      </div>
+      <div class="filter-group">
+        <select id="genreFilter" class="filter-select" onchange="filtrarBeats()">
+          <option value="">Todos los estilos</option>
+          <option value="trap">Trap</option>
+          <option value="hiphop">Hiphop</option>
+          <option value="reggaeton">Reggaeton</option>
+          <option value="tech">Tech</option>
+          <option value="techno">Techno</option>
+        </select>
+        <select id="priceFilter" class="filter-select" onchange="filtrarBeats()">
+          <option value="">Ordenar por precio</option>
+          <option value="cheapest">Más económico</option>
+          <option value="expensive">Más caro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid" id="listaBeats"></div>
+    
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <h3>No hay beats disponibles</h3>
+      <p>Los beats aparecerán aquí una vez que sean agregados.</p>
+    </div>
+  </div>
+
+  <!-- Modal Login (aparece después de mantener presionado el logo) -->
+  <div class="modal" id="modalLogin">
+    <div class="modal-content modal-login" style="max-width: 400px;">
+      <div class="login-icon">
+        <i class="fas fa-lock"></i>
+      </div>
+      <h2>Acceso Admin</h2>
+      <p>Ingresa la contraseña para gestionar beats</p>
+      
+      <div class="form-group" style="margin-bottom: 20px;">
+        <input type="password" id="passInput" placeholder="Contraseña" style="text-align: center; font-size: 1.1rem;">
+      </div>
+      
+      <button class="btn-accent" onclick="login()">Ingresar</button>
+      <button class="btn-secondary" onclick="cancelarLogin()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal Info del Beat -->
+  <div class="modal" id="modalInfoBeat">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 id="infoBeatNombre"></h2>
+      </div>
+      
+      <div style="text-align: center; margin-bottom: 25px;">
+        <img id="infoBeatFoto" src="" alt="Portada" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+      </div>
+
+      <div class="form-group">
+        <label>Género / Estilo</label>
+        <p id="infoBeatGenero" style="font-size: 1.1rem; font-weight: 600; color: var(--accent); text-transform: capitalize;"></p>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción</label>
+        <p id="infoBeatDesc" style="font-size: 1rem; color: #555; line-height: 1.6;"></p>
+      </div>
+
+      <div class="form-group">
+        <label>Precios</label>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+          <div style="background: var(--accent-bg); padding: 10px 20px; border-radius: 10px; flex: 1; text-align: center;">
+            <span style="display: block; font-size: 0.7rem; color: #666; font-weight: 800; text-transform: uppercase;">MP3</span>
+            <span id="infoBeatPrecioMP3" style="font-weight: 800; color: var(--accent);"></span>
+          </div>
+          <div style="background: var(--accent-bg); padding: 10px 20px; border-radius: 10px; flex: 1; text-align: center;">
+            <span style="display: block; font-size: 0.7rem; color: #666; font-weight: 800; text-transform: uppercase;">WAV</span>
+            <span id="infoBeatPrecioWAV" style="font-weight: 800; color: var(--accent);"></span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-accent" id="btnLoQuiero">LO QUIERO</button>
+      <button class="btn-secondary" onclick="cerrarModal('modalInfoBeat')">Volver</button>
+    </div>
+  </div>
+
+  <!-- Modal Selección de Formato -->
+  <div class="modal" id="modalFormato">
+    <div class="modal-content" style="max-width: 450px;">
+      <div class="modal-header">
+        <h2>Selecciona el Formato</h2>
+      </div>
+      
+      <div id="formatoBeatInfo" style="margin-bottom: 20px; text-align: center;">
+        <h3 id="formatoBeatNombre" style="font-size: 1.3rem; margin-bottom: 5px;"></h3>
+        <p style="color: #666; font-size: 0.9rem;">¿Qué formato deseas comprar?</p>
+      </div>
+
+      <div class="format-selection">
+        <button class="format-btn" id="btnMP3" onclick="seleccionarFormato('MP3')">
+          <div class="format-info">
+            <span class="format-name">MP3</span>
+            <span class="format-desc">Calidad estándar 320kbps</span>
+          </div>
+          <span class="format-price" id="precioMP3"></span>
+        </button>
+        
+        <button class="format-btn" id="btnWAV" onclick="seleccionarFormato('WAV')">
+          <div class="format-info">
+            <span class="format-name">WAV</span>
+            <span class="format-desc">Calidad sin pérdida (Lossless)</span>
+          </div>
+          <span class="format-price" id="precioWAV"></span>
+        </button>
+      </div>
+
+      <button class="btn-secondary" onclick="cerrarModal('modalFormato')" style="margin-top: 10px;">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal Crear/Editar Beat (solo accesible vía admin) -->
+  <div class="modal" id="modalBeat">
+    <div class="modal-content">
+      <div class="modal-header">
+         <button class="btn-secondary" onclick="cerrarModal('modalBeat')">   <i class="fas fa-edit"></i>EDITAR O ELIMINAR <i class="fas fa-trash"></i><b style="color: black !important;">| BEAT</b> </button>
+        <h2 id="modalTitle">Nuevo <b style="color: black !important;">| BEAT</b></h2>
+      </div>
+      
+      <input type="hidden" id="beatId">
+      
+      <!-- IMAGEN DESDE ARCHIVO -->
+      <div class="form-group">
+        <label>Imagen de Portada</label>
+        <div class="file-input-wrapper">
+          <input type="file" id="beatFotoFile" accept="image/*">
+          <label for="beatFotoFile" class="file-input-label" id="fotoLabel">
+            <i class="fas fa-image" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>
+            Arrastra o haz click para subir la imagen
+          </label>
+        </div>
+        <div class="preview-container" id="fotoPreview">
+          <img id="previewImg" src="" alt="Preview">
+        </div>
+        <input type="hidden" id="beatFoto">
+      </div>
+
+      <div class="form-group">
+        <label>Nombre del Beat</label>
+        <input type="text" id="beatNombre" placeholder="Ej: Dark Trap Beat 2024">
+      </div>
+
+      <div class="form-group">
+        <label>Género / Estilo</label>
+        <select id="beatGenero" class="filter-select" style="width: 100%; border: 2px solid var(--border);">
+          <option value="trap">Trap</option>
+          <option value="hiphop">Hiphop</option>
+          <option value="reggaeton">Reggaeton</option>
+          <option value="tech">Tech</option>
+          <option value="techno">Techno</option>
+        </select>
+      </div>
+
+      <!-- PRECIOS MP3 Y WAV -->
+      <div class="form-group">
+        <label>Precios</label>
+        <div class="price-row">
+          <div class="form-group">
+            <label style="font-size: 0.65rem; color: #666;">MP3 (CLP)</label>
+            <input type="text" id="beatPrecioMP3" placeholder="15.000" oninput="formatearPrecioInput(this); actualizarPreviewPrecios()">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.65rem; color: #666;">WAV (CLP)</label>
+            <input type="text" id="beatPrecioWAV" placeholder="25.000" oninput="formatearPrecioInput(this); actualizarPreviewPrecios()">
+          </div>
+        </div>
+        <div class="price-preview" id="previewPrecios">
+          MP3: $0 CLP ($0 USD) | WAV: $0 CLP ($0 USD)
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea id="beatDesc" placeholder="Estilo, BPM, mood..."></textarea>
+      </div>
+
+      <!-- AUDIO DESDE ARCHIVO -->
+      <div class="form-group">
+        <label>Archivo de Audio (MP3/WAV)</label>
+        <div class="file-input-wrapper">
+          <input type="file" id="beatAudio" accept="audio/mp3,audio/wav,audio/mpeg,audio/wave">
+          <label for="beatAudio" class="file-input-label" id="audioLabel">
+            <i class="fas fa-music" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i><h1 style="color: black;">CAMBIAR BEAT</h1>
+            Arrastra o haz click para subir el beat
+          </label>
+        </div>
+        <div class="preview-container" id="audioPreview">
+          <audio id="previewPlayer" controls></audio>
+        </div>
+      </div>
+
+      <button class="btn-accent" onclick="guardarBeat()">Guardar Beat</button>
+      <button class="btn-secondary" onclick="cerrarModal('modalBeat')">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal Carrito -->
+  <div class="modal" id="modalCarrito">
+    <div class="modal-content" style="max-width: 650px;">
+      <div class="cart-header-accent">
+        <h2 style="margin:0; font-size:1.6rem;">🛒 Tu Carrito</h2>
+      </div>
+      
+      <div id="cartList"></div>
+      
+      <div class="cart-total">
+        <span>TOTAL</span>
+        <span id="cartTotal">$0 CLP</span>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Tu Nombre</label>
+          <input type="text" id="customerName" placeholder="Nombre completo">
+        </div>
+        <div hidden class="form-group">
+          <label>Email</label>
+          <input value="@" type="email" id="customerEmail" placeholder="tu@email.com">
+        </div>
+      </div>
+
+      <button class="btn-accent" onclick="enviarWhatsApp()" id="btnWhatsApp" disabled>
+        <i class="fab fa-whatsapp"></i> Comprar por WhatsApp
+      </button>
+      <button class="btn-secondary" onclick="cerrarModal('modalCarrito')">Seguir comprando</button>
+    </div>
+  </div>
+
+  <!-- Modal Confirmación -->
+  <div class="modal" id="modalConfirm">
+    <div class="modal-content" style="max-width:400px; text-align:center;">
+      <div class="modal-header" style="border:none; margin-bottom:20px;">
+        <h2 id="confirmTitle" style="color:var(--primary);">¿Eliminar?</h2>
+      </div>
+      <p id="confirmMessage" style="margin-bottom:30px; color:#666; font-size:1rem;">Esta acción no se puede deshacer.</p>
+      <button class="btn-accent" id="confirmAccept" style="background:var(--accent);">Eliminar</button>
+      <button class="btn-secondary" id="confirmCancel">Cancelar</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuHSlv7WEmoEWh96rWWCnTi7AwgN-7Hd4",
+      authDomain: "tatuajes-e7c8f.firebaseapp.com",
+      databaseURL: "https://tatuajes-e7c8f-default-rtdb.firebaseio.com/",
+      projectId: "tatuajes-e7c8f",
+      storageBucket: "tatuajes-e7c8f.appspot.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const beatsRef = ref(db, 'winnie_beats');
+
+    let beats = [];
+    let beatsFiltrados = [];
+    let carrito = [];
+    let isAdmin = false;
+    let accionPendiente = null;
+    let audioActual = null;
+    let beatActual = null;
+    let audioPlayerActual = null;
+    let longPressDetected = false;
+    let beatPendienteFormato = null;
+    let btnPendienteFormato = null;
+
+    // Tasa de conversión
+    const USD_TO_CLP = 950;
+
+    // Recuperar carrito del localStorage
+    try {
+      const stored = JSON.parse(localStorage.getItem('winnie_cart') || '[]');
+      if (Array.isArray(stored)) carrito = stored;
+    } catch (e) {
+      localStorage.removeItem('winnie_cart');
+    }
+
+    onValue(beatsRef, (snapshot) => {
+      beats = [];
+      snapshot.forEach((childSnapshot) => {
+        beats.push({
+          id: childSnapshot.key,
+          ...childSnapshot.val()
+        });
+      });
+      beatsFiltrados = [...beats];
+      filtrarBeats();
+      actualizarCarritoUI();
+      ocultarLoader();
+    });
+
+    window.filtrarBeats = () => {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const genre = document.getElementById('genreFilter').value;
+      const priceSort = document.getElementById('priceFilter').value;
+
+      beatsFiltrados = beats.filter(beat => {
+        const matchesSearch = beat.nombre.toLowerCase().includes(search);
+        const matchesGenre = !genre || beat.genero === genre;
+        return matchesSearch && matchesGenre;
+      });
+
+      if (priceSort === 'cheapest') {
+        beatsFiltrados.sort((a, b) => {
+          const precioA = Math.min(a.precioMP3 || 0, a.precioWAV || 0);
+          const precioB = Math.min(b.precioMP3 || 0, b.precioWAV || 0);
+          return precioA - precioB;
+        });
+      } else if (priceSort === 'expensive') {
+        beatsFiltrados.sort((a, b) => {
+          const precioA = Math.min(a.precioMP3 || 0, a.precioWAV || 0);
+          const precioB = Math.min(b.precioMP3 || 0, b.precioWAV || 0);
+          return precioB - precioA;
+        });
+      } else {
+        // Por defecto, por fecha (más nuevos primero)
+        beatsFiltrados.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+      }
+
+      render();
+    };
+
+    function ocultarLoader() {
+      setTimeout(() => {
+        document.getElementById('loader').style.display = 'none';
+      }, 800);
+    }
+
+    // Long press detection para el logo (3 segundos) -> Abre login
+    const logo = document.getElementById('logoPress');
+    const progress = document.getElementById('pressProgress');
+    let pressTimer;
+    let pressStartTime;
+
+    logo.addEventListener('mousedown', startPress);
+    logo.addEventListener('touchstart', startPress);
+    logo.addEventListener('mouseup', cancelPress);
+    logo.addEventListener('mouseleave', cancelPress);
+    logo.addEventListener('touchend', cancelPress);
+
+    function startPress(e) {
+      e.preventDefault();
+      longPressDetected = false;
+      pressStartTime = Date.now();
+      progress.style.width = '0%';
+      
+      pressTimer = setInterval(() => {
+        const elapsed = Date.now() - pressStartTime;
+        const percentage = Math.min((elapsed / 3000) * 100, 100);
+        progress.style.width = percentage + '%';
+        
+        if (elapsed >= 3000) {
+          clearInterval(pressTimer);
+          progress.style.width = '0%';
+          longPressDetected = true;
+          abrirModal('modalLogin');
+        }
+      }, 50);
+    }
+
+    function cancelPress() {
+      clearInterval(pressTimer);
+      progress.style.width = '0%';
+    }
+
+    // Sistema de Login
+    window.login = () => {
+      const pass = document.getElementById('passInput').value;
+      if (pass === '1234') {
+        isAdmin = true;
+        cerrarModal('modalLogin');
+        document.getElementById('passInput').value = '';
+        
+        mostrarControlesAdmin();
+        abrirModal('modalBeat');
+      } else {
+        alert('Contraseña incorrecta');
+      }
+    };
+
+    window.cancelarLogin = () => {
+      cerrarModal('modalLogin');
+      document.getElementById('passInput').value = '';
+      longPressDetected = false;
+    };
+
+    function mostrarControlesAdmin() {
+      document.querySelectorAll('.admin-controls').forEach(el => {
+        el.classList.add('active');
+      });
+      render();
+    }
+
+    window.abrirModal = (id) => {
+      document.getElementById(id).classList.add('active');
+      if (id === 'modalBeat' && !document.getElementById('beatId').value) {
+        limpiarFormulario();
+      }
+      if (id === 'modalCarrito') {
+        actualizarCarritoUI();
+      }
+    };
+
+    window.cerrarModal = (id) => {
+      document.getElementById(id).classList.remove('active');
+      if (id === 'modalBeat') {
+        const preview = document.getElementById('previewPlayer');
+        preview.pause();
+        preview.src = '';
+      }
+    };
+
+    // Formatear precio con puntos automáticos
+    window.formatearPrecioInput = (input) => {
+      let valor = input.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+      if (valor) {
+        input.value = parseInt(valor).toLocaleString('es-CL');
+      } else {
+        input.value = '';
+      }
+    };
+
+    // Convertir precio formateado a número
+    function parsePrecio(valor) {
+      return parseInt(valor.replace(/\./g, '')) || 0;
+    }
+
+    // Actualizar preview de precios
+    window.actualizarPreviewPrecios = () => {
+      const precioMP3 = parsePrecio(document.getElementById('beatPrecioMP3').value);
+      const precioWAV = parsePrecio(document.getElementById('beatPrecioWAV').value);
+      
+      const usdMP3 = (precioMP3 / USD_TO_CLP).toFixed(2);
+      const usdWAV = (precioWAV / USD_TO_CLP).toFixed(2);
+      
+      document.getElementById('previewPrecios').innerHTML = 
+        `MP3: $${precioMP3.toLocaleString('es-CL')} CLP ($${usdMP3} USD) | ` +
+        `WAV: $${precioWAV.toLocaleString('es-CL')} CLP ($${usdWAV} USD)`;
+    };
+
+    // Manejo de IMAGEN desde archivo - REEMPLAZAR
+    const fotoInput = document.getElementById('beatFotoFile');
+    const fotoLabel = document.getElementById('fotoLabel');
+    const fotoPreview = document.getElementById('fotoPreview');
+    const previewImg = document.getElementById('previewImg');
+    const fotoHidden = document.getElementById('beatFoto');
+
+    fotoInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = function() {
+          fotoLabel.classList.add('has-file');
+          fotoLabel.innerHTML = `<i class="fas fa-check" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>${file.name}`;
+          previewImg.src = reader.result;
+          fotoPreview.classList.add('active');
+          fotoHidden.value = reader.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Manejo de AUDIO desde archivo - REEMPLAZAR
+    const audioInput = document.getElementById('beatAudio');
+    const audioLabel = document.getElementById('audioLabel');
+    const audioPreview = document.getElementById('audioPreview');
+    const previewPlayer = document.getElementById('previewPlayer');
+
+    audioInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        // Limpiar audio anterior si existe
+        if (previewPlayer.src) {
+          URL.revokeObjectURL(previewPlayer.src);
+        }
+        
+        audioLabel.classList.add('has-file');
+        audioLabel.innerHTML = `<i class="fas fa-check" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>${file.name}`;
+        
+        const url = URL.createObjectURL(file);
+        previewPlayer.src = url;
+        audioPreview.classList.add('active');
+      }
+    });
+
+    function limpiarFormulario() {
+      document.getElementById('beatId').value = '';
+      document.getElementById('beatNombre').value = '';
+      document.getElementById('beatGenero').value = 'trap';
+      document.getElementById('beatPrecioMP3').value = '';
+      document.getElementById('beatPrecioWAV').value = '';
+      document.getElementById('previewPrecios').textContent = 'MP3: $0 CLP ($0 USD) | WAV: $0 CLP ($0 USD)';
+      document.getElementById('beatDesc').value = '';
+      
+      fotoInput.value = '';
+      fotoLabel.classList.remove('has-file');
+      fotoLabel.innerHTML = `<i class="fas fa-image" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>Arrastra o haz click para subir la imagen`;
+      fotoPreview.classList.remove('active');
+      previewImg.src = '';
+      fotoHidden.value = '';
+      
+      audioInput.value = '';
+      audioLabel.classList.remove('has-file');
+      audioLabel.innerHTML = `<i class="fas fa-music" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>Arrastra o haz click para subir el beat`;
+      audioPreview.classList.remove('active');
+      previewPlayer.src = '';
+      
+      document.getElementById('modalTitle').textContent = 'Nuevo Beat';
+    }
+
+    window.guardarBeat = async () => {
+      const id = document.getElementById('beatId').value;
+      const foto = fotoHidden.value;
+      const nombre = document.getElementById('beatNombre').value.trim();
+      const genero = document.getElementById('beatGenero').value;
+      const precioMP3 = parsePrecio(document.getElementById('beatPrecioMP3').value);
+      const precioWAV = parsePrecio(document.getElementById('beatPrecioWAV').value);
+      const descripcion = document.getElementById('beatDesc').value.trim();
+      const audioFile = audioInput.files[0];
+
+      if (!nombre) {
+        alert('El nombre del beat es obligatorio');
+        return;
+      }
+
+      if (!id && !foto) {
+        alert('Debes subir una imagen de portada');
+        return;
+      }
+
+      if (!id && !audioFile) {
+        alert('Debes subir un archivo de audio');
+        return;
+      }
+
+      // Convertir audio a Base64 si hay archivo nuevo
+      let audioBase64 = null;
+      let audioName = null;
+      if (audioFile) {
+        audioBase64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(audioFile);
+        });
+        audioName = audioFile.name;
+      }
+
+      const data = {
+        foto: foto || 'https://via.placeholder.com/400x400/1a1a1a/ffffff?text=No+Cover',
+        nombre: nombre,
+        genero: genero,
+        precioMP3: precioMP3,
+        precioWAV: precioWAV,
+        precioMP3USD: parseFloat((precioMP3 / USD_TO_CLP).toFixed(2)),
+        precioWAVUSD: parseFloat((precioWAV / USD_TO_CLP).toFixed(2)),
+        descripcion: descripcion,
+        fecha: new Date().toISOString()
+      };
+
+      if (audioBase64) {
+        data.audio = audioBase64;
+        data.audioName = audioName;
+      } else if (id) {
+        const beatExistente = beats.find(b => b.id === id);
+        if (beatExistente) {
+          data.audio = beatExistente.audio;
+          data.audioName = beatExistente.audioName;
+        }
+      }
+
+      if (id) {
+        await set(ref(db, 'winnie_beats/' + id), data);
+      } else {
+        await push(beatsRef, data);
+      }
+
+      cerrarModal('modalBeat');
+      limpiarFormulario();
+    };
+
+    window.editarBeat = (id) => {
+      const beat = beats.find(b => b.id === id);
+      if (!beat) return;
+
+      document.getElementById('beatId').value = id;
+      
+      if (beat.foto) {
+        fotoHidden.value = beat.foto;
+        previewImg.src = beat.foto;
+        fotoPreview.classList.add('active');
+        fotoLabel.classList.add('has-file');
+        fotoLabel.innerHTML = `<i class="fas fa-image" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>CAMBIAR IMAGEN`;
+      }
+      
+      document.getElementById('beatNombre').value = beat.nombre || '';
+      document.getElementById('beatGenero').value = beat.genero || 'trap';
+      
+      // Formatear precios con puntos
+      document.getElementById('beatPrecioMP3').value = beat.precioMP3 ? beat.precioMP3.toLocaleString('es-CL') : '';
+      document.getElementById('beatPrecioWAV').value = beat.precioWAV ? beat.precioWAV.toLocaleString('es-CL') : '';
+      actualizarPreviewPrecios();
+      
+      document.getElementById('beatDesc').value = beat.descripcion || '';
+
+      if (beat.audio) {
+        audioLabel.classList.add('has-file');
+        audioLabel.innerHTML = `<i class="fas fa-music" style="display:block; font-size:2rem; margin-bottom:10px; color:var(--accent);"></i>${beat.audioName || 'Audio guardado'}`;
+        previewPlayer.src = beat.audio;
+        audioPreview.classList.add('active');
+      }
+
+      document.getElementById('modalTitle').textContent = 'Editar Beat';
+      abrirModal('modalBeat');
+    };
+
+    window.borrarBeat = (id) => {
+      accionPendiente = () => {
+        remove(ref(db, 'winnie_beats/' + id));
+        cerrarModal('modalConfirm');
+      };
+      
+      document.getElementById('confirmTitle').textContent = '¿Eliminar beat?';
+      document.getElementById('confirmMessage').textContent = 'Esta acción no se puede deshacer.';
+      abrirModal('modalConfirm');
+    };
+
+    document.getElementById('confirmAccept').onclick = () => {
+      if (accionPendiente) accionPendiente();
+    };
+
+    document.getElementById('confirmCancel').onclick = () => {
+      accionPendiente = null;
+      cerrarModal('modalConfirm');
+    };
+
+    // Funciones de audio - SISTEMA MEJORADO
+    window.togglePlay = (id, btn) => {
+      const beat = beats.find(b => b.id === id);
+      if (!beat || !beat.audio) return;
+
+      // Si hay un audio reproduciéndose y es diferente al seleccionado
+      if (audioActual && audioActual !== id && audioPlayerActual) {
+        audioPlayerActual.pause();
+        audioPlayerActual.currentTime = 0;
+        
+        const prevBtn = document.querySelector(`[data-beat="${audioActual}"]`);
+        if (prevBtn) {
+          prevBtn.innerHTML = '<i class="fas fa-play"></i>';
+          prevBtn.classList.remove('playing');
+        }
+        const prevCard = document.querySelector(`[data-beat="${audioActual}"]`).closest('.card');
+        if (prevCard) {
+          prevCard.querySelector('.visualizer').classList.remove('active');
+        }
+      }
+
+      // Si es el mismo beat que está sonando -> PAUSAR
+      if (audioActual === id && audioPlayerActual) {
+        if (!audioPlayerActual.paused) {
+          // Está sonando, entonces pausar
+          audioPlayerActual.pause();
+          btn.innerHTML = '<i class="fas fa-play"></i>';
+          btn.classList.remove('playing');
+          const card = btn.closest('.card');
+          card.querySelector('.visualizer').classList.remove('active');
+          return;
+        } else {
+          // Está pausado, entonces reanudar
+          audioPlayerActual.play();
+          btn.innerHTML = '<i class="fas fa-pause"></i>';
+          btn.classList.add('playing');
+          const card = btn.closest('.card');
+          card.querySelector('.visualizer').classList.add('active');
+          return;
+        }
+      }
+
+      // Reproducir nuevo beat
+      if (audioPlayerActual) {
+        audioPlayerActual.pause();
+        audioPlayerActual = null;
+      }
+
+      audioPlayerActual = new Audio(beat.audio);
+      audioPlayerActual.play();
+      
+      btn.innerHTML = '<i class="fas fa-pause"></i>';
+      btn.classList.add('playing');
+      const card = btn.closest('.card');
+      card.querySelector('.visualizer').classList.add('active');
+      audioActual = id;
+      beatActual = beat;
+      
+      audioPlayerActual.onended = () => {
+        btn.innerHTML = '<i class="fas fa-play"></i>';
+        btn.classList.remove('playing');
+        card.querySelector('.visualizer').classList.remove('active');
+        if (audioActual === id) {
+          audioActual = null;
+          beatActual = null;
+          audioPlayerActual = null;
+        }
+      };
+
+      audioPlayerActual.onpause = () => {
+        if (audioActual === id) {
+          btn.innerHTML = '<i class="fas fa-play"></i>';
+          btn.classList.remove('playing');
+          card.querySelector('.visualizer').classList.remove('active');
+        }
+      };
+    };
+
+    window.setupHoverPlay = (card, id) => {
+      // Desactivado en móviles
+      if (window.matchMedia('(pointer: coarse)').matches) return;
+      
+      // El hover play está desactivado para evitar conflictos con el sistema de pausa
+      // Solo se reproduce al hacer click en el botón de play
+    };
+
+    // Carrito de compras - SELECCIÓN DE FORMATO
+    window.agregarAlCarrito = (id, btn) => {
+      const beat = beats.find(b => b.id === id);
+      if (!beat) return;
+
+      // Verificar si ya está en el carrito
+      const itemExistente = carrito.find(item => item.id === id);
+      if (itemExistente) {
+        alert('Este beat ya está en tu carrito. Solo puedes comprar un beat una vez.');
+        return;
+      }
+
+      // Guardar referencias para cuando se seleccione el formato
+      beatPendienteFormato = beat;
+      btnPendienteFormato = btn;
+
+      // Mostrar modal de selección de formato
+      document.getElementById('formatoBeatNombre').textContent = beat.nombre;
+      
+      // Actualizar precios en los botones
+      const precioMP3 = beat.precioMP3 || 0;
+      const precioWAV = beat.precioWAV || 0;
+      
+      document.getElementById('precioMP3').textContent = precioMP3 ? `$${precioMP3.toLocaleString('es-CL')} CLP` : 'Gratis';
+      document.getElementById('precioWAV').textContent = precioWAV ? `$${precioWAV.toLocaleString('es-CL')} CLP` : 'Gratis';
+      
+      // Resetear selección
+      document.getElementById('btnMP3').classList.remove('selected');
+      document.getElementById('btnWAV').classList.remove('selected');
+      
+      abrirModal('modalFormato');
+    };
+
+    window.seleccionarFormato = (formato) => {
+      if (!beatPendienteFormato) return;
+
+      const beat = beatPendienteFormato;
+      const btn = btnPendienteFormato;
+      
+      // Determinar precio según formato
+      const precioCLP = formato === 'MP3' ? (beat.precioMP3 || 0) : (beat.precioWAV || 0);
+      const precioUSD = formato === 'MP3' ? (beat.precioMP3USD || 0) : (beat.precioWAVUSD || 0);
+
+      // Agregar al carrito con cantidad fija de 1
+      carrito.push({
+        id: beat.id,
+        cantidad: 1, // SIEMPRE 1, no se puede cambiar
+        nombre: beat.nombre,
+        formato: formato,
+        precioCLP: precioCLP,
+        precioUSD: precioUSD,
+        foto: beat.foto
+      });
+
+      guardarCarrito();
+      actualizarCarritoUI();
+      if (btn) flyToCart(btn);
+      
+      // Cerrar modal de formato
+      cerrarModal('modalFormato');
+      
+      // Feedback visual
+      if (btn) {
+        btn.innerHTML = '<i class="fas fa-check"></i> Agregado';
+        setTimeout(() => {
+          btn.innerHTML = '<i class="fas fa-info-circle"></i> VER INFO';
+        }, 1500);
+      } else {
+        alert('Beat agregado al carrito correctamente');
+      }
+      
+      // Limpiar referencias
+      beatPendienteFormato = null;
+      btnPendienteFormato = null;
+    };
+
+    // Las funciones de cantidad están deshabilitadas para beats (siempre 1)
+    window.cambiarCantidad = (index, delta) => {
+      // No hacer nada - los beats siempre son cantidad 1
+      // Esta función se mantiene por compatibilidad pero no modifica nada
+      alert('Solo puedes comprar 1 unidad de cada beat. Elimina el item si deseas cambiar el formato.');
+    };
+
+    window.borrarDelCarrito = (index) => {
+      carrito.splice(index, 1);
+      guardarCarrito();
+      actualizarCarritoUI();
+    };
+
+    function guardarCarrito() {
+      try {
+        localStorage.setItem('winnie_cart', JSON.stringify(carrito));
+      } catch (e) {
+        console.error('Error guardando carrito', e);
+      }
+    }
+
+    function flyToCart(btn) {
+      const cartBtn = document.getElementById('cartBtn');
+      if (!cartBtn) return;
+      
+      const rectBtn = btn.getBoundingClientRect();
+      const rectCart = cartBtn.getBoundingClientRect();
+      
+      const flyer = document.createElement('div');
+      flyer.className = 'flying-item';
+      flyer.innerHTML = '<i class="fas fa-music"></i>';
+      flyer.style.left = rectBtn.left + rectBtn.width / 2 + 'px';
+      flyer.style.top = rectBtn.top + rectBtn.height / 2 + 'px';
+      document.body.appendChild(flyer);
+      
+      const deltaX = rectCart.left + rectCart.width / 2 - (rectBtn.left + rectBtn.width / 2);
+      const deltaY = rectCart.top + rectCart.height / 2 - (rectBtn.top + rectBtn.height / 2);
+      
+      flyer.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: `translate(${deltaX}px, ${deltaY}px) scale(0.3)`, opacity: 0 }
+      ], {
+        duration: 600,
+        easing: 'ease-in-out'
+      }).onfinish = () => {
+        document.body.removeChild(flyer);
+      };
+    }
+
+    function actualizarCarritoUI() {
+      const list = document.getElementById('cartList');
+      const count = document.getElementById('cartCount');
+      const total = document.getElementById('cartTotal');
+      const btnWhatsApp = document.getElementById('btnWhatsApp');
+      const nameInput = document.getElementById('customerName');
+      const emailInput = document.getElementById('customerEmail');
+
+      if (!list) return;
+
+      const totalItems = carrito.length; // Cada beat cuenta como 1, sin sumar cantidades
+      count.textContent = totalItems;
+      count.style.display = totalItems > 0 ? 'block' : 'none';
+
+      list.innerHTML = '';
+      let totalCLP = 0;
+      let totalUSD = 0;
+
+      if (carrito.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:#999; padding:40px; font-size:1.1rem;">Tu carrito está vacío</p>';
+      } else {
+        carrito.forEach((item, i) => {
+          const subtotalCLP = item.precioCLP; // Ya es el precio total (cantidad 1)
+          const subtotalUSD = item.precioUSD;
+          totalCLP += subtotalCLP;
+          totalUSD += subtotalUSD;
+          
+          list.innerHTML += `
+            <div class="cart-item">
+              <img src="${item.foto}" class="cart-img-min" onerror="this.src='https://via.placeholder.com/70'">
+              <div class="cart-item-info">
+                <div style="font-weight:800; font-size:1rem; color:var(--primary);">${item.nombre}</div>
+                <span class="cart-item-format">${item.formato}</span>
+                <div style="font-size:0.9rem; color:var(--accent); margin-top:4px; font-weight:700;">
+                  $${item.precioCLP.toLocaleString('es-CL')} CLP 
+                  <span style="color:#999; font-weight:400;">($${item.precioUSD} USD)</span>
+                </div>
+                <button class="btn-delete-item" onclick="borrarDelCarrito(${i})">Eliminar</button>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:800; font-size:1.2rem; color:var(--accent);">
+                  $${subtotalCLP.toLocaleString('es-CL')}
+                </div>
+                <div style="font-size:0.8rem; color:#999;">$${subtotalUSD.toFixed(2)} USD</div>
+                <div style="font-size:0.75rem; color:#666; margin-top:5px;">Cantidad: 1</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      total.textContent = `$${totalCLP.toLocaleString('es-CL')} CLP ($${totalUSD.toFixed(2)} USD)`;
+
+      const validarCompra = () => {
+        const name = nameInput.value.trim();
+        const email = emailInput.value.trim();
+        const valid = carrito.length > 0 && name.length > 2 && email.includes('@');
+        btnWhatsApp.disabled = !valid;
+        if (valid) {
+          btnWhatsApp.style.opacity = '1';
+        } else {
+          btnWhatsApp.style.opacity = '0.5';
+        }
+      };
+
+      nameInput.oninput = validarCompra;
+      emailInput.oninput = validarCompra;
+      validarCompra();
+    }
+
+    window.enviarWhatsApp = () => {
+      if (carrito.length === 0) return;
+      
+      const name = document.getElementById('customerName').value.trim();
+      const email = document.getElementById('customerEmail').value.trim();
+
+      let msg = `🎵 *PEDIDO WINNIE PROD* 🎵\n\n`;
+      msg += `👤 *Cliente:* ${name}\n`;
+      msg += `*BEATS SELECCIONADOS:*\n\n`;
+      
+      let totalCLP = 0;
+      let totalUSD = 0;
+      
+      carrito.forEach((item, i) => {
+        totalCLP += item.precioCLP;
+        totalUSD += item.precioUSD;
+        
+        msg += `${i + 1}. *${item.nombre}*\n`;
+        msg += `   Formato: *${item.formato}*\n`;
+        msg += `   Precio: $${item.precioCLP.toLocaleString('es-CL')} CLP ($${item.precioUSD} USD)\n\n`;
+      });
+      
+      msg += `💰 *TOTAL:*\n`;
+      msg += `   $${totalCLP.toLocaleString('es-CL')} CLP\n`;
+      msg += `   ($${totalUSD.toFixed(2)} USD)\n\n`;
+      msg += `✅ Listo para completar la compra.`;
+
+      carrito = [];
+      guardarCarrito();
+      actualizarCarritoUI();
+      cerrarModal('modalCarrito');
+
+      window.open(`https://wa.me/56954998792?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+
+    function formatPriceCLP(price) {
+      if (!price || price === 0) return 'Gratis';
+      return '$' + Math.round(price).toLocaleString('es-CL');
+    }
+
+    window.verInfo = (id) => {
+      const beat = beats.find(b => b.id === id);
+      if (!beat) return;
+
+      document.getElementById('infoBeatNombre').textContent = beat.nombre;
+      document.getElementById('infoBeatFoto').src = beat.foto || 'https://via.placeholder.com/400x400/1a1a1a/ffffff?text=No+Cover';
+      document.getElementById('infoBeatGenero').textContent = beat.genero || 'No especificado';
+      document.getElementById('infoBeatDesc').textContent = beat.descripcion || 'Sin descripción';
+      document.getElementById('infoBeatPrecioMP3').textContent = formatPriceCLP(beat.precioMP3);
+      document.getElementById('infoBeatPrecioWAV').textContent = formatPriceCLP(beat.precioWAV);
+
+      const btnLoQuiero = document.getElementById('btnLoQuiero');
+      btnLoQuiero.onclick = () => {
+        cerrarModal('modalInfoBeat');
+        agregarAlCarrito(id, null);
+      };
+
+      abrirModal('modalInfoBeat');
+    };
+
+    function render() {
+      const grid = document.getElementById('listaBeats');
+      const emptyState = document.getElementById('emptyState');
+      
+      if (beatsFiltrados.length === 0) {
+        grid.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+      
+      emptyState.style.display = 'none';
+      grid.innerHTML = '';
+
+      beatsFiltrados.forEach((beat, index) => {
+        // Mostrar precio más bajo por defecto o "Desde"
+        const precioMin = Math.min(beat.precioMP3 || 0, beat.precioWAV || 0);
+        const precioMax = Math.max(beat.precioMP3 || 0, beat.precioWAV || 0);
+        
+        let precioDisplay;
+        if (precioMin === 0 && precioMax === 0) {
+          precioDisplay = 'Gratis';
+        } else if (beat.precioMP3 === beat.precioWAV) {
+          precioDisplay = formatPriceCLP(beat.precioMP3);
+        } else {
+          precioDisplay = `Desde ${formatPriceCLP(precioMin)}`;
+        }
+        
+        const precioUSDDisplay = beat.precioMP3USD ? `$${beat.precioMP3USD} USD` : 'Gratis';
+
+        const adminHtml = `
+          <div class="admin-controls ${isAdmin ? 'active' : ''}">
+            <button class="admin-btn edit" onclick="editarBeat('${beat.id}')" title="Editar">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="admin-btn delete" onclick="borrarBeat('${beat.id}')" title="Eliminar">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `;
+
+        const tieneAudio = beat.audio ? '' : 'opacity:0.5; pointer-events:none;';
+
+        grid.innerHTML += `
+          <div class="card">
+            ${adminHtml}
+            <div class="price-tag">${precioDisplay}</div>
+            <div class="price-usd">${precioUSDDisplay}</div>
+            <div class="card-img">
+              <img src="${beat.foto}" alt="${beat.nombre}" onerror="this.src='https://via.placeholder.com/400x400/1a1a1a/ffffff?text=No+Cover'">
+              <button class="play-btn" data-beat="${beat.id}" onclick="togglePlay('${beat.id}', this)" style="${tieneAudio}">
+                <i class="fas fa-play"></i>
+              </button>
+              <div class="visualizer">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+              </div>
+            </div>
+            <div class="card-info">
+              <h3>${beat.nombre}</h3>
+              <div style="font-size: 0.8rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 10px;">
+                ${beat.genero || 'Beat'}
+              </div>
+              <button class="btn-add-cart" onclick="verInfo('${beat.id}')">
+                <i class="fas fa-info-circle"></i> VER INFO
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    window.onclick = (e) => {
+      if (e.target.classList.contains('modal')) {
+        e.target.classList.remove('active');
+      }
+    };
+
+    actualizarCarritoUI();
+  </script>
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, push, onValue } 
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } 
+    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+ 
+  // Guardar beat con audio + portada
+  async function guardarBeat() {
+    const nombre = document.getElementById("beatNombre").value;
+    const genero = document.getElementById("beatGenero").value;
+    const desc = document.getElementById("beatDesc").value;
+    const precioMP3 = document.getElementById("beatPrecioMP3").value;
+    const precioWAV = document.getElementById("beatPrecioWAV").value;
+
+    const archivoAudio = document.getElementById("beatAudio").files[0];
+    const archivoImagen = document.getElementById("beatFotoFile").files[0];
+
+    if (!archivoAudio) {
+      alert("Debes subir un archivo de audio");
+      return;
+    }
+
+    // Subir audio
+    const audioRef = storageRef(storage, `beats/${archivoAudio.name}`);
+    await uploadBytes(audioRef, archivoAudio);
+    const urlAudio = await getDownloadURL(audioRef);
+
+    // Subir imagen
+    let urlImagen = "";
+    if (archivoImagen) {
+      const imgRef = storageRef(storage, `beats_portadas/${archivoImagen.name}`);
+      await uploadBytes(imgRef, archivoImagen);
+      urlImagen = await getDownloadURL(imgRef);
+    }
+
+    // Guardar en DB
+    const nuevoBeat = { nombre, genero, descripcion: desc, precioMP3, precioWAV, urlAudio, urlImagen };
+    push(beatsRef, nuevoBeat);
+    alert("Beat guardado correctamente");
+  }
+
+  // Renderizar beats desde DB
+  onValue(beatsRef, snapshot => {
+    const cont = document.getElementById("listaBeats");
+    cont.innerHTML = "";
+    if (!snapshot.exists()) {
+      document.getElementById("emptyState").style.display = "block";
+      return;
+    }
+    document.getElementById("emptyState").style.display = "none";
+
+    snapshot.forEach(child => {
+      const beat = child.val();
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="card-img">
+          <img src="${beat.urlImagen || 'default.jpg'}" alt="${beat.nombre}">
+          <button class="play-btn" onclick="new Audio('${beat.urlAudio}').play()">
+            <i class="fas fa-play"></i>
+          </button>
+          <span class="price-tag">$${beat.precioMP3}</span>
+          <span class="price-usd">$${beat.precioWAV}</span>
+        </div>
+        <div class="card-info">
+          <h3>${beat.nombre}</h3>
+          <p>${beat.descripcion || ''}</p>
+        </div>
+      `;
+      cont.appendChild(card);
+    });
+  });
+</script>
+</body>
+</html>
