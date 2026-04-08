@@ -561,8 +561,7 @@ function safeEval(expr) {
     .replace(/log\(/g, "Math.log10(")
     .replace(/ln\(/g, "Math.log(")
     .replace(/pi/gi, "Math.PI")
-    .replace(/e(?![+\-\d])/g, "Math.E")
-    .replace(/(\d+\.?\d*)\s*%/g, "($1/100)");  // ← NUEVO: 35% → (35/100)
+    .replace(/e(?![+\-\d])/g, "Math.E");
 
   // Solo permitir caracteres seguros
   if (/[^0-9+\-*/().,\s%MathsqrlogabpiE.PI]/g.test(e.replace(/Math\.(sqrt|abs|log10?|PI|E)/g, ""))) {
@@ -571,7 +570,7 @@ function safeEval(expr) {
   try {
     // eslint-disable-next-line no-new-func
     const result = Function('"use strict"; return (' + e + ')')();
-    if (typeof result === "number" && isFinite(result)) return null;
+    if (typeof result === "number" && isFinite(result)) return result;
     return null;
   } catch (_) {
     return null;
@@ -629,7 +628,14 @@ function loadQuestion(idx) {
   // Número y texto
   document.getElementById("q-number").textContent = String(idx + 1).padStart(2, "0");
   document.getElementById("q-text").textContent   = q.text;
-  document.getElementById("q-formula").textContent = "Fórmula: " + q.formula;
+  // Detectar si es disminución para mostrar fórmula adecuada
+let formulaDisplay = q.formula;
+if (q.type === "VF" && /disminuye|baja|descuento|rebaja/i.test(q.text)) {
+  formulaDisplay = "VF = VI × (1 − VP/100)";
+} else if (q.type === "VI" && /disminuye|baja|descuento|rebaja|después de un descuento/i.test(q.text)) {
+  formulaDisplay = "VI = VF / (1 − VP/100)";
+}
+document.getElementById("q-formula").textContent = "Fórmula: " + formulaDisplay;
 
   // Contador
   document.getElementById("question-counter").textContent =
