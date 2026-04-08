@@ -561,7 +561,8 @@ function safeEval(expr) {
     .replace(/log\(/g, "Math.log10(")
     .replace(/ln\(/g, "Math.log(")
     .replace(/pi/gi, "Math.PI")
-    .replace(/e(?![+\-\d])/g, "Math.E");
+    .replace(/e(?![+\-\d])/g, "Math.E")
+    .replace(/(\d+\.?\d*)\s*%/g, "($1/100)");  // ← NUEVO: 35% → (35/100)
 
   // Solo permitir caracteres seguros
   if (/[^0-9+\-*/().,\s%MathsqrlogabpiE.PI]/g.test(e.replace(/Math\.(sqrt|abs|log10?|PI|E)/g, ""))) {
@@ -570,7 +571,7 @@ function safeEval(expr) {
   try {
     // eslint-disable-next-line no-new-func
     const result = Function('"use strict"; return (' + e + ')')();
-    if (typeof result === "number" && isFinite(result)) return result;
+    if (typeof result === "number" && isFinite(result)) return null;
     return null;
   } catch (_) {
     return null;
