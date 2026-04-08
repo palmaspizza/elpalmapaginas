@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MathSim — Simulador de Álgebra</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <!-- KaTeX for math rendering -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"/>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo-block">
+      <span class="logo-icon">∑</span>
+      <div>
+        <h1 class="site-title">MathSim</h1>
+        <p class="site-sub">Simulador de Álgebra · Prof. Sebastián López</p>
+      </div>
+    </div>
+    <nav class="main-nav">
+      <button class="nav-btn active" data-section="quiz">🎯 Examen</button>
+      <button class="nav-btn" data-section="calc">🧮 Calculadora</button>
+      <button class="nav-btn" data-section="ref">📐 Referencia</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+<main class="main-wrap">
+
+  <!-- ─────────── SECCIÓN: EXAMEN ─────────── -->
+  <section id="section-quiz" class="section active">
+
+    <div class="quiz-header">
+      <div class="quiz-meta">
+        <span class="tag tag-blue">Guía 1 — Álgebra</span>
+        <span id="question-counter" class="tag tag-dim">Pregunta 1 / 44</span>
+      </div>
+      <div class="progress-track">
+        <div id="progress-bar" class="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Filtrar por tema:</span>
+        <button class="filter-btn active" data-filter="all">Todo</button>
+        <button class="filter-btn" data-filter="VP">VP</button>
+        <button class="filter-btn" data-filter="VI">VI</button>
+        <button class="filter-btn" data-filter="VF">VF</button>
+        <button class="filter-btn" data-filter="R3">Regla de 3</button>
+        <button class="filter-btn" data-filter="PCT">% Directo</button>
+      </div>
+    </div>
+
+    <!-- Tarjeta de pregunta -->
+    <div class="question-card" id="question-card">
+      <div class="question-badge" id="q-badge">VP</div>
+      <div class="question-number" id="q-number">01</div>
+      <div class="question-text" id="q-text">Cargando pregunta...</div>
+      <div class="formula-hint" id="q-formula"></div>
+
+      <!-- Input estilo GeoGebra -->
+      <div class="geogebra-input-wrap">
+        <div class="ggb-toolbar">
+          <span class="ggb-label">Expresión matemática</span>
+          <div class="ggb-symbols">
+            <button class="sym-btn" data-insert="(VF-VI)/VI*100">VP=</button>
+            <button class="sym-btn" data-insert="VF/(1+VP/100)">VI=</button>
+            <button class="sym-btn" data-insert="VI*(1+VP/100)">VF=</button>
+            <button class="sym-btn" data-insert="(b*c)/a">R3=</button>
+            <button class="sym-btn" data-insert="*">×</button>
+            <button class="sym-btn" data-insert="/">/</button>
+            <button class="sym-btn" data-insert="**">^</button>
+            <button class="sym-btn" data-insert="sqrt(">√</button>
+            <button class="sym-btn" data-insert="%">%</button>
+          </div>
+        </div>
+        <div class="ggb-input-row">
+          <span class="ggb-cursor-label">f(x) =</span>
+          <input
+            type="text"
+            id="answer-input"
+            class="ggb-input"
+            placeholder="Escribe la fórmula o el resultado, ej: (120-100)/100*100"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="ggb-eval-btn" id="eval-btn" title="Evaluar expresión">⏎</button>
+        </div>
+        <div class="ggb-preview-row">
+          <span class="ggb-preview-label">Vista previa:</span>
+          <span class="ggb-preview" id="input-preview">—</span>
+          <span class="ggb-result" id="input-result"></span>
+        </div>
+      </div>
+
+      <div class="answer-actions">
+        <button class="btn-verify" id="btn-verify">✓ Verificar</button>
+        <button class="btn-hint" id="btn-hint">💡 Pista</button>
+        <button class="btn-skip" id="btn-skip">→ Saltar</button>
+      </div>
+
+      <div class="feedback-box" id="feedback-box" style="display:none"></div>
+      <div class="hint-box" id="hint-box" style="display:none"></div>
+    </div>
+
+    <!-- Navegación de preguntas -->
+    <div class="quiz-nav">
+      <button class="btn-nav" id="btn-prev">← Anterior</button>
+      <button class="btn-nav primary" id="btn-next">Siguiente →</button>
+      <button class="btn-nav danger" id="btn-finish">🏁 Ver Resultado</button>
+    </div>
+
+    <!-- Mapa de preguntas -->
+    <div class="question-map" id="question-map"></div>
+
+  </section>
+
+  <!-- ─────────── SECCIÓN: RESULTADO ─────────── -->
+  <section id="section-result" class="section">
+    <div class="result-card">
+      <div class="result-icon" id="result-icon">🎓</div>
+      <h2 class="result-title">Resultado Final</h2>
+      <div class="result-score" id="result-score">—</div>
+      <div class="result-details" id="result-details"></div>
+      <div class="result-breakdown" id="result-breakdown"></div>
+      <div class="result-actions">
+        <button class="btn-verify" id="btn-restart">🔄 Reiniciar Examen</button>
+        <button class="btn-hint" id="btn-review">📋 Revisar Respuestas</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── SECCIÓN: CALCULADORA ─────────── -->
+  <section id="section-calc" class="section">
+    <div class="calc-grid">
+
+      <!-- Calculadora VP -->
+      <div class="calc-card">
+        <div class="calc-card-header vp-color">
+          <span class="calc-icon">📊</span>
+          <div>
+            <h3>Variación Porcentual</h3>
+            <code class="calc-formula-small">VP = ((VF − VI) / VI) × 100</code>
+          </div>
+        </div>
+        <div class="calc-body">
+          <div class="calc-field">
+            <label>Valor Inicial (VI)</label>
+            <div class="calc-input-wrap">
+              <input type="text" id="vp-vi" class="calc-input" placeholder="ej: 100"/>
+              <span class="calc-unit">$</span>
+            </div>
+          </div>
+          <div class="calc-field">
+            <label>Valor Final (VF)</label>
+            <div class="calc-input-wrap">
+              <input type="text" id="vp-vf" class="calc-input" placeholder="ej: 120"/>
+              <span class="calc-unit">$</span>
+            </div>
+          </div>
+          <button class="calc-btn vp-btn" onclick="calcVP()">Calcular VP</button>
+          <div class="calc-result" id="vp-result"></div>
+          <div class="calc-steps" id="vp-steps"></div>
+        </div>
+      </div>
+
+      <!-- Calculadora VI -->
+      <div class="calc-card">
+        <div class="calc-card-header vi-color">
+          <span class="calc-icon">🔍</span>
+          <div>
+            <h3>Valor Inicial</h3>
+            <code class="calc-formula-small">VI = VF / (1 + VP/100)</code>
+          </div>
+        </div>
+        <div class="calc-body">
+          <div class="calc-field">
+            <label>Valor Final (VF)</label>
+            <div class="calc-input-wrap">
+              <input type="text" id="vi-vf" class="calc-input" placeholder="ej: 990"/>
+              <span class="calc-unit">$</span>
+            </div>
+          </div>
+          <div class="calc-field">
+            <label>Variación Porcentual (VP%)</label>
+            <div class="calc-input-wrap">
+              <input type="text" id="vi-vp" class="calc-input" placeholder="ej: 11.2"/>
+              <span class="calc-unit">%</span>
+            </div>
+          </div>
+          <button class="calc-btn vi-btn" onclick="calcVI()">Calcular VI</button>
+          <div class="calc-result" id="vi-result"></div>
+          <div class="calc-steps" id="vi-steps"></div>
+        </div>
+      </div>
+
+      <!-- Calculadora VF -->
+      <div class="calc-card">
+        <div class="calc-card-header vf-color">
+          <span class="calc-icon">🎯</span>
+          <div>
+            <h3>Valor Final</h3>
+            <code class="calc-formula-small">VF = VI × (1 + VP/100)</code>
+          </div>
+        </div>
+        <div class="calc-body">
+          <div class="calc-field">
+            <label>Valor Inicial (VI)</label>
+            <div class="calc-input-wrap">
+              <input type="text" id="vf-vi" class="calc-input" placeholder="ej: 500"/>
+              <span class="calc-unit">$</span>
+            </div>
+          </div>
+          <div class="calc-field">
+            <label>Variación Porcentual (VP%)</label>
+            <div class="calc-input-wrap">
+              <input type="text" id="vf-vp" class="calc-input" placeholder="ej: 20"/>
+              <span class="calc-unit">%</span>
+            </div>
+          </div>
+          <button class="calc-btn vf-btn" onclick="calcVF()">Calcular VF</button>
+          <div class="calc-result" id="vf-result"></div>
+          <div class="calc-steps" id="vf-steps"></div>
+        </div>
+      </div>
+
+      <!-- Calculadora Regla de 3 -->
+      <div class="calc-card">
+        <div class="calc-card-header r3-color">
+          <span class="calc-icon">⚖️</span>
+          <div>
+            <h3>Regla de 3 Simple</h3>
+            <code class="calc-formula-small">x = (b × c) / a</code>
+          </div>
+        </div>
+        <div class="calc-body">
+          <div class="r3-table">
+            <div class="r3-row r3-header-row">
+              <span>Cantidad</span><span>Valor</span>
+            </div>
+            <div class="r3-row">
+              <div class="calc-input-wrap"><input type="text" id="r3-a" class="calc-input" placeholder="a"/></div>
+              <div class="calc-input-wrap"><input type="text" id="r3-b" class="calc-input" placeholder="b"/></div>
+            </div>
+            <div class="r3-row">
+              <div class="calc-input-wrap"><input type="text" id="r3-c" class="calc-input" placeholder="c"/></div>
+              <div class="calc-input-wrap r3-x"><span class="r3-x-label">x = ?</span></div>
+            </div>
+          </div>
+          <p class="r3-hint">Si <b>a</b> → <b>b</b>, entonces <b>c</b> → <b>x</b></p>
+          <button class="calc-btn r3-btn" onclick="calcR3()">Calcular x</button>
+          <div class="calc-result" id="r3-result"></div>
+          <div class="calc-steps" id="r3-steps"></div>
+        </div>
+      </div>
+
+      <!-- Calculadora % Directo -->
+      <div class="calc-card">
+        <div class="calc-card-header pct-color">
+          <span class="calc-icon">💯</span>
+          <div>
+            <h3>Porcentaje Directo</h3>
+            <code class="calc-formula-small">P = (parte / total) × 100</code>
+          </div>
+        </div>
+        <div class="calc-body">
+          <div class="calc-field">
+            <label>Total</label>
+            <div class="calc-input-wrap">
+              <input type="text" id="pct-total" class="calc-input" placeholder="ej: 150"/>
+            </div>
+          </div>
+          <div class="calc-field">
+            <label>Porcentaje que quieres calcular (%)</label>
+            <div class="calc-input-wrap">
+              <input type="text" id="pct-pct" class="calc-input" placeholder="ej: 20"/>
+              <span class="calc-unit">%</span>
+            </div>
+          </div>
+          <button class="calc-btn pct-btn" onclick="calcPCT()">Calcular parte</button>
+          <div class="calc-result" id="pct-result"></div>
+          <div class="calc-steps" id="pct-steps"></div>
+        </div>
+      </div>
+
+      <!-- Tabla de referencia de fórmulas en la calc -->
+      <div class="calc-card formula-ref-card">
+        <div class="calc-card-header ref-color">
+          <span class="calc-icon">📖</span>
+          <div><h3>Resumen de Fórmulas</h3></div>
+        </div>
+        <div class="calc-body formula-list">
+          <div class="formula-row"><span class="fml-name">VP</span><span class="fml-eq">= ((VF − VI) / VI) × 100</span></div>
+          <div class="formula-row"><span class="fml-name">VI</span><span class="fml-eq">= VF / (1 + VP/100)</span></div>
+          <div class="formula-row"><span class="fml-name">VF</span><span class="fml-eq">= VI × (1 + VP/100)</span></div>
+          <div class="formula-row"><span class="fml-name">R3</span><span class="fml-eq">x = (b × c) / a</span></div>
+          <div class="formula-row"><span class="fml-name">%</span><span class="fml-eq">= (parte / total) × 100</span></div>
+          <hr class="fml-hr"/>
+          <p class="fml-note">⚠️ VP negativo → disminución<br/>VP positivo → aumento</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─────────── SECCIÓN: REFERENCIA ─────────── -->
+  <section id="section-ref" class="section">
+    <div class="ref-grid">
+      <div class="ref-card">
+        <div class="ref-badge vp-color">VP</div>
+        <h3>Variación Porcentual</h3>
+        <div class="ref-formula">VP = ((VF − VI) / VI) × 100</div>
+        <ul class="ref-list">
+          <li>VP <b>positivo</b>: el valor aumentó</li>
+          <li>VP <b>negativo</b>: el valor disminuyó</li>
+          <li>Unidad: siempre en <b>%</b></li>
+          <li>Ejemplo: 100 → 120 ⟹ VP = 20%</li>
+        </ul>
+      </div>
+      <div class="ref-card">
+        <div class="ref-badge vi-color">VI</div>
+        <h3>Valor Inicial</h3>
+        <div class="ref-formula">VI = VF / (1 + VP/100)</div>
+        <ul class="ref-list">
+          <li>Se usa cuando conocemos el precio <b>final</b></li>
+          <li>y sabemos cuánto <b>subió o bajó</b></li>
+          <li>Ejemplo: VF=990, VP=11.2% ⟹ VI≈890</li>
+        </ul>
+      </div>
+      <div class="ref-card">
+        <div class="ref-badge vf-color">VF</div>
+        <h3>Valor Final</h3>
+        <div class="ref-formula">VF = VI × (1 + VP/100)</div>
+        <ul class="ref-list">
+          <li>Partimos del precio <b>original</b></li>
+          <li>y aplicamos el porcentaje de cambio</li>
+          <li>Ejemplo: VI=500, VP=20% ⟹ VF=600</li>
+        </ul>
+      </div>
+      <div class="ref-card">
+        <div class="ref-badge r3-color">R3</div>
+        <h3>Regla de 3</h3>
+        <div class="ref-formula">x = (b × c) / a</div>
+        <ul class="ref-list">
+          <li>Si <b>a</b> corresponde a <b>b</b></li>
+          <li>entonces <b>c</b> corresponde a <b>x</b></li>
+          <li>Ejemplo: 100%→150, 20%→x ⟹ x=30</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+<footer class="site-footer">
+  <p>MathSim · Guía 1 · Prof. Sebastián López Silva · Álgebra</p>
+</footer>
+<style>
+    /* ═══════════════════════════════════════════════════════════════
+   MathSim — style.css
+   Dark, modern, GeoGebra-inspired study interface
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Variables ── */
+:root {
+  --bg-base:      #0d0f14;
+  --bg-surface:   #14181f;
+  --bg-card:      #1a1f2b;
+  --bg-elevated:  #212838;
+  --bg-input:     #111520;
+
+  --border:       #2a3040;
+  --border-light: #343d52;
+
+  --text-primary:   #e8ecf4;
+  --text-secondary: #8a94a8;
+  --text-dim:       #4e5a6e;
+
+  --accent-vp:  #38bdf8;
+  --accent-vi:  #a78bfa;
+  --accent-vf:  #34d399;
+  --accent-r3:  #fb923c;
+  --accent-pct: #f472b6;
+  --accent-ref: #94a3b8;
+
+  --correct: #22c55e;
+  --wrong:   #ef4444;
+  --hint:    #eab308;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --font-display: 'Syne', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.5);
+  --shadow-glow-vp: 0 0 20px rgba(56,189,248,0.15);
+  --shadow-glow-vi: 0 0 20px rgba(167,139,250,0.15);
+  --shadow-glow-vf: 0 0 20px rgba(52,211,153,0.15);
+  --shadow-glow-r3: 0 0 20px rgba(251,146,60,0.15);
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-display);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════ HEADER ══════════════════════════════ */
+.site-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(13,15,20,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+}
+.header-inner {
+  max-width: 1300px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 70px; gap: 2rem;
+}
+.logo-block { display: flex; align-items: center; gap: 1rem; }
+.logo-icon {
+  font-size: 2.2rem; color: var(--accent-vp);
+  text-shadow: 0 0 30px rgba(56,189,248,0.5);
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%,100% { text-shadow: 0 0 20px rgba(56,189,248,0.4); }
+  50%      { text-shadow: 0 0 40px rgba(56,189,248,0.8), 0 0 80px rgba(56,189,248,0.2); }
+}
+.site-title {
+  font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--accent-vp), var(--accent-vi));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.site-sub { font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono); }
+
+/* ── Nav ── */
+.main-nav { display: flex; gap: 0.5rem; }
+.nav-btn {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-secondary); padding: 0.4rem 1rem;
+  border-radius: var(--radius-sm); cursor: pointer;
+  font-family: var(--font-display); font-size: 0.85rem; font-weight: 700;
+  transition: all 0.2s ease;
+}
+.nav-btn:hover { border-color: var(--accent-vp); color: var(--accent-vp); }
+.nav-btn.active {
+  background: var(--accent-vp); color: #000; border-color: var(--accent-vp);
+}
+
+/* ══════════════════════════════ MAIN WRAP ══════════════════════════════ */
+.main-wrap { max-width: 1300px; margin: 0 auto; padding: 2rem; }
+
+/* ── Sections ── */
+.section { display: none; animation: fadeIn 0.3s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ══════════════════════════════ QUIZ SECTION ══════════════════════════════ */
+.quiz-header {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.5rem 2rem; margin-bottom: 1.5rem;
+}
+.quiz-meta { display: flex; gap: 0.75rem; margin-bottom: 1rem; align-items: center; }
+.tag {
+  font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+  padding: 0.3rem 0.8rem; border-radius: 999px; letter-spacing: 0.05em;
+}
+.tag-blue { background: rgba(56,189,248,0.12); color: var(--accent-vp); border: 1px solid rgba(56,189,248,0.3); }
+.tag-dim  { background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--border); }
+
+/* Progress */
+.progress-track {
+  background: var(--bg-input); border-radius: 999px; height: 6px;
+  margin-bottom: 1.2rem; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-vp), var(--accent-vi));
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 10px rgba(56,189,248,0.4);
+}
+
+/* Filter row */
+.filter-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.filter-label { font-size: 0.78rem; color: var(--text-dim); font-family: var(--font-mono); margin-right: 0.5rem; }
+.filter-btn {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-secondary); padding: 0.3rem 0.9rem;
+  border-radius: 999px; cursor: pointer; font-size: 0.78rem; font-weight: 700;
+  transition: all 0.18s ease; font-family: var(--font-mono);
+}
+.filter-btn:hover { border-color: var(--accent-vp); color: var(--accent-vp); }
+.filter-btn.active { background: var(--accent-vp); color: #000; border-color: var(--accent-vp); }
+
+/* ── Question Card ── */
+.question-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 2.5rem;
+  margin-bottom: 1.5rem; position: relative; overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.3s ease;
+}
+.question-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent-vp), var(--accent-vi), var(--accent-vf));
+}
+.question-badge {
+  display: inline-block; font-family: var(--font-mono); font-size: 0.7rem;
+  font-weight: 700; padding: 0.25rem 0.8rem; border-radius: 4px;
+  margin-bottom: 1rem; letter-spacing: 0.1em;
+  background: rgba(56,189,248,0.1); color: var(--accent-vp);
+  border: 1px solid rgba(56,189,248,0.25);
+}
+.question-badge.badge-VP { background: rgba(56,189,248,0.1);  color: var(--accent-vp); border-color: rgba(56,189,248,0.25); }
+.question-badge.badge-VI { background: rgba(167,139,250,0.1); color: var(--accent-vi); border-color: rgba(167,139,250,0.25); }
+.question-badge.badge-VF { background: rgba(52,211,153,0.1);  color: var(--accent-vf); border-color: rgba(52,211,153,0.25); }
+.question-badge.badge-R3 { background: rgba(251,146,60,0.1);  color: var(--accent-r3); border-color: rgba(251,146,60,0.25); }
+.question-badge.badge-PCT{ background: rgba(244,114,182,0.1); color: var(--accent-pct);border-color: rgba(244,114,182,0.25); }
+
+.question-number {
+  font-family: var(--font-mono); font-size: 5rem; font-weight: 700;
+  color: var(--bg-elevated); position: absolute; right: 2rem; top: 1.5rem;
+  line-height: 1; user-select: none; pointer-events: none;
+}
+.question-text {
+  font-size: 1.2rem; font-weight: 700; color: var(--text-primary);
+  line-height: 1.5; max-width: 85%; margin-bottom: 1rem;
+}
+.formula-hint {
+  font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-secondary);
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0.5rem 1rem;
+  margin-bottom: 1.5rem; display: inline-block;
+}
+
+/* ══════════════════════════════ GEOGEBRA INPUT ══════════════════════════════ */
+.geogebra-input-wrap {
+  background: var(--bg-input); border: 2px solid var(--border);
+  border-radius: var(--radius-md); overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 1.5rem;
+}
+.geogebra-input-wrap:focus-within {
+  border-color: var(--accent-vp);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.12), 0 0 20px rgba(56,189,248,0.08);
+}
+
+/* Toolbar (botones de símbolos) */
+.ggb-toolbar {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.6rem 1rem; background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border); flex-wrap: wrap;
+}
+.ggb-label {
+  font-family: var(--font-mono); font-size: 0.65rem;
+  color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-right: 0.5rem; flex-shrink: 0;
+}
+.ggb-symbols { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.sym-btn {
+  background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--accent-vp); padding: 0.2rem 0.6rem;
+  border-radius: 4px; cursor: pointer; font-family: var(--font-mono);
+  font-size: 0.72rem; font-weight: 700;
+  transition: all 0.15s ease; white-space: nowrap;
+}
+.sym-btn:hover {
+  background: var(--accent-vp); color: #000; border-color: var(--accent-vp);
+  transform: translateY(-1px);
+}
+
+/* Input row */
+.ggb-input-row {
+  display: flex; align-items: center; padding: 0.75rem 1rem; gap: 0.75rem;
+}
+.ggb-cursor-label {
+  font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-vp);
+  flex-shrink: 0; font-weight: 700;
+}
+.ggb-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text-primary); font-family: var(--font-mono); font-size: 1rem;
+  caret-color: var(--accent-vp); letter-spacing: 0.02em;
+}
+.ggb-input::placeholder { color: var(--text-dim); font-size: 0.85rem; }
+.ggb-eval-btn {
+  background: var(--accent-vp); border: none; color: #000;
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 1rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease; flex-shrink: 0;
+}
+.ggb-eval-btn:hover { background: #7dd3fc; transform: scale(1.05); }
+
+/* Preview row */
+.ggb-preview-row {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.5rem 1rem 0.75rem; border-top: 1px solid var(--border);
+  min-height: 2.2rem;
+}
+.ggb-preview-label {
+  font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim);
+  text-transform: uppercase; flex-shrink: 0;
+}
+.ggb-preview {
+  font-family: var(--font-mono); font-size: 0.9rem; color: var(--text-secondary);
+  flex: 1; overflow-x: auto; white-space: nowrap;
+}
+.ggb-result {
+  font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700;
+  color: var(--accent-vf); padding: 0.1rem 0.6rem;
+  background: rgba(52,211,153,0.1); border-radius: 4px;
+  border: 1px solid rgba(52,211,153,0.2);
+}
+.ggb-result:empty { display: none; }
+
+/* ── Answer Actions ── */
+.answer-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.btn-verify, .btn-hint, .btn-skip {
+  padding: 0.65rem 1.6rem; border-radius: var(--radius-sm);
+  border: none; cursor: pointer; font-family: var(--font-display);
+  font-size: 0.9rem; font-weight: 700; transition: all 0.2s ease;
+}
+.btn-verify {
+  background: linear-gradient(135deg, var(--correct), #16a34a);
+  color: #fff; box-shadow: 0 4px 12px rgba(34,197,94,0.25);
+}
+.btn-verify:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(34,197,94,0.35); }
+.btn-hint {
+  background: rgba(234,179,8,0.1); color: var(--hint);
+  border: 1px solid rgba(234,179,8,0.25);
+}
+.btn-hint:hover { background: rgba(234,179,8,0.2); }
+.btn-skip {
+  background: rgba(255,255,255,0.05); color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-skip:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+/* Feedback */
+.feedback-box {
+  margin-top: 1.2rem; padding: 1rem 1.4rem;
+  border-radius: var(--radius-md); font-family: var(--font-mono);
+  font-size: 0.9rem; line-height: 1.6; animation: slideIn 0.25s ease;
+}
+.feedback-box.correct {
+  background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.3);
+  color: var(--correct);
+}
+.feedback-box.wrong {
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+}
+.hint-box {
+  margin-top: 0.75rem; padding: 0.8rem 1.2rem;
+  background: rgba(234,179,8,0.07); border: 1px solid rgba(234,179,8,0.2);
+  border-radius: var(--radius-sm); color: var(--hint);
+  font-family: var(--font-mono); font-size: 0.82rem;
+  animation: slideIn 0.2s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Quiz Navigation ── */
+.quiz-nav { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.btn-nav {
+  padding: 0.6rem 1.4rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg-card);
+  color: var(--text-secondary); cursor: pointer;
+  font-family: var(--font-display); font-weight: 700; font-size: 0.85rem;
+  transition: all 0.18s ease;
+}
+.btn-nav:hover { border-color: var(--accent-vp); color: var(--accent-vp); }
+.btn-nav.primary { background: var(--accent-vp); color: #000; border-color: var(--accent-vp); }
+.btn-nav.primary:hover { background: #7dd3fc; }
+.btn-nav.danger { background: rgba(239,68,68,0.1); color: #f87171; border-color: rgba(239,68,68,0.25); }
+.btn-nav.danger:hover { background: rgba(239,68,68,0.2); }
+
+/* ── Question Map ── */
+.question-map {
+  display: flex; gap: 0.4rem; flex-wrap: wrap;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.2rem;
+}
+.map-btn {
+  width: 36px; height: 36px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg-elevated);
+  color: var(--text-secondary); cursor: pointer; font-family: var(--font-mono);
+  font-size: 0.72rem; font-weight: 700; transition: all 0.15s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+.map-btn:hover { border-color: var(--accent-vp); color: var(--accent-vp); }
+.map-btn.current { border-color: var(--accent-vp); background: rgba(56,189,248,0.12); color: var(--accent-vp); }
+.map-btn.answered-correct { background: rgba(34,197,94,0.15); border-color: var(--correct); color: var(--correct); }
+.map-btn.answered-wrong   { background: rgba(239,68,68,0.15); border-color: var(--wrong); color: #f87171; }
+.map-btn.skipped { background: rgba(234,179,8,0.1); border-color: rgba(234,179,8,0.3); color: var(--hint); }
+
+/* ══════════════════════════════ RESULT SECTION ══════════════════════════════ */
+#section-result { max-width: 700px; margin: 0 auto; }
+.result-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 3rem; text-align: center;
+  box-shadow: var(--shadow-card);
+}
+.result-icon { font-size: 4rem; margin-bottom: 1rem; }
+.result-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 1rem; color: var(--text-primary); }
+.result-score {
+  font-size: 4rem; font-weight: 800; margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--accent-vp), var(--accent-vi));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.result-details {
+  color: var(--text-secondary); font-size: 1rem; margin-bottom: 1.5rem;
+  font-family: var(--font-mono);
+}
+.result-breakdown {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem; margin-bottom: 2rem;
+}
+.breakdown-item {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0.75rem;
+}
+.breakdown-label { font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono); text-transform: uppercase; }
+.breakdown-value { font-size: 1.4rem; font-weight: 800; }
+.result-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+
+/* ══════════════════════════════ CALCULATOR SECTION ══════════════════════════════ */
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+}
+.calc-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--shadow-card); transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.calc-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+
+.calc-card-header {
+  padding: 1.2rem 1.5rem;
+  display: flex; align-items: center; gap: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.calc-card-header.vp-color { background: rgba(56,189,248,0.07); }
+.calc-card-header.vi-color { background: rgba(167,139,250,0.07); }
+.calc-card-header.vf-color { background: rgba(52,211,153,0.07); }
+.calc-card-header.r3-color { background: rgba(251,146,60,0.07); }
+.calc-card-header.pct-color{ background: rgba(244,114,182,0.07); }
+.calc-card-header.ref-color { background: rgba(148,163,184,0.07); }
+
+.calc-icon { font-size: 2rem; flex-shrink: 0; }
+.calc-card-header h3 { font-size: 1.05rem; font-weight: 800; color: var(--text-primary); }
+.calc-formula-small {
+  font-size: 0.7rem; color: var(--text-secondary);
+  font-family: var(--font-mono); display: block; margin-top: 0.2rem;
+}
+
+.calc-body { padding: 1.5rem; }
+.calc-field { margin-bottom: 1rem; }
+.calc-field label {
+  display: block; font-size: 0.78rem; color: var(--text-secondary);
+  font-family: var(--font-mono); margin-bottom: 0.4rem;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.calc-input-wrap { position: relative; display: flex; align-items: center; }
+.calc-input {
+  width: 100%; background: var(--bg-input); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0.65rem 2.5rem 0.65rem 1rem;
+  color: var(--text-primary); font-family: var(--font-mono); font-size: 1rem;
+  outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.calc-input:focus {
+  border-color: var(--accent-vp);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
+}
+.calc-unit {
+  position: absolute; right: 0.75rem; color: var(--text-dim);
+  font-family: var(--font-mono); font-size: 0.85rem; pointer-events: none;
+}
+
+/* Calc Buttons */
+.calc-btn {
+  width: 100%; padding: 0.75rem; border: none; border-radius: var(--radius-sm);
+  cursor: pointer; font-family: var(--font-display); font-weight: 800; font-size: 0.95rem;
+  transition: all 0.2s ease; margin-bottom: 1rem; letter-spacing: 0.02em;
+}
+.vp-btn  { background: linear-gradient(135deg,rgba(56,189,248,0.25),rgba(56,189,248,0.1));  color: var(--accent-vp);  border: 1px solid rgba(56,189,248,0.3); }
+.vi-btn  { background: linear-gradient(135deg,rgba(167,139,250,0.25),rgba(167,139,250,0.1)); color: var(--accent-vi);  border: 1px solid rgba(167,139,250,0.3); }
+.vf-btn  { background: linear-gradient(135deg,rgba(52,211,153,0.25),rgba(52,211,153,0.1));  color: var(--accent-vf);  border: 1px solid rgba(52,211,153,0.3); }
+.r3-btn  { background: linear-gradient(135deg,rgba(251,146,60,0.25),rgba(251,146,60,0.1));  color: var(--accent-r3);  border: 1px solid rgba(251,146,60,0.3); }
+.pct-btn { background: linear-gradient(135deg,rgba(244,114,182,0.25),rgba(244,114,182,0.1));color: var(--accent-pct); border: 1px solid rgba(244,114,182,0.3); }
+.calc-btn:hover { transform: translateY(-2px); filter: brightness(1.2); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+.calc-btn:active { transform: translateY(0); }
+
+/* Calc Result & Steps */
+.calc-result {
+  font-family: var(--font-mono); font-size: 1.4rem; font-weight: 700;
+  text-align: center; min-height: 2rem; color: var(--correct);
+  transition: all 0.3s ease;
+}
+.calc-steps {
+  font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary);
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0.75rem; margin-top: 0.75rem;
+  line-height: 1.8; display: none;
+}
+.calc-steps.show { display: block; animation: slideIn 0.2s ease; }
+
+/* Regla de 3 table */
+.r3-table { margin-bottom: 0.75rem; }
+.r3-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+  margin-bottom: 0.75rem; align-items: center;
+}
+.r3-header-row span {
+  font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.08em; padding-left: 0.25rem;
+}
+.r3-x { display: flex; align-items: center; justify-content: center;
+  background: var(--bg-elevated); border: 1.5px dashed var(--accent-r3);
+  border-radius: var(--radius-sm); min-height: 42px; }
+.r3-x-label { color: var(--accent-r3); font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; }
+.r3-hint { font-size: 0.78rem; color: var(--text-dim); font-family: var(--font-mono); margin-bottom: 0.75rem; }
+
+/* Formula ref card */
+.formula-ref-card .calc-body.formula-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.formula-row { display: flex; gap: 1rem; align-items: baseline; }
+.fml-name { font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem; color: var(--accent-vp); min-width: 2.5rem; }
+.fml-eq { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-secondary); }
+.fml-hr { border: none; border-top: 1px solid var(--border); margin: 0.5rem 0; }
+.fml-note { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); line-height: 1.7; }
+
+/* ══════════════════════════════ REFERENCE SECTION ══════════════════════════════ */
+.ref-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+.ref-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 2rem;
+  box-shadow: var(--shadow-card);
+}
+.ref-badge {
+  display: inline-block; font-family: var(--font-mono); font-size: 0.7rem;
+  font-weight: 700; padding: 0.25rem 0.8rem; border-radius: 4px;
+  margin-bottom: 1rem; letter-spacing: 0.1em;
+}
+.ref-badge.vp-color { background: rgba(56,189,248,0.12);  color: var(--accent-vp); border: 1px solid rgba(56,189,248,0.25); }
+.ref-badge.vi-color { background: rgba(167,139,250,0.12); color: var(--accent-vi); border: 1px solid rgba(167,139,250,0.25); }
+.ref-badge.vf-color { background: rgba(52,211,153,0.12);  color: var(--accent-vf); border: 1px solid rgba(52,211,153,0.25); }
+.ref-badge.r3-color { background: rgba(251,146,60,0.12);  color: var(--accent-r3); border: 1px solid rgba(251,146,60,0.25); }
+.ref-card h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; color: var(--text-primary); }
+.ref-formula {
+  font-family: var(--font-mono); font-size: 0.9rem; color: var(--accent-vp);
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0.65rem 1rem; margin-bottom: 1rem;
+}
+.ref-list { list-style: none; padding: 0; }
+.ref-list li {
+  font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-secondary);
+  padding: 0.25rem 0; border-bottom: 1px solid var(--border);
+}
+.ref-list li:last-child { border-bottom: none; }
+
+/* ══════════════════════════════ FOOTER ══════════════════════════════ */
+.site-footer {
+  border-top: 1px solid var(--border); text-align: center;
+  padding: 1.5rem; color: var(--text-dim);
+  font-family: var(--font-mono); font-size: 0.72rem; margin-top: 3rem;
+}
+
+/* ══════════════════════════════ SCROLLBAR ══════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ══════════════════════════════ RESPONSIVE ══════════════════════════════ */
+@media (max-width: 768px) {
+  .header-inner { flex-direction: column; height: auto; padding: 1rem 0; gap: 0.75rem; }
+  .main-wrap { padding: 1rem; }
+  .question-card { padding: 1.5rem; }
+  .question-number { font-size: 3rem; }
+  .question-text { max-width: 100%; font-size: 1rem; }
+  .calc-grid { grid-template-columns: 1fr; }
+  .quiz-nav { flex-direction: column; }
+  .btn-nav { width: 100%; text-align: center; }
+}
+
+/* ══════════════════════════════ ANIMATIONS ══════════════════════════════ */
+@keyframes correctPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.02); box-shadow: 0 0 30px rgba(34,197,94,0.3); }
+  100% { transform: scale(1); }
+}
+@keyframes wrongShake {
+  0%,100% { transform: translateX(0); }
+  20%,60% { transform: translateX(-6px); }
+  40%,80% { transform: translateX(6px); }
+}
+.card-correct { animation: correctPop 0.4s ease; }
+.card-wrong   { animation: wrongShake 0.4s ease; }
+</style>
+<script src="script.js"></script>
+</body>
+</html>
