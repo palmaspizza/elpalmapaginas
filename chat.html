@@ -21,6 +21,26 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Pantalla de login obligatoria */
+        #login-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .login-box {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
         /* Canvas de dibujo */
@@ -28,7 +48,7 @@
             position: fixed;
             top: 0; left: 0;
             z-index: 10;
-            pointer-events: none; /* Deja pasar clicks si no se está dibujando */
+            pointer-events: none;
         }
         canvas { cursor: crosshair; pointer-events: auto; }
 
@@ -67,11 +87,9 @@
             border-radius: 8px; 
             cursor: pointer; 
             font-weight: bold;
-            transition: opacity 0.3s, transform 0.2s;
         }
 
-        .btn-subir:disabled { background: #475569; cursor: not-allowed; }
-        .btn-subir:active { transform: scale(0.95); }
+        .btn-subir:disabled { background: #475569; opacity: 0.6; }
 
         #lista { list-style: none; padding: 0; max-height: 400px; overflow-y: auto; }
         
@@ -82,11 +100,11 @@
             border-radius: 12px; 
             display: flex; 
             flex-direction: column;
-            gap: 10px;
-            animation: fadeIn 0.3s ease;
+            gap: 5px;
         }
 
-        .img-post { width: 100%; border-radius: 8px; margin-top: 5px; }
+        .user-name { font-weight: bold; color: var(--primary); font-size: 0.9rem; }
+        .img-post { width: 100%; border-radius: 8px; margin-top: 10px; }
 
         .btn-borrar { 
             align-self: flex-end;
@@ -97,25 +115,33 @@
             border-radius: 6px; 
             cursor: pointer; 
             font-size: 0.75rem;
+            margin-top: 5px;
         }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        #cooldown-timer { font-size: 0.8rem; color: #94a3b8; text-align: center; }
+        #cooldown-timer { font-size: 0.8rem; color: #94a3b8; text-align: center; height: 1rem; }
     </style>
 </head>
 <body>
+
+<div id="login-overlay">
+    <div class="login-box">
+        <h2>¿Quién eres?</h2>
+        <input type="text" id="nombreUsuario" placeholder="Tu nombre..." style="margin-bottom: 15px; width: 80%;">
+        <br>
+        <button id="btnEntrar" class="btn-subir">Entrar al Chat</button>
+    </div>
+</div>
 
 <div id="canvas-container">
     <canvas id="dibujoCanvas"></canvas>
 </div>
 
 <div class="container">
-    <h2>✨ Firebase Social</h2>
+    <h2 id="saludoChat">✨ Firebase Social</h2>
     
     <div class="form-group">
         <div class="input-row">
-            <input type="text" id="textoInput" placeholder="Escribe un mensaje...">
+            <input type="text" id="textoInput" placeholder="Escribe un mensaje y pulsa Enter...">
             <button id="btnEnviar" class="btn-subir">Enviar</button>
         </div>
         <input type="file" id="fotoInput" accept="image/*" style="font-size: 0.8rem; color: #94a3b8;">
@@ -145,30 +171,34 @@
     const storage = getStorage(app);
     const dbRef = ref(db, "posteos");
 
-    const input = document.getElementById('textoInput');
-    const fotoInput = document.getElementById('fotoInput');
-    const btn = document.getElementById('btnEnviar');
-    const listaUI = document.getElementById('lista');
-    const cooldownLabel = document.getElementById('cooldown-timer');
+    let usuarioActual = "";
+
+    // --- LÓGICA DE LOGIN ---
+    const loginOverlay = document.getElementById('login-overlay');
+    const inputNombre = document.getElementById('nombreUsuario');
+    const btnEntrar = document.getElementById('btnEntrar');
+
+    btnEntrar.onclick = () => {
+        if (inputNombre.value.trim() !== "") {
+            usuarioActual = inputNombre.value.trim();
+            loginOverlay.style.display = "none";
+            document.getElementById('saludoChat').textContent = `Hola, ${usuarioActual}`;
+        }
+    };
 
     // --- LÓGICA DE DIBUJO ---
     const canvas = document.getElementById('dibujoCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-
     let dibujando = false;
 
     canvas.onmousedown = () => dibujando = true;
     canvas.onmouseup = () => {
         dibujando = false;
         ctx.beginPath();
-        // Borrar después de 4 segundos
-        setTimeout(() => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }, 4000);
+        setTimeout(() => ctx.clearRect(0, 0, canvas.width, canvas.height), 4000);
     };
-
     canvas.onmousemove = (e) => {
         if (!dibujando) return;
         ctx.lineWidth = 3;
@@ -180,19 +210,25 @@
         ctx.moveTo(e.clientX, e.clientY);
     };
 
-    // --- SUBIR DATOS (MENSAJE + FOTO + COOLDOWN) ---
-    btn.addEventListener('click', async () => {
+    // --- ENVIAR DATOS ---
+    const input = document.getElementById('textoInput');
+    const fotoInput = document.getElementById('fotoInput');
+    const btn = document.getElementById('btnEnviar');
+    const listaUI = document.getElementById('lista');
+    const cooldownLabel = document.getElementById('cooldown-timer');
+
+    async function enviarMensaje() {
+        if (btn.disabled) return;
+        
         const mensaje = input.value;
         const archivo = fotoInput.files[0];
 
         if (mensaje.trim() === "" && !archivo) return;
 
-        // Desactivar botón (Cooldown)
         btn.disabled = true;
         let timeLeft = 3;
-        
         const interval = setInterval(() => {
-            cooldownLabel.textContent = `Espera ${timeLeft}s para volver a escribir...`;
+            cooldownLabel.textContent = `Espera ${timeLeft}s...`;
             timeLeft--;
             if (timeLeft < 0) {
                 clearInterval(interval);
@@ -203,12 +239,13 @@
 
         let urlImagen = null;
         if (archivo) {
-            const storageRef = sRef(storage, 'fotos/' + Date.now() + arquivo.name);
+            const storageRef = sRef(storage, 'fotos/' + Date.now() + archivo.name);
             const snapshot = await uploadBytes(storageRef, archivo);
             urlImagen = await getDownloadURL(snapshot.ref);
         }
 
         push(dbRef, {
+            usuario: usuarioActual,
             texto: mensaje,
             foto: urlImagen,
             hora: new Date().toLocaleString()
@@ -216,6 +253,18 @@
 
         input.value = "";
         fotoInput.value = "";
+    }
+
+    btn.onclick = enviarMensaje;
+
+    // Detectar ENTER en el input de mensaje
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') enviarMensaje();
+    });
+
+    // Detectar ENTER en el login
+    inputNombre.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') btnEntrar.onclick();
     });
 
     // --- MOSTRAR DATOS ---
@@ -225,14 +274,11 @@
         if (data) {
             Object.entries(data).reverse().forEach(([id, item]) => {
                 const li = document.createElement('li');
-                
-                let contenidoHtml = `<span>${item.texto}</span>`;
-                if (item.foto) {
-                    contenidoHtml += `<img src="${item.foto}" class="img-post">`;
-                }
+                let contenidoHtml = `<span class="user-name">${item.usuario || 'Anónimo'}:</span>`;
+                contenidoHtml += `<span>${item.texto}</span>`;
+                if (item.foto) contenidoHtml += `<img src="${item.foto}" class="img-post">`;
                 
                 li.innerHTML = contenidoHtml;
-
                 const btnBorrar = document.createElement('button');
                 btnBorrar.textContent = "Eliminar";
                 btnBorrar.className = "btn-borrar";
