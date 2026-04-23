@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase App</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding-top: 50px; }
+        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { color: #1a73e8; margin-top: 0; }
+        .form-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; }
+        button { background: #1a73e8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #1557b0; }
+        #lista { list-style: none; padding: 0; }
+        li { background: #f8f9fa; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 5px solid #1a73e8; word-break: break-word; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Mensajes</h2>
+    
+    <div class="form-group">
+        <input type="text" id="textoInput" placeholder="Escribe algo...">
+        <button id="btnEnviar">Subir</button>
+    </div>
+
+    <ul id="lista">
+        </ul>
+</div>
+
+<script type="module">
+    // 1. Importar los módulos necesarios de Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+
+    // 2. Tu configuración (la que pasaste antes)
+    const firebaseConfig = {
+        apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
+        authDomain: "palmaxd-32720.firebaseapp.com",
+        databaseURL: "https://palmaxd-32720-default-rtdb.firebaseio.com",
+        projectId: "palmaxd-32720",
+        storageBucket: "palmaxd-32720.firebasestorage.app",
+        messagingSenderId: "527831930817",
+        appId: "1:527831930817:web:05fcfd4b53296068d4c140"
+    };
+
+    // 3. Inicializar Firebase y la Base de Datos
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dbRef = ref(db, "posteos"); // "posteos" es el nombre de la carpeta en tu DB
+
+    const input = document.getElementById('textoInput');
+    const btn = document.getElementById('btnEnviar');
+    const listaUI = document.getElementById('lista');
+
+    // 4. Función para SUBIR datos
+    btn.addEventListener('click', () => {
+        const mensaje = input.value;
+        if (mensaje.trim() !== "") {
+            push(dbRef, {
+                texto: mensaje,
+                hora: new Date().toLocaleString()
+            });
+            input.value = ""; // Limpiar el input
+        }
+    });
+
+    // 5. Función para MOSTRAR datos (se activa sola cuando hay cambios)
+    onValue(dbRef, (snapshot) => {
+        listaUI.innerHTML = ""; // Limpiar lista antes de recargar
+        const data = snapshot.val();
+        
+        if (data) {
+            // Convertir el objeto de Firebase en un array y recorrerlo
+            Object.values(data).reverse().forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.texto;
+                listaUI.appendChild(li);
+            });
+        }
+    });
+</script>
+
+</body>
+</html>
