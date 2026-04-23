@@ -3,47 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase App con Borrado</title>
+    <title>Firebase App - Sesión Temporal</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding-top: 50px; }
         .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         h2 { color: #1a73e8; margin-top: 0; }
+        .usuario-info { font-size: 0.9rem; color: #666; margin-bottom: 15px; font-style: italic; }
         .form-group { display: flex; gap: 10px; margin-bottom: 20px; }
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; }
         .btn-subir { background: #1a73e8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         
         #lista { list-style: none; padding: 0; }
         li { 
-            background: #f8f9fa; 
-            padding: 10px; 
-            margin-bottom: 8px; 
-            border-radius: 6px; 
+            background: #fff; 
+            padding: 12px; 
+            margin-bottom: 10px; 
+            border-radius: 8px; 
+            border: 1px solid #e0e0e0;
             border-left: 5px solid #1a73e8; 
             display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            word-break: break-word;
+            flex-direction: column;
+            position: relative;
         }
+        .nombre-autor { font-size: 0.75rem; font-weight: bold; color: #1a73e8; margin-bottom: 4px; }
+        .texto-msg { word-break: break-word; color: #333; }
+        
         .btn-borrar { 
-            background: #ff4d4d; 
-            color: white; 
-            border: none; 
-            padding: 5px 10px; 
+            background: #ffeded; 
+            color: #d93025; 
+            border: 1px solid #d93025;
+            padding: 3px 8px; 
             border-radius: 4px; 
             cursor: pointer; 
-            font-size: 0.8rem;
-            margin-left: 10px;
+            font-size: 0.7rem;
+            align-self: flex-end;
+            margin-top: 8px;
+            transition: 0.2s;
         }
-        .btn-borrar:hover { background: #cc0000; }
+        .btn-borrar:hover { background: #d93025; color: white; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Mensajes</h2>
+    <div id="infoUser" class="usuario-info"></div>
     
     <div class="form-group">
-        <input type="text" id="textoInput" placeholder="Escribe algo...">
+        <input type="text" id="textoInput" placeholder="Escribe y presiona Enter...">
         <button id="btnEnviar" class="btn-subir">Subir</button>
     </div>
 
@@ -51,7 +58,6 @@
 </div>
 
 <script type="module">
-    // 1. Importar remove de la base de datos
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
 
@@ -69,49 +75,75 @@
     const db = getDatabase(app);
     const dbRef = ref(db, "posteos");
 
+    // --- SESIÓN TEMPORAL (Se borra al cerrar la pestaña) ---
+    let nombreUsuario = sessionStorage.getItem('nombreChat');
+    let idUsuario = sessionStorage.getItem('idUsuarioChat');
+
+    if (!nombreUsuario) {
+        nombreUsuario = prompt("Dinos tu nombre para esta sesión:") || "Invitado";
+        idUsuario = 'ID_' + Date.now() + Math.random().toString(36).substr(2, 5);
+        
+        // Guardamos en sessionStorage (Solo dura mientras la pestaña esté abierta)
+        sessionStorage.setItem('nombreChat', nombreUsuario);
+        sessionStorage.setItem('idUsuarioChat', idUsuario);
+    }
+    
+    document.getElementById('infoUser').textContent = `Conectado como: ${nombreUsuario}`;
+
     const input = document.getElementById('textoInput');
     const btn = document.getElementById('btnEnviar');
     const listaUI = document.getElementById('lista');
 
-    // SUBIR DATOS
-    btn.addEventListener('click', () => {
+    // Función para enviar a Firebase
+    const enviarMensaje = () => {
         const mensaje = input.value;
         if (mensaje.trim() !== "") {
             push(dbRef, {
                 texto: mensaje,
-                hora: new Date().toLocaleString()
+                autor: nombreUsuario,
+                autorID: idUsuario,
+                timestamp: Date.now()
             });
             input.value = "";
         }
+    };
+
+    // Evento botón
+    btn.addEventListener('click', enviarMensaje);
+
+    // Evento tecla Enter
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            enviarMensaje();
+        }
     });
 
-    // MOSTRAR DATOS Y BOTÓN ELIMINAR
+    // Leer mensajes en tiempo real
     onValue(dbRef, (snapshot) => {
         listaUI.innerHTML = "";
         const data = snapshot.val();
         
         if (data) {
-            // Usamos Object.entries para obtener el ID (key) y el contenido (value)
+            // Ordenar por más reciente arriba
             Object.entries(data).reverse().forEach(([id, item]) => {
                 const li = document.createElement('li');
                 
-                // Texto del mensaje
-                const span = document.createElement('span');
-                span.textContent = item.texto;
-                
-                // Botón de eliminar
-                const btnBorrar = document.createElement('button');
-                btnBorrar.textContent = "Eliminar";
-                btnBorrar.className = "btn-borrar";
-                
-                // Evento para eliminar de Firebase
-                btnBorrar.onclick = () => {
-                    const itemRef = ref(db, `posteos/${id}`);
-                    remove(itemRef);
-                };
+                li.innerHTML = `
+                    <span class="nombre-autor">${item.autor}</span>
+                    <span class="texto-msg">${item.texto}</span>
+                `;
 
-                li.appendChild(span);
-                li.appendChild(btnBorrar);
+                // Solo mostrar botón "Eliminar" si el autorID coincide con el de esta pestaña
+                if (item.autorID === idUsuario) {
+                    const btnBorrar = document.createElement('button');
+                    btnBorrar.textContent = "Borrar mi mensaje";
+                    btnBorrar.className = "btn-borrar";
+                    btnBorrar.onclick = () => {
+                        remove(ref(db, `posteos/${id}`));
+                    };
+                    li.appendChild(btnBorrar);
+                }
+
                 listaUI.appendChild(li);
             });
         }
