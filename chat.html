@@ -24,7 +24,6 @@
             overflow-x: hidden;
         }
 
-        /* Pantalla de login obligatoria */
         #login-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -43,7 +42,6 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
-        /* Canvas de dibujo */
         #canvas-container {
             position: fixed;
             top: 0; left: 0;
@@ -154,7 +152,6 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
-    import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
@@ -168,12 +165,14 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const storage = getStorage(app);
     const dbRef = ref(db, "posteos");
 
+    if (!sessionStorage.getItem('userId')) {
+        sessionStorage.setItem('userId', 'user_' + Math.random().toString(36).substr(2, 9));
+    }
+    const myId = sessionStorage.getItem('userId');
     let usuarioActual = "";
 
-    // --- LÓGICA DE LOGIN ---
     const loginOverlay = document.getElementById('login-overlay');
     const inputNombre = document.getElementById('nombreUsuario');
     const btnEntrar = document.getElementById('btnEntrar');
@@ -186,13 +185,11 @@
         }
     };
 
-    // --- LÓGICA DE DIBUJO ---
     const canvas = document.getElementById('dibujoCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     let dibujando = false;
-
     canvas.onmousedown = () => dibujando = true;
     canvas.onmouseup = () => {
         dibujando = false;
@@ -201,28 +198,28 @@
     };
     canvas.onmousemove = (e) => {
         if (!dibujando) return;
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-        ctx.strokeStyle = "#6366f1";
-        ctx.lineTo(e.clientX, e.clientY);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(e.clientX, e.clientY);
+        ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.strokeStyle = "#6366f1";
+        ctx.lineTo(e.clientX, e.clientY); ctx.stroke(); ctx.beginPath(); ctx.moveTo(e.clientX, e.clientY);
     };
 
-    // --- ENVIAR DATOS ---
     const input = document.getElementById('textoInput');
     const fotoInput = document.getElementById('fotoInput');
     const btn = document.getElementById('btnEnviar');
     const listaUI = document.getElementById('lista');
     const cooldownLabel = document.getElementById('cooldown-timer');
 
+    // Función para convertir imagen a Base64
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
     async function enviarMensaje() {
         if (btn.disabled) return;
-        
         const mensaje = input.value;
         const archivo = fotoInput.files[0];
-
         if (mensaje.trim() === "" && !archivo) return;
 
         btn.disabled = true;
@@ -230,44 +227,30 @@
         const interval = setInterval(() => {
             cooldownLabel.textContent = `Espera ${timeLeft}s...`;
             timeLeft--;
-            if (timeLeft < 0) {
-                clearInterval(interval);
-                btn.disabled = false;
-                cooldownLabel.textContent = "";
-            }
+            if (timeLeft < 0) { clearInterval(interval); btn.disabled = false; cooldownLabel.textContent = ""; }
         }, 1000);
 
-        let urlImagen = null;
+        let imgData = null;
         if (archivo) {
-            const storageRef = sRef(storage, 'fotos/' + Date.now() + archivo.name);
-            const snapshot = await uploadBytes(storageRef, archivo);
-            urlImagen = await getDownloadURL(snapshot.ref);
+            // Convertimos la imagen a texto (Base64) para guardarla en la DB
+            imgData = await toBase64(archivo);
         }
 
         push(dbRef, {
+            uid: myId,
             usuario: usuarioActual,
             texto: mensaje,
-            foto: urlImagen,
+            foto: imgData, // Se guarda la cadena de texto de la imagen
             hora: new Date().toLocaleString()
         });
 
-        input.value = "";
-        fotoInput.value = "";
+        input.value = ""; fotoInput.value = "";
     }
 
     btn.onclick = enviarMensaje;
+    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') enviarMensaje(); });
+    inputNombre.addEventListener('keypress', (e) => { if (e.key === 'Enter') btnEntrar.onclick(); });
 
-    // Detectar ENTER en el input de mensaje
-    input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') enviarMensaje();
-    });
-
-    // Detectar ENTER en el login
-    inputNombre.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') btnEntrar.onclick();
-    });
-
-    // --- MOSTRAR DATOS ---
     onValue(dbRef, (snapshot) => {
         listaUI.innerHTML = "";
         const data = snapshot.val();
@@ -275,25 +258,23 @@
             Object.entries(data).reverse().forEach(([id, item]) => {
                 const li = document.createElement('li');
                 let contenidoHtml = `<span class="user-name">${item.usuario || 'Anónimo'}:</span>`;
-                contenidoHtml += `<span>${item.texto}</span>`;
+                if(item.texto) contenidoHtml += `<span>${item.texto}</span>`;
                 if (item.foto) contenidoHtml += `<img src="${item.foto}" class="img-post">`;
-                
                 li.innerHTML = contenidoHtml;
-                const btnBorrar = document.createElement('button');
-                btnBorrar.textContent = "Eliminar";
-                btnBorrar.className = "btn-borrar";
-                btnBorrar.onclick = () => remove(ref(db, `posteos/${id}`));
 
-                li.appendChild(btnBorrar);
+                if (item.uid === myId) {
+                    const btnBorrar = document.createElement('button');
+                    btnBorrar.textContent = "Eliminar";
+                    btnBorrar.className = "btn-borrar";
+                    btnBorrar.onclick = () => remove(ref(db, `posteos/${id}`));
+                    li.appendChild(btnBorrar);
+                }
                 listaUI.appendChild(li);
             });
         }
     });
 
-    window.onresize = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    };
+    window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
 </script>
 
 </body>
