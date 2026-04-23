@@ -6,38 +6,51 @@
     <title>Firebase Realtime Chat & Canvas</title>
     <style>
         :root { --primary: #6366f1; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow: hidden; }
         
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .login-box { background: var(--card); padding: 2rem; border-radius: 16px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .login-box { background: var(--card); padding: 2rem; border-radius: 16px; text-align: center; }
 
         #canvas-container { position: fixed; top: 0; left: 0; z-index: 10; pointer-events: none; }
         canvas { cursor: crosshair; pointer-events: auto; }
 
-        .container { background: var(--card); padding: 2rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 90%; max-width: 500px; margin-top: 20px; z-index: 20; position: relative; }
-        h2 { color: var(--primary); margin-bottom: 1.5rem; text-align: center; }
-        .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-        .input-row { display: flex; gap: 10px; }
-        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #334155; background: #0f172a; color: white; border-radius: 8px; outline: none; }
-        .btn-subir { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .btn-subir:disabled { background: #475569; opacity: 0.6; cursor: not-allowed; }
+        /* Paleta de colores */
+        .controls { position: fixed; top: 20px; left: 20px; z-index: 30; background: var(--card); padding: 10px; border-radius: 12px; display: flex; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto; }
+        .color-btn { width: 25px; height: 25px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
+        .color-btn.active { border-color: white; transform: scale(1.2); }
 
-        #lista { list-style: none; padding: 0; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; }
-        li { background: #334155; padding: 15px; margin-bottom: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 5px; }
-        .user-name { font-weight: bold; color: var(--primary); font-size: 0.9rem; }
-        .img-post { width: 100%; border-radius: 8px; margin-top: 10px; }
-        .btn-borrar { align-self: flex-end; background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; }
-        #cooldown-timer { font-size: 0.8rem; color: #94a3b8; text-align: center; height: 1.2rem; }
+        .container { background: var(--card); padding: 1.5rem; border-radius: 16px; width: 90%; max-width: 450px; margin-top: 80px; z-index: 20; position: relative; max-height: 80vh; display: flex; flex-direction: column; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+        .input-row { display: flex; gap: 8px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #334155; background: #0f172a; color: white; border-radius: 8px; outline: none; }
+        .btn-subir { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-subir:disabled { opacity: 0.5; }
+
+        #lista { list-style: none; padding: 0; overflow-y: auto; flex: 1; }
+        li { background: #334155; padding: 12px; margin-bottom: 10px; border-radius: 10px; display: flex; flex-direction: column; }
+        .user-name { font-weight: bold; color: var(--primary); margin-bottom: 4px; }
+        .img-post { width: 100%; border-radius: 8px; margin-top: 8px; }
+        .btn-borrar { align-self: flex-end; background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; }
+        #cooldown-timer { font-size: 0.75rem; color: #94a3b8; text-align: center; min-height: 1rem; }
     </style>
 </head>
 <body>
 
 <div id="login-overlay">
     <div class="login-box">
-        <h2>¿Quién eres?</h2>
-        <input type="text" id="nombreUsuario" placeholder="Tu nombre...">
-        <button id="btnEntrar" class="btn-subir" style="margin-top:10px">Entrar</button>
+        <h2>Tu Nombre</h2>
+        <input type="text" id="nombreUsuario" placeholder="Escribe aquí...">
+        <button id="btnEntrar" class="btn-subir" style="margin-top:10px; width: 100%;">Entrar</button>
     </div>
+</div>
+
+<div class="controls" id="colorPicker">
+    <div class="color-btn active" style="background: #6366f1;" data-color="#6366f1"></div>
+    <div class="color-btn" style="background: #ef4444;" data-color="#ef4444"></div>
+    <div class="color-btn" style="background: #22c55e;" data-color="#22c55e"></div>
+    <div class="color-btn" style="background: #eab308;" data-color="#eab308"></div>
+    <div class="color-btn" style="background: #ec4899;" data-color="#ec4899"></div>
+    <div class="color-btn" style="background: #ffffff;" data-color="#ffffff"></div>
 </div>
 
 <div id="canvas-container">
@@ -45,13 +58,12 @@
 </div>
 
 <div class="container">
-    <h2 id="saludoChat">✨ Chat en Vivo</h2>
     <div class="form-group">
         <div class="input-row">
-            <input type="text" id="textoInput" placeholder="Escribe algo...">
+            <input type="text" id="textoInput" placeholder="Mensaje...">
             <button id="btnEnviar" class="btn-subir">Enviar</button>
         </div>
-        <input type="file" id="fotoInput" accept="image/*" style="font-size: 0.8rem;">
+        <input type="file" id="fotoInput" accept="image/*" style="font-size: 0.7rem;">
         <div id="cooldown-timer"></div>
     </div>
     <ul id="lista"></ul>
@@ -59,7 +71,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, remove, set, onChildAdded } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, remove, set } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
@@ -73,85 +85,99 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const dbRef = ref(db, "posteos");
-    const drawRef = ref(db, "dibujo");
-
-    if (!sessionStorage.getItem('userId')) sessionStorage.setItem('userId', 'u_' + Math.random().toString(36).substr(2, 9));
-    const myId = sessionStorage.getItem('userId');
+    const myId = 'u_' + Math.random().toString(36).substr(2, 9);
     let usuarioActual = "";
+    let colorSeleccionado = "#6366f1";
 
     // LOGIN
     document.getElementById('btnEntrar').onclick = () => {
         const nom = document.getElementById('nombreUsuario').value.trim();
-        if (nom) { usuarioActual = nom; document.getElementById('login-overlay').style.display = "none"; document.getElementById('saludoChat').textContent = `Hola, ${usuarioActual}`; }
+        if (nom) { usuarioActual = nom; document.getElementById('login-overlay').style.display = "none"; }
     };
 
-    // --- DIBUJO EN TIEMPO REAL ---
+    // PALETA DE COLORES
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelector('.color-btn.active').classList.remove('active');
+            btn.classList.add('active');
+            colorSeleccionado = btn.dataset.color;
+        };
+    });
+
+    // --- DIBUJO INDEPENDIENTE ---
     const canvas = document.getElementById('dibujoCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     let dibujando = false;
 
-    canvas.onmousedown = () => dibujando = true;
+    canvas.onmousedown = () => { dibujando = true; };
     canvas.onmouseup = () => { 
         dibujando = false; 
-        // Limpiar dibujo de todos después de 10 segundos tras dejar de dibujar
-        setTimeout(() => { set(drawRef, null); }, 10000);
+        setTimeout(() => set(ref(db, `dibujos/${myId}`), null), 10000); 
     };
 
     canvas.onmousemove = (e) => {
         if (!dibujando) return;
-        push(drawRef, { x: e.clientX, y: e.clientY, color: "#6366f1" });
+        // Guardamos cada trazo en un nodo específico del usuario
+        push(ref(db, `dibujos/${myId}`), { x: e.clientX, y: e.clientY, c: colorSeleccionado });
     };
 
-    // Escuchar dibujos de otros
-    onValue(drawRef, (snapshot) => {
-        if (!snapshot.exists()) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
-        const puntos = snapshot.val();
-        ctx.beginPath();
-        ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.strokeStyle = "#6366f1";
-        Object.values(puntos).forEach(p => {
-            ctx.lineTo(p.x, p.y);
-            ctx.stroke();
+    // Renderizar todos los trazos de todos los usuarios
+    onValue(ref(db, "dibujos"), (snapshot) => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const todosLosDibujos = snapshot.val();
+        if (!todosLosDibujos) return;
+
+        Object.values(todosLosDibujos).forEach(usuarioPuntos => {
             ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
+            ctx.lineWidth = 3; ctx.lineCap = "round";
+            const puntos = Object.values(usuarioPuntos);
+            puntos.forEach((p, index) => {
+                ctx.strokeStyle = p.c;
+                if (index === 0) ctx.moveTo(p.x, p.y);
+                else {
+                    ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                }
+            });
         });
     });
 
-    // --- CHAT CON ANTI-SPAM ---
+    // --- CHAT ---
     const input = document.getElementById('textoInput');
     const fotoInput = document.getElementById('fotoInput');
     const btn = document.getElementById('btnEnviar');
     const cooldownLabel = document.getElementById('cooldown-timer');
 
-    const toBase64 = file => new Promise((res, rej) => {
-        const reader = new FileReader(); reader.readAsDataURL(file);
-        reader.onload = () => res(reader.result); reader.onerror = rej;
-    });
-
     async function enviarMensaje() {
         if (btn.disabled || (input.value.trim() === "" && !fotoInput.files[0])) return;
-        
         btn.disabled = true;
         let timeLeft = 3;
-        cooldownLabel.textContent = `Espera ${timeLeft}s...`;
-        
         const timer = setInterval(() => {
+            cooldownLabel.textContent = `Espera ${timeLeft}s...`;
+            if (timeLeft <= 0) { clearInterval(timer); btn.disabled = false; cooldownLabel.textContent = ""; }
             timeLeft--;
-            if (timeLeft > 0) cooldownLabel.textContent = `Espera ${timeLeft}s...`;
-            else { clearInterval(timer); btn.disabled = false; cooldownLabel.textContent = ""; }
         }, 1000);
 
-        let imgData = fotoInput.files[0] ? await toBase64(fotoInput.files[0]) : null;
+        let imgData = null;
+        if (fotoInput.files[0]) {
+            const reader = new FileReader();
+            imgData = await new Promise(res => {
+                reader.onload = () => res(reader.result);
+                reader.readAsDataURL(fotoInput.files[0]);
+            });
+        }
         
-        push(dbRef, { uid: myId, usuario: usuarioActual, texto: input.value, foto: imgData, hora: new Date().toLocaleTimeString() });
+        push(ref(db, "posteos"), { uid: myId, usuario: usuarioActual, texto: input.value, foto: imgData });
         input.value = ""; fotoInput.value = "";
     }
 
     btn.onclick = enviarMensaje;
     input.onkeypress = (e) => { if (e.key === 'Enter') enviarMensaje(); };
 
-    onValue(dbRef, (snapshot) => {
+    onValue(ref(db, "posteos"), (snapshot) => {
         const listaUI = document.getElementById('lista');
         listaUI.innerHTML = "";
         const data = snapshot.val();
