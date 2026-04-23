@@ -3,55 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase App - Sesión Temporal</title>
+    <title>Modern Firebase Chat & Canvas</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding-top: 50px; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        h2 { color: #1a73e8; margin-top: 0; }
-        .usuario-info { font-size: 0.9rem; color: #666; margin-bottom: 15px; font-style: italic; }
-        .form-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; }
-        .btn-subir { background: #1a73e8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+        }
+
+        body { 
+            font-family: 'Inter', system-ui, sans-serif; 
+            background: var(--bg); 
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Canvas de dibujo */
+        #canvas-container {
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 10;
+            pointer-events: none; /* Deja pasar clicks si no se está dibujando */
+        }
+        canvas { cursor: crosshair; pointer-events: auto; }
+
+        .container { 
+            background: var(--card); 
+            padding: 2rem; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
+            width: 90%; 
+            max-width: 500px; 
+            margin-top: 20px;
+            z-index: 20;
+        }
+
+        h2 { color: var(--primary); margin-bottom: 1.5rem; text-align: center; }
+
+        .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         
-        #lista { list-style: none; padding: 0; }
-        li { 
-            background: #fff; 
+        .input-row { display: flex; gap: 10px; }
+
+        input[type="text"] { 
+            flex: 1; 
             padding: 12px; 
-            margin-bottom: 10px; 
+            border: 1px solid #334155; 
+            background: #0f172a;
+            color: white;
             border-radius: 8px; 
-            border: 1px solid #e0e0e0;
-            border-left: 5px solid #1a73e8; 
+            outline: none; 
+        }
+
+        .btn-subir { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: opacity 0.3s, transform 0.2s;
+        }
+
+        .btn-subir:disabled { background: #475569; cursor: not-allowed; }
+        .btn-subir:active { transform: scale(0.95); }
+
+        #lista { list-style: none; padding: 0; max-height: 400px; overflow-y: auto; }
+        
+        li { 
+            background: #334155; 
+            padding: 15px; 
+            margin-bottom: 12px; 
+            border-radius: 12px; 
             display: flex; 
             flex-direction: column;
-            position: relative;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
         }
-        .nombre-autor { font-size: 0.75rem; font-weight: bold; color: #1a73e8; margin-bottom: 4px; }
-        .texto-msg { word-break: break-word; color: #333; }
-        
+
+        .img-post { width: 100%; border-radius: 8px; margin-top: 5px; }
+
         .btn-borrar { 
-            background: #ffeded; 
-            color: #d93025; 
-            border: 1px solid #d93025;
-            padding: 3px 8px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-size: 0.7rem;
             align-self: flex-end;
-            margin-top: 8px;
-            transition: 0.2s;
+            background: #ef4444; 
+            color: white; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 0.75rem;
         }
-        .btn-borrar:hover { background: #d93025; color: white; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        #cooldown-timer { font-size: 0.8rem; color: #94a3b8; text-align: center; }
     </style>
 </head>
 <body>
 
+<div id="canvas-container">
+    <canvas id="dibujoCanvas"></canvas>
+</div>
+
 <div class="container">
-    <h2>Mensajes</h2>
-    <div id="infoUser" class="usuario-info"></div>
+    <h2>✨ Firebase Social</h2>
     
     <div class="form-group">
-        <input type="text" id="textoInput" placeholder="Escribe y presiona Enter...">
-        <button id="btnEnviar" class="btn-subir">Subir</button>
+        <div class="input-row">
+            <input type="text" id="textoInput" placeholder="Escribe un mensaje...">
+            <button id="btnEnviar" class="btn-subir">Enviar</button>
+        </div>
+        <input type="file" id="fotoInput" accept="image/*" style="font-size: 0.8rem; color: #94a3b8;">
+        <div id="cooldown-timer"></div>
     </div>
 
     <ul id="lista"></ul>
@@ -60,6 +128,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+    import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
@@ -73,81 +142,112 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const storage = getStorage(app);
     const dbRef = ref(db, "posteos");
 
-    // --- SESIÓN TEMPORAL (Se borra al cerrar la pestaña) ---
-    let nombreUsuario = sessionStorage.getItem('nombreChat');
-    let idUsuario = sessionStorage.getItem('idUsuarioChat');
-
-    if (!nombreUsuario) {
-        nombreUsuario = prompt("Dinos tu nombre para esta sesión:") || "Invitado";
-        idUsuario = 'ID_' + Date.now() + Math.random().toString(36).substr(2, 5);
-        
-        // Guardamos en sessionStorage (Solo dura mientras la pestaña esté abierta)
-        sessionStorage.setItem('nombreChat', nombreUsuario);
-        sessionStorage.setItem('idUsuarioChat', idUsuario);
-    }
-    
-    document.getElementById('infoUser').textContent = `Conectado como: ${nombreUsuario}`;
-
     const input = document.getElementById('textoInput');
+    const fotoInput = document.getElementById('fotoInput');
     const btn = document.getElementById('btnEnviar');
     const listaUI = document.getElementById('lista');
+    const cooldownLabel = document.getElementById('cooldown-timer');
 
-    // Función para enviar a Firebase
-    const enviarMensaje = () => {
-        const mensaje = input.value;
-        if (mensaje.trim() !== "") {
-            push(dbRef, {
-                texto: mensaje,
-                autor: nombreUsuario,
-                autorID: idUsuario,
-                timestamp: Date.now()
-            });
-            input.value = "";
-        }
+    // --- LÓGICA DE DIBUJO ---
+    const canvas = document.getElementById('dibujoCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let dibujando = false;
+
+    canvas.onmousedown = () => dibujando = true;
+    canvas.onmouseup = () => {
+        dibujando = false;
+        ctx.beginPath();
+        // Borrar después de 4 segundos
+        setTimeout(() => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }, 4000);
     };
 
-    // Evento botón
-    btn.addEventListener('click', enviarMensaje);
+    canvas.onmousemove = (e) => {
+        if (!dibujando) return;
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "#6366f1";
+        ctx.lineTo(e.clientX, e.clientY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(e.clientX, e.clientY);
+    };
 
-    // Evento tecla Enter
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            enviarMensaje();
+    // --- SUBIR DATOS (MENSAJE + FOTO + COOLDOWN) ---
+    btn.addEventListener('click', async () => {
+        const mensaje = input.value;
+        const archivo = fotoInput.files[0];
+
+        if (mensaje.trim() === "" && !archivo) return;
+
+        // Desactivar botón (Cooldown)
+        btn.disabled = true;
+        let timeLeft = 3;
+        
+        const interval = setInterval(() => {
+            cooldownLabel.textContent = `Espera ${timeLeft}s para volver a escribir...`;
+            timeLeft--;
+            if (timeLeft < 0) {
+                clearInterval(interval);
+                btn.disabled = false;
+                cooldownLabel.textContent = "";
+            }
+        }, 1000);
+
+        let urlImagen = null;
+        if (archivo) {
+            const storageRef = sRef(storage, 'fotos/' + Date.now() + arquivo.name);
+            const snapshot = await uploadBytes(storageRef, archivo);
+            urlImagen = await getDownloadURL(snapshot.ref);
         }
+
+        push(dbRef, {
+            texto: mensaje,
+            foto: urlImagen,
+            hora: new Date().toLocaleString()
+        });
+
+        input.value = "";
+        fotoInput.value = "";
     });
 
-    // Leer mensajes en tiempo real
+    // --- MOSTRAR DATOS ---
     onValue(dbRef, (snapshot) => {
         listaUI.innerHTML = "";
         const data = snapshot.val();
-        
         if (data) {
-            // Ordenar por más reciente arriba
             Object.entries(data).reverse().forEach(([id, item]) => {
                 const li = document.createElement('li');
                 
-                li.innerHTML = `
-                    <span class="nombre-autor">${item.autor}</span>
-                    <span class="texto-msg">${item.texto}</span>
-                `;
-
-                // Solo mostrar botón "Eliminar" si el autorID coincide con el de esta pestaña
-                if (item.autorID === idUsuario) {
-                    const btnBorrar = document.createElement('button');
-                    btnBorrar.textContent = "Borrar mi mensaje";
-                    btnBorrar.className = "btn-borrar";
-                    btnBorrar.onclick = () => {
-                        remove(ref(db, `posteos/${id}`));
-                    };
-                    li.appendChild(btnBorrar);
+                let contenidoHtml = `<span>${item.texto}</span>`;
+                if (item.foto) {
+                    contenidoHtml += `<img src="${item.foto}" class="img-post">`;
                 }
+                
+                li.innerHTML = contenidoHtml;
 
+                const btnBorrar = document.createElement('button');
+                btnBorrar.textContent = "Eliminar";
+                btnBorrar.className = "btn-borrar";
+                btnBorrar.onclick = () => remove(ref(db, `posteos/${id}`));
+
+                li.appendChild(btnBorrar);
                 listaUI.appendChild(li);
             });
         }
     });
+
+    window.onresize = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    };
 </script>
 
 </body>
