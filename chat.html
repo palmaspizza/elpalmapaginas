@@ -14,7 +14,6 @@
         #canvas-container { position: fixed; top: 0; left: 0; z-index: 10; pointer-events: none; }
         canvas { cursor: crosshair; pointer-events: auto; }
 
-        /* Paleta de colores */
         .controls { position: fixed; top: 20px; left: 20px; z-index: 30; background: var(--card); padding: 10px; border-radius: 12px; display: flex; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto; }
         .color-btn { width: 25px; height: 25px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
         .color-btn.active { border-color: white; transform: scale(1.2); }
@@ -71,7 +70,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, remove, set } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, remove, set, onChildAdded } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
@@ -95,7 +94,7 @@
         if (nom) { usuarioActual = nom; document.getElementById('login-overlay').style.display = "none"; }
     };
 
-    // PALETA DE COLORES
+    // PALETA
     document.querySelectorAll('.color-btn').forEach(btn => {
         btn.onclick = () => {
             document.querySelector('.color-btn.active').classList.remove('active');
@@ -104,44 +103,47 @@
         };
     });
 
-    // --- DIBUJO INDEPENDIENTE ---
+    // --- DIBUJO ---
     const canvas = document.getElementById('dibujoCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    let dibujando = false;
+    
+    let ultimosPuntos = {}; // Guardar el último punto de cada usuario para conectar líneas
 
-    canvas.onmousedown = () => { dibujando = true; };
+    canvas.onmousedown = () => { window.dibujandoAhora = true; };
     canvas.onmouseup = () => { 
-        dibujando = false; 
-        setTimeout(() => set(ref(db, `dibujos/${myId}`), null), 10000); 
+        window.dibujandoAhora = false; 
+        // Solo enviamos la señal de borrado si no hay más trazos activos
+        setTimeout(() => { if(!window.dibujandoAhora) set(ref(db, `dibujos`), null); }, 10000); 
     };
 
     canvas.onmousemove = (e) => {
-        if (!dibujando) return;
-        // Guardamos cada trazo en un nodo específico del usuario
+        if (!window.dibujandoAhora) return;
         push(ref(db, `dibujos/${myId}`), { x: e.clientX, y: e.clientY, c: colorSeleccionado });
     };
 
-    // Renderizar todos los trazos de todos los usuarios
-    onValue(ref(db, "dibujos"), (snapshot) => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const todosLosDibujos = snapshot.val();
-        if (!todosLosDibujos) return;
+    // Escuchar cuando se borra todo
+    onValue(ref(db, "dibujos"), (snap) => {
+        if (!snap.exists()) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ultimosPuntos = {};
+        }
+    });
 
-        Object.values(todosLosDibujos).forEach(usuarioPuntos => {
+    // Dibujar cada punto nuevo que llega de CUALQUIER usuario
+    onChildAdded(ref(db, "dibujos"), (userSnap) => {
+        const userId = userSnap.key;
+        onChildAdded(ref(db, `dibujos/${userId}`), (pointSnap) => {
+            const p = pointSnap.val();
             ctx.beginPath();
-            ctx.lineWidth = 3; ctx.lineCap = "round";
-            const puntos = Object.values(usuarioPuntos);
-            puntos.forEach((p, index) => {
-                ctx.strokeStyle = p.c;
-                if (index === 0) ctx.moveTo(p.x, p.y);
-                else {
-                    ctx.lineTo(p.x, p.y);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                }
-            });
+            ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.strokeStyle = p.c;
+            
+            if (ultimosPuntos[userId]) {
+                ctx.moveTo(ultimosPuntos[userId].x, ultimosPuntos[userId].y);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            }
+            ultimosPuntos[userId] = p;
         });
     });
 
