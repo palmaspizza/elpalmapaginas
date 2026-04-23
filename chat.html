@@ -3,17 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase App</title>
+    <title>Firebase App con Borrado</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding-top: 50px; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         h2 { color: #1a73e8; margin-top: 0; }
         .form-group { display: flex; gap: 10px; margin-bottom: 20px; }
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; }
-        button { background: #1a73e8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #1557b0; }
+        .btn-subir { background: #1a73e8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
         #lista { list-style: none; padding: 0; }
-        li { background: #f8f9fa; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 5px solid #1a73e8; word-break: break-word; }
+        li { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            margin-bottom: 8px; 
+            border-radius: 6px; 
+            border-left: 5px solid #1a73e8; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            word-break: break-word;
+        }
+        .btn-borrar { 
+            background: #ff4d4d; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        .btn-borrar:hover { background: #cc0000; }
     </style>
 </head>
 <body>
@@ -23,19 +44,17 @@
     
     <div class="form-group">
         <input type="text" id="textoInput" placeholder="Escribe algo...">
-        <button id="btnEnviar">Subir</button>
+        <button id="btnEnviar" class="btn-subir">Subir</button>
     </div>
 
-    <ul id="lista">
-        </ul>
+    <ul id="lista"></ul>
 </div>
 
 <script type="module">
-    // 1. Importar los módulos necesarios de Firebase
+    // 1. Importar remove de la base de datos
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
 
-    // 2. Tu configuración (la que pasaste antes)
     const firebaseConfig = {
         apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
         authDomain: "palmaxd-32720.firebaseapp.com",
@@ -46,16 +65,15 @@
         appId: "1:527831930817:web:05fcfd4b53296068d4c140"
     };
 
-    // 3. Inicializar Firebase y la Base de Datos
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const dbRef = ref(db, "posteos"); // "posteos" es el nombre de la carpeta en tu DB
+    const dbRef = ref(db, "posteos");
 
     const input = document.getElementById('textoInput');
     const btn = document.getElementById('btnEnviar');
     const listaUI = document.getElementById('lista');
 
-    // 4. Función para SUBIR datos
+    // SUBIR DATOS
     btn.addEventListener('click', () => {
         const mensaje = input.value;
         if (mensaje.trim() !== "") {
@@ -63,20 +81,37 @@
                 texto: mensaje,
                 hora: new Date().toLocaleString()
             });
-            input.value = ""; // Limpiar el input
+            input.value = "";
         }
     });
 
-    // 5. Función para MOSTRAR datos (se activa sola cuando hay cambios)
+    // MOSTRAR DATOS Y BOTÓN ELIMINAR
     onValue(dbRef, (snapshot) => {
-        listaUI.innerHTML = ""; // Limpiar lista antes de recargar
+        listaUI.innerHTML = "";
         const data = snapshot.val();
         
         if (data) {
-            // Convertir el objeto de Firebase en un array y recorrerlo
-            Object.values(data).reverse().forEach(item => {
+            // Usamos Object.entries para obtener el ID (key) y el contenido (value)
+            Object.entries(data).reverse().forEach(([id, item]) => {
                 const li = document.createElement('li');
-                li.textContent = item.texto;
+                
+                // Texto del mensaje
+                const span = document.createElement('span');
+                span.textContent = item.texto;
+                
+                // Botón de eliminar
+                const btnBorrar = document.createElement('button');
+                btnBorrar.textContent = "Eliminar";
+                btnBorrar.className = "btn-borrar";
+                
+                // Evento para eliminar de Firebase
+                btnBorrar.onclick = () => {
+                    const itemRef = ref(db, `posteos/${id}`);
+                    remove(itemRef);
+                };
+
+                li.appendChild(span);
+                li.appendChild(btnBorrar);
                 listaUI.appendChild(li);
             });
         }
