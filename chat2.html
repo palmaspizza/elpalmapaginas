@@ -9,1377 +9,834 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --bg: #0a0a12;
-            --bg2: #101020;
-            --card: #171728;
-            --card2: #1e1e32;
-            --border: #2a2a42;
-            --fg: #e6e6f0;
-            --fg2: #c0c0d0;
-            --muted: #6a6a82;
-            --accent: #ff5e3a;
-            --accent2: #ff2d55;
-            --accent-soft: rgba(255, 94, 58, 0.1);
-            --accent-glow: rgba(255, 94, 58, 0.25);
-            --success: #34c759;
-            --error: #ff453a;
-            --warning: #ff9f0a;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: var(--bg);
-            color: var(--fg);
-            overflow: hidden;
-            height: 100dvh;
-            width: 100vw;
-        }
-
-        /* ============ SCROLLBAR ============ */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-        /* ============ LOGIN SCREEN ============ */
-        #loginScreen {
-            position: fixed; inset: 0; z-index: 1000;
-            display: flex; align-items: center; justify-content: center;
-            background: var(--bg);
-            overflow: hidden;
-        }
-
-        .login-bg {
-            position: absolute; inset: 0; pointer-events: none;
-        }
-
-        .blob {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(100px);
-            opacity: 0.4;
-            animation: blobFloat 8s ease-in-out infinite alternate;
-        }
-
-        .blob-1 {
-            width: 350px; height: 350px;
-            background: radial-gradient(circle, var(--accent), transparent 70%);
-            top: -10%; left: -5%;
-            animation-delay: 0s;
-        }
-
-        .blob-2 {
-            width: 280px; height: 280px;
-            background: radial-gradient(circle, var(--accent2), transparent 70%);
-            bottom: -10%; right: -5%;
-            animation-delay: -3s;
-            animation-duration: 10s;
-        }
-
-        .blob-3 {
-            width: 200px; height: 200px;
-            background: radial-gradient(circle, #ff9f0a, transparent 70%);
-            top: 50%; left: 60%;
-            animation-delay: -5s;
-            animation-duration: 12s;
-        }
-
-        @keyframes blobFloat {
-            0% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(30px, -20px) scale(1.1); }
-            66% { transform: translate(-20px, 30px) scale(0.9); }
-            100% { transform: translate(15px, 15px) scale(1.05); }
-        }
-
-        .login-card {
-            position: relative; z-index: 1;
-            background: rgba(23, 23, 40, 0.75);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 24px;
-            padding: 48px 40px;
-            width: 90%; max-width: 420px;
-            text-align: center;
-            animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        @keyframes cardIn {
-            from { opacity: 0; transform: translateY(30px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .login-icon {
-            width: 72px; height: 72px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 24px;
-            font-size: 30px; color: white;
-            box-shadow: 0 8px 32px var(--accent-glow);
-        }
-
-        .login-card h1 {
-            font-size: 28px; font-weight: 800;
-            background: linear-gradient(135deg, var(--fg), var(--fg2));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
-        }
-
-        .login-card p {
-            color: var(--muted); font-size: 14px; margin-bottom: 32px;
-        }
-
-        .login-input {
-            width: 100%; padding: 14px 18px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1.5px solid var(--border);
-            border-radius: 14px;
-            color: var(--fg); font-size: 16px;
-            font-family: inherit;
-            outline: none;
-            transition: all 0.3s ease;
-            margin-bottom: 16px;
-        }
-
-        .login-input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-soft);
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        .login-input::placeholder { color: var(--muted); }
-
-        .login-btn {
-            width: 100%; padding: 14px;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            border: none; border-radius: 14px;
-            color: white; font-size: 16px; font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px var(--accent-glow);
-        }
-
-        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
-        .login-btn:active { transform: translateY(0); }
-        .login-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-        .login-error {
-            color: var(--error); font-size: 13px;
-            margin-top: -8px; margin-bottom: 12px;
-            min-height: 20px;
-            transition: all 0.2s;
-        }
-
-        /* ============ CHAT SCREEN ============ */
-        #chatScreen {
-            display: none;
-            flex-direction: column;
-            height: 100dvh;
-            background: var(--bg);
-            background-image:
-                radial-gradient(ellipse at 15% 80%, rgba(255, 94, 58, 0.025) 0%, transparent 50%),
-                radial-gradient(ellipse at 85% 15%, rgba(255, 45, 85, 0.02) 0%, transparent 50%);
-        }
-
-        /* Header */
-        .chat-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 12px 16px;
-            background: rgba(16, 16, 32, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            z-index: 10;
-            flex-shrink: 0;
-        }
-
-        .header-left { display: flex; align-items: center; gap: 10px; }
-
-        .header-logo {
-            width: 36px; height: 36px; border-radius: 10px;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            display: flex; align-items: center; justify-content: center;
-            font-size: 16px; color: white;
-        }
-
-        .header-title { font-size: 18px; font-weight: 700; }
-
-        .header-right { display: flex; align-items: center; gap: 8px; }
-
-        .header-user {
-            font-size: 13px; color: var(--muted);
-            background: rgba(255, 255, 255, 0.04);
-            padding: 5px 12px; border-radius: 20px;
-            display: flex; align-items: center; gap: 6px;
-            cursor: pointer; transition: background 0.2s;
-        }
-
-        .header-user:hover { background: rgba(255, 255, 255, 0.08); }
-
-        .header-user .dot {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: var(--success);
-            box-shadow: 0 0 6px rgba(52, 199, 89, 0.5);
-        }
-
-        .icon-btn {
-            width: 38px; height: 38px; border-radius: 12px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            color: var(--fg2); font-size: 15px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.2s;
-        }
-
-        .icon-btn:hover { background: rgba(255, 255, 255, 0.08); color: var(--fg); }
-        .icon-btn.active { background: var(--accent-soft); color: var(--accent); border-color: rgba(255, 94, 58, 0.2); }
-
-        /* Cooldown bar */
-        .cooldown-container {
-            height: 3px; background: transparent; flex-shrink: 0;
-            overflow: hidden;
-        }
-
-        .cooldown-bar {
-            height: 100%; width: 0%;
-            background: linear-gradient(90deg, var(--accent), var(--accent2));
-            border-radius: 0 2px 2px 0;
-            transition: width 0.1s linear;
-        }
-
-        /* Messages area */
-        .messages-area {
-            flex: 1; overflow-y: auto;
-            padding: 16px;
-            display: flex; flex-direction: column; gap: 8px;
-        }
-
-        .empty-state {
-            flex: 1; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 12px;
-            color: var(--muted); text-align: center;
-        }
-
-        .empty-state i { font-size: 48px; opacity: 0.3; }
-        .empty-state p { font-size: 14px; max-width: 260px; line-height: 1.5; }
-
-        /* Message bubbles */
-        .msg-row {
-            display: flex; flex-direction: column;
-            max-width: 75%;
-            animation: msgIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        .msg-row.self { align-self: flex-end; align-items: flex-end; }
-        .msg-row.other { align-self: flex-start; align-items: flex-start; }
-
-        @keyframes msgIn {
-            from { opacity: 0; transform: translateY(12px) scale(0.96); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .msg-sender {
-            font-size: 11px; font-weight: 600; color: var(--muted);
-            margin-bottom: 4px; padding: 0 4px;
-            text-transform: uppercase; letter-spacing: 0.5px;
-        }
-
-        .msg-bubble {
-            padding: 10px 14px;
-            border-radius: 18px;
-            font-size: 14px; line-height: 1.5;
-            position: relative;
-            word-break: break-word;
-        }
-
-        .msg-row.self .msg-bubble {
-            background: linear-gradient(135deg, var(--accent), #e0442a);
-            color: white;
-            border-bottom-right-radius: 6px;
-            box-shadow: 0 2px 12px rgba(255, 94, 58, 0.15);
-        }
-
-        .msg-row.other .msg-bubble {
-            background: var(--card);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            color: var(--fg);
-            border-bottom-left-radius: 6px;
-        }
-
-        .msg-bubble img {
-            max-width: 100%; max-height: 300px;
-            border-radius: 12px; margin-top: 6px;
-            cursor: pointer; transition: opacity 0.2s;
-            display: block;
-        }
-
-        .msg-bubble img:hover { opacity: 0.9; }
-
-        .msg-time {
-            font-size: 10px; color: var(--muted);
-            margin-top: 3px; padding: 0 4px;
-        }
-
-        .msg-row.self .msg-time { text-align: right; }
-
-        .msg-delete {
-            position: absolute; top: -6px; right: -6px;
-            width: 22px; height: 22px; border-radius: 50%;
-            background: var(--error); border: 2px solid var(--bg);
-            color: white; font-size: 9px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; opacity: 0;
-            transition: all 0.2s; z-index: 2;
-        }
-
-        .msg-row.self .msg-bubble:hover .msg-delete { opacity: 1; }
-
-        .msg-delete:hover { transform: scale(1.15); }
-
-        /* Input area */
-        .chat-footer {
-            padding: 10px 12px;
-            padding-bottom: max(10px, env(safe-area-inset-bottom));
-            background: rgba(16, 16, 32, 0.9);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            flex-shrink: 0;
-        }
-
-        .input-row {
-            display: flex; align-items: flex-end; gap: 8px;
-        }
-
-        .msg-input-wrap {
-            flex: 1; position: relative;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1.5px solid var(--border);
-            border-radius: 16px;
-            transition: all 0.3s;
-            display: flex; align-items: flex-end;
-        }
-
-        .msg-input-wrap:focus-within {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-soft);
-        }
-
-        .msg-input {
-            flex: 1; padding: 11px 14px;
-            background: transparent; border: none;
-            color: var(--fg); font-size: 15px;
-            font-family: inherit; outline: none;
-            resize: none; max-height: 120px;
-            line-height: 1.4;
-        }
-
-        .msg-input::placeholder { color: var(--muted); }
-
-        .img-preview-mini {
-            padding: 4px 4px 4px 14px;
-            display: flex; align-items: center; gap: 6px;
-        }
-
-        .img-preview-mini img {
-            width: 36px; height: 36px; border-radius: 8px; object-fit: cover;
-        }
-
-        .img-preview-mini button {
-            width: 20px; height: 20px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1); border: none;
-            color: var(--muted); font-size: 10px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .img-preview-mini button:hover { background: var(--error); color: white; }
-
-        .send-btn {
-            width: 44px; height: 44px; border-radius: 14px;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            border: none; color: white; font-size: 16px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.2s;
-            box-shadow: 0 3px 12px var(--accent-glow);
-            flex-shrink: 0;
-        }
-
-        .send-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-glow); }
-        .send-btn:active { transform: scale(0.95); }
-        .send-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
-
-        /* ============ DRAWING OVERLAY ============ */
-        #drawOverlay {
-            display: none;
-            position: fixed; inset: 0; z-index: 500;
-            background: rgba(0, 0, 0, 0.15);
-        }
-
-        #drawCanvas {
-            position: absolute; inset: 0;
-            width: 100%; height: 100%;
-            cursor: crosshair;
-            touch-action: none;
-        }
-
-        .draw-timer-bar {
-            position: absolute; top: 0; left: 0; right: 0;
-            height: 4px; background: rgba(255, 255, 255, 0.05);
-            z-index: 10;
-        }
-
-        .draw-timer-fill {
-            height: 100%; width: 100%;
-            background: linear-gradient(90deg, var(--accent), var(--accent2));
-            transition: width 0.05s linear;
-            border-radius: 0 2px 2px 0;
-        }
-
-        .draw-toolbar {
-            position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
-            background: rgba(23, 23, 40, 0.92);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 20px;
-            padding: 10px 16px;
-            display: flex; align-items: center; gap: 10px;
-            z-index: 20;
-            animation: toolbarIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            flex-wrap: wrap; justify-content: center;
-            max-width: calc(100vw - 24px);
-        }
-
-        @keyframes toolbarIn {
-            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-
-        .color-swatch {
-            width: 28px; height: 28px; border-radius: 50%;
-            border: 2px solid transparent;
-            cursor: pointer; transition: all 0.2s;
-            flex-shrink: 0;
-        }
-
-        .color-swatch:hover { transform: scale(1.15); }
-        .color-swatch.active { border-color: white; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2); transform: scale(1.1); }
-
-        .draw-sep {
-            width: 1px; height: 24px;
-            background: rgba(255, 255, 255, 0.08);
-            flex-shrink: 0;
-        }
-
-        .brush-slider {
-            width: 70px; height: 4px;
-            -webkit-appearance: none; appearance: none;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px; outline: none;
-            cursor: pointer;
-        }
-
-        .brush-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 16px; height: 16px; border-radius: 50%;
-            background: var(--accent); cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
-
-        .brush-slider::-moz-range-thumb {
-            width: 16px; height: 16px; border-radius: 50%;
-            background: var(--accent); cursor: pointer; border: none;
-        }
-
-        .draw-tool-btn {
-            width: 32px; height: 32px; border-radius: 10px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            color: var(--fg2); font-size: 13px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.2s;
-            flex-shrink: 0;
-        }
-
-        .draw-tool-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
-        .draw-tool-btn.active { background: var(--accent-soft); color: var(--accent); border-color: rgba(255, 94, 58, 0.2); }
-
-        .draw-hint {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(23, 23, 40, 0.8);
-            backdrop-filter: blur(20px);
-            padding: 8px 16px; border-radius: 12px;
-            font-size: 12px; color: var(--muted);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            z-index: 20;
-            animation: toolbarIn 0.4s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        /* ============ TOASTS ============ */
-        #toastContainer {
-            position: fixed; top: 16px; right: 16px;
-            z-index: 9999;
-            display: flex; flex-direction: column; gap: 8px;
-            pointer-events: none;
-        }
-
-        .toast {
-            padding: 10px 18px;
-            background: rgba(23, 23, 40, 0.92);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
-            font-size: 13px; color: var(--fg);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            transform: translateX(100%); opacity: 0;
-            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: auto;
-            max-width: 300px;
-        }
-
-        .toast.show { transform: translateX(0); opacity: 1; }
-        .toast-success { border-left: 3px solid var(--success); }
-        .toast-error { border-left: 3px solid var(--error); }
-        .toast-warning { border-left: 3px solid var(--warning); }
-        .toast-info { border-left: 3px solid var(--accent); }
-
-        /* ============ IMAGE MODAL ============ */
-        #imgModal {
-            display: none;
-            position: fixed; inset: 0; z-index: 2000;
-            background: rgba(0, 0, 0, 0.9);
-            align-items: center; justify-content: center;
-            cursor: pointer;
-            animation: fadeIn 0.2s ease;
-        }
-
-        #imgModal img {
-            max-width: 92vw; max-height: 92vh;
-            border-radius: 12px;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
-        }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* ============ RESPONSIVE ============ */
-        @media (max-width: 480px) {
-            .msg-row { max-width: 88%; }
-            .login-card { padding: 36px 24px; }
-            .header-user span { display: none; }
-            .draw-toolbar { padding: 8px 10px; gap: 6px; }
-            .color-swatch { width: 24px; height: 24px; }
-            .brush-slider { width: 50px; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
+            --bg:#0a0a12;--bg2:#101020;--card:#171728;--card2:#1e1e32;
+            --border:#2a2a42;--fg:#e6e6f0;--fg2:#c0c0d0;--muted:#6a6a82;
+            --accent:#ff5e3a;--accent2:#ff2d55;--accent-soft:rgba(255,94,58,0.1);
+            --accent-glow:rgba(255,94,58,0.25);--success:#34c759;--error:#ff453a;--warning:#ff9f0a;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--fg);overflow:hidden;height:100dvh;width:100vw}
+        ::-webkit-scrollbar{width:5px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+
+        /* ===== LOGIN ===== */
+        #loginScreen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--bg);overflow:hidden}
+        .login-bg{position:absolute;inset:0;pointer-events:none}
+        .blob{position:absolute;border-radius:50%;filter:blur(100px);opacity:.4;animation:blobF 8s ease-in-out infinite alternate}
+        .blob-1{width:350px;height:350px;background:radial-gradient(circle,var(--accent),transparent 70%);top:-10%;left:-5%}
+        .blob-2{width:280px;height:280px;background:radial-gradient(circle,var(--accent2),transparent 70%);bottom:-10%;right:-5%;animation-delay:-3s;animation-duration:10s}
+        .blob-3{width:200px;height:200px;background:radial-gradient(circle,#ff9f0a,transparent 70%);top:50%;left:60%;animation-delay:-5s;animation-duration:12s}
+        @keyframes blobF{0%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.1)}66%{transform:translate(-20px,30px) scale(.9)}100%{transform:translate(15px,15px) scale(1.05)}}
+        .login-card{position:relative;z-index:1;background:rgba(23,23,40,.75);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:48px 40px;width:90%;max-width:420px;text-align:center;animation:cardIn .6s cubic-bezier(.16,1,.3,1) both}
+        @keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .login-icon{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:30px;color:#fff;box-shadow:0 8px 32px var(--accent-glow)}
+        .login-card h1{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--fg),var(--fg2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+        .login-card p{color:var(--muted);font-size:14px;margin-bottom:32px}
+        .login-input{width:100%;padding:14px 18px;background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:14px;color:var(--fg);font-size:16px;font-family:inherit;outline:none;transition:all .3s;margin-bottom:16px}
+        .login-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:rgba(255,255,255,.06)}
+        .login-input::placeholder{color:var(--muted)}
+        .login-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .3s;box-shadow:0 4px 20px var(--accent-glow)}
+        .login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px var(--accent-glow)}
+        .login-btn:active{transform:translateY(0)}
+        .login-error{color:var(--error);font-size:13px;margin-top:-8px;margin-bottom:12px;min-height:20px}
+
+        /* ===== CHAT ===== */
+        #chatScreen{display:none;flex-direction:column;height:100dvh;background:var(--bg);background-image:radial-gradient(ellipse at 15% 80%,rgba(255,94,58,.025) 0%,transparent 50%),radial-gradient(ellipse at 85% 15%,rgba(255,45,85,.02) 0%,transparent 50%)}
+        .chat-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(16,16,32,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.04);z-index:10;flex-shrink:0}
+        .header-left{display:flex;align-items:center;gap:10px}
+        .header-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff}
+        .header-title{font-size:18px;font-weight:700}
+        .header-right{display:flex;align-items:center;gap:8px}
+        .header-user{font-size:13px;color:var(--muted);background:rgba(255,255,255,.04);padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:6px;cursor:pointer;transition:background .2s}
+        .header-user:hover{background:rgba(255,255,255,.08)}
+        .header-user .dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 6px rgba(52,199,89,.5)}
+        .icon-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.04);color:var(--fg2);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+        .icon-btn:hover{background:rgba(255,255,255,.08);color:var(--fg)}
+        .icon-btn.active{background:var(--accent-soft);color:var(--accent);border-color:rgba(255,94,58,.2)}
+        .cooldown-container{height:3px;background:transparent;flex-shrink:0;overflow:hidden}
+        .cooldown-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:0 2px 2px 0;transition:width .1s linear}
+        .messages-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+        .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);text-align:center}
+        .empty-state i{font-size:48px;opacity:.3}
+        .empty-state p{font-size:14px;max-width:260px;line-height:1.5}
+
+        /* Mensajes */
+        .msg-row{display:flex;flex-direction:column;max-width:75%;animation:msgIn .35s cubic-bezier(.16,1,.3,1) both}
+        .msg-row.self{align-self:flex-end;align-items:flex-end}
+        .msg-row.other{align-self:flex-start;align-items:flex-start}
+        @keyframes msgIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .msg-sender{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;padding:0 4px;text-transform:uppercase;letter-spacing:.5px}
+        .msg-bubble{padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;position:relative;word-break:break-word}
+        .msg-row.self .msg-bubble{background:linear-gradient(135deg,var(--accent),#e0442a);color:#fff;border-bottom-right-radius:6px;box-shadow:0 2px 12px rgba(255,94,58,.15)}
+        .msg-row.other .msg-bubble{background:var(--card);border:1px solid rgba(255,255,255,.04);color:var(--fg);border-bottom-left-radius:6px}
+        .msg-bubble img{max-width:100%;max-height:300px;border-radius:12px;margin-top:6px;cursor:pointer;transition:opacity .2s;display:block}
+        .msg-bubble img:hover{opacity:.85}
+        .msg-time{font-size:10px;color:var(--muted);margin-top:3px;padding:0 4px}
+        .msg-row.self .msg-time{text-align:right}
+        .msg-delete{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--error);border:2px solid var(--bg);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:all .2s;z-index:2}
+        .msg-row.self .msg-bubble:hover .msg-delete{opacity:1}
+        .msg-delete:hover{transform:scale(1.15)}
+
+        /* Input */
+        .chat-footer{padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(16,16,32,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.04);flex-shrink:0}
+        .input-row{display:flex;align-items:flex-end;gap:8px}
+        .msg-input-wrap{flex:1;position:relative;background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:16px;transition:all .3s;display:flex;align-items:flex-end}
+        .msg-input-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+        .msg-input{flex:1;padding:11px 14px;background:transparent;border:none;color:var(--fg);font-size:15px;font-family:inherit;outline:none;resize:none;max-height:120px;line-height:1.4}
+        .msg-input::placeholder{color:var(--muted)}
+        .img-preview-mini{padding:4px 4px 4px 14px;display:flex;align-items:center;gap:6px}
+        .img-preview-mini img{width:36px;height:36px;border-radius:8px;object-fit:cover}
+        .img-preview-mini button{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:var(--muted);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+        .img-preview-mini button:hover{background:var(--error);color:#fff}
+        .send-btn{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;box-shadow:0 3px 12px var(--accent-glow);flex-shrink:0}
+        .send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--accent-glow)}
+        .send-btn:active{transform:scale(.95)}
+        .send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+
+        /* ===== DIBUJO ===== */
+        #drawOverlay{position:fixed;inset:0;z-index:500;pointer-events:none}
+        #drawOverlay.active{pointer-events:auto;background:rgba(0,0,0,.12)}
+        #drawCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+        #drawOverlay.active #drawCanvas{cursor:crosshair}
+        .draw-timer-bar{position:absolute;top:0;left:0;right:0;height:4px;background:rgba(255,255,255,.05);z-index:10;display:none}
+        #drawOverlay.active .draw-timer-bar{display:block}
+        .draw-timer-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:0 2px 2px 0;transition:width .05s linear}
+        .draw-toolbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(23,23,40,.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:10px 16px;display:none;align-items:center;gap:10px;z-index:20;animation:toolbarIn .3s cubic-bezier(.16,1,.3,1) both;box-shadow:0 8px 32px rgba(0,0,0,.4);flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
+        #drawOverlay.active .draw-toolbar{display:flex}
+        @keyframes toolbarIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+        .color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all .2s;flex-shrink:0}
+        .color-swatch:hover{transform:scale(1.15)}
+        .color-swatch.active{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.2);transform:scale(1.1)}
+        .draw-sep{width:1px;height:24px;background:rgba(255,255,255,.08);flex-shrink:0}
+        .brush-slider{width:70px;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.1);border-radius:2px;outline:none;cursor:pointer}
+        .brush-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+        .brush-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+        .draw-tool-btn{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);color:var(--fg2);font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
+        .draw-tool-btn:hover{background:rgba(255,255,255,.1);color:var(--fg)}
+        .draw-tool-btn.active{background:var(--accent-soft);color:var(--accent);border-color:rgba(255,94,58,.2)}
+        .draw-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(23,23,40,.8);backdrop-filter:blur(20px);padding:8px 16px;border-radius:12px;font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,.06);z-index:20;display:none;animation:toolbarIn .4s .15s cubic-bezier(.16,1,.3,1) both;white-space:nowrap}
+        #drawOverlay.active .draw-hint{display:block}
+
+        /* ===== MODALES & TOASTS ===== */
+        #toastContainer{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+        .toast{padding:10px 18px;background:rgba(23,23,40,.92);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.06);border-radius:12px;font-size:13px;color:var(--fg);box-shadow:0 4px 20px rgba(0,0,0,.3);transform:translateX(100%);opacity:0;transition:all .35s cubic-bezier(.16,1,.3,1);pointer-events:auto;max-width:300px}
+        .toast.show{transform:translateX(0);opacity:1}
+        .toast-success{border-left:3px solid var(--success)}
+        .toast-error{border-left:3px solid var(--error)}
+        .toast-warning{border-left:3px solid var(--warning)}
+        .toast-info{border-left:3px solid var(--accent)}
+        #imgModal{display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.9);align-items:center;justify-content:center;cursor:pointer;animation:fadeIn .2s ease}
+        #imgModal img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+        /* Permiso notif banner */
+        .notif-banner{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-top:16px;text-align:left;display:flex;align-items:center;gap:12px}
+        .notif-banner i{font-size:20px;color:var(--warning);flex-shrink:0}
+        .notif-banner p{font-size:13px;color:var(--fg2);line-height:1.4;flex:1}
+        .notif-banner button{padding:6px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+        .notif-banner button:hover{opacity:.85}
+
+        @media(max-width:480px){
+            .msg-row{max-width:88%}
+            .login-card{padding:36px 24px}
+            .header-user span{display:none}
+            .draw-toolbar{padding:8px 10px;gap:6px}
+            .color-swatch{width:24px;height:24px}
+            .brush-slider{width:50px}
+            .draw-hint{font-size:11px;padding:6px 12px}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
     </style>
 </head>
 <body>
 
-    <!-- ============ LOGIN SCREEN ============ -->
-    <div id="loginScreen">
-        <div class="login-bg">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
-            <div class="blob blob-3"></div>
-        </div>
-        <div class="login-card">
-            <div class="login-icon"><i class="fas fa-comments"></i></div>
-            <h1>Palma Chat</h1>
-            <p>Ingresa tu nombre para unirte a la conversacion</p>
-            <input type="text" class="login-input" id="nameInput" placeholder="Tu nombre..." maxlength="20" autocomplete="off">
-            <div class="login-error" id="loginError"></div>
-            <button class="login-btn" id="loginBtn">Entrar al chat</button>
+<!-- Login -->
+<div id="loginScreen">
+    <div class="login-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    <div class="login-card">
+        <div class="login-icon"><i class="fas fa-comments"></i></div>
+        <h1>Palma Chat</h1>
+        <p>Ingresa tu nombre para unirte a la conversacion</p>
+        <input type="text" class="login-input" id="nameInput" placeholder="Tu nombre..." maxlength="20" autocomplete="off">
+        <div class="login-error" id="loginError"></div>
+        <button class="login-btn" id="loginBtn">Entrar al chat</button>
+        <div class="notif-banner" id="notifBanner" style="display:none">
+            <i class="fas fa-bell"></i>
+            <p>Activa las notificaciones para ver los mensajes cuando esta en otra pestana</p>
+            <button id="notifAllowBtn">Activar</button>
         </div>
     </div>
+</div>
 
-    <!-- ============ CHAT SCREEN ============ -->
-    <div id="chatScreen">
-        <header class="chat-header">
-            <div class="header-left">
-                <div class="header-logo"><i class="fas fa-comments"></i></div>
-                <span class="header-title">Palma Chat</span>
+<!-- Chat -->
+<div id="chatScreen">
+    <header class="chat-header">
+        <div class="header-left">
+            <div class="header-logo"><i class="fas fa-comments"></i></div>
+            <span class="header-title">Palma Chat</span>
+        </div>
+        <div class="header-right">
+            <div class="header-user" id="headerUser" title="Cambiar nombre">
+                <span class="dot"></span>
+                <span id="headerName"></span>
+                <i class="fas fa-pen" style="font-size:10px;opacity:.5"></i>
             </div>
-            <div class="header-right">
-                <div class="header-user" id="headerUser" title="Cambiar nombre">
-                    <span class="dot"></span>
-                    <span id="headerName"></span>
-                    <i class="fas fa-pen" style="font-size:10px; opacity:0.5;"></i>
+            <button class="icon-btn" id="drawToggleBtn" title="Modo dibujo" aria-label="Activar modo dibujo">
+                <i class="fas fa-paintbrush"></i>
+            </button>
+        </div>
+    </header>
+    <div class="cooldown-container"><div class="cooldown-bar" id="cooldownBar"></div></div>
+    <main class="messages-area" id="messagesArea">
+        <div class="empty-state" id="emptyState">
+            <i class="fas fa-message"></i>
+            <p>No hay mensajes todavia. Se el primero en escribir algo.</p>
+        </div>
+    </main>
+    <footer class="chat-footer">
+        <div class="input-row">
+            <input type="file" id="imgFileInput" accept="image/*" hidden>
+            <button class="icon-btn" id="imgBtn" title="Subir imagen" aria-label="Subir imagen"><i class="fas fa-image"></i></button>
+            <div class="msg-input-wrap" id="inputWrap">
+                <textarea class="msg-input" id="msgInput" placeholder="Escribe un mensaje..." rows="1"></textarea>
+                <div class="img-preview-mini" id="imgPreview" style="display:none">
+                    <img id="imgPreviewThumb" src="" alt="">
+                    <button id="imgPreviewRemove" aria-label="Quitar imagen"><i class="fas fa-xmark"></i></button>
                 </div>
-                <button class="icon-btn" id="drawToggleBtn" title="Modo dibujo" aria-label="Activar modo dibujo">
-                    <i class="fas fa-paintbrush"></i>
-                </button>
             </div>
-        </header>
-
-        <div class="cooldown-container">
-            <div class="cooldown-bar" id="cooldownBar"></div>
+            <button class="send-btn" id="sendBtn" title="Enviar" aria-label="Enviar mensaje"><i class="fas fa-paper-plane"></i></button>
         </div>
+    </footer>
+</div>
 
-        <main class="messages-area" id="messagesArea">
-            <div class="empty-state" id="emptyState">
-                <i class="fas fa-message"></i>
-                <p>No hay mensajes todavia. Se el primero en escribir algo.</p>
-            </div>
-        </main>
+<!-- Capa de dibujo (siempre presente, sin bloquear interacciones) -->
+<div id="drawOverlay">
+    <div class="draw-timer-bar"><div class="draw-timer-fill" id="drawTimerFill"></div></div>
+    <canvas id="drawCanvas"></canvas>
+    <div class="draw-toolbar" id="drawToolbar"></div>
+    <div class="draw-hint">Dibuja sobre la pantalla. Se borrara automaticamente en 10 segundos.</div>
+</div>
 
-        <footer class="chat-footer">
-            <div class="input-row">
-                <input type="file" id="imgFileInput" accept="image/*" hidden>
-                <button class="icon-btn" id="imgBtn" title="Subir imagen" aria-label="Subir imagen">
-                    <i class="fas fa-image"></i>
-                </button>
-                <div class="msg-input-wrap" id="inputWrap">
-                    <textarea class="msg-input" id="msgInput" placeholder="Escribe un mensaje..." rows="1"></textarea>
-                    <div class="img-preview-mini" id="imgPreview" style="display:none;">
-                        <img id="imgPreviewThumb" src="" alt="">
-                        <button id="imgPreviewRemove" aria-label="Quitar imagen"><i class="fas fa-xmark"></i></button>
-                    </div>
-                </div>
-                <button class="send-btn" id="sendBtn" title="Enviar" aria-label="Enviar mensaje">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
-        </footer>
-    </div>
+<!-- Modal imagen -->
+<div id="imgModal"><img id="imgModalSrc" src="" alt="Imagen ampliada"></div>
 
-    <!-- ============ DRAWING OVERLAY ============ -->
-    <div id="drawOverlay">
-        <div class="draw-timer-bar">
-            <div class="draw-timer-fill" id="drawTimerFill"></div>
-        </div>
-        <canvas id="drawCanvas"></canvas>
-        <div class="draw-toolbar" id="drawToolbar">
-            <!-- Colores generados por JS -->
-        </div>
-        <div class="draw-hint">Dibuja sobre la pantalla. Se borrara automaticamente en 10 segundos.</div>
-    </div>
+<!-- Toasts -->
+<div id="toastContainer"></div>
 
-    <!-- ============ IMAGE MODAL ============ -->
-    <div id="imgModal">
-        <img id="imgModalSrc" src="" alt="Imagen ampliada">
-    </div>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove, set, get, onChildAdded, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
 
-    <!-- ============ TOASTS ============ -->
-    <div id="toastContainer"></div>
+    /* ============================
+       FIREBASE
+    ============================ */
+    const firebaseConfig = {
+        apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
+        authDomain: "palmaxd-32720.firebaseapp.com",
+        databaseURL: "https://palmaxd-32720-default-rtdb.firebaseio.com",
+        projectId: "palmaxd-32720",
+        storageBucket: "palmaxd-32720.firebasestorage.app",
+        messagingSenderId: "527831930817",
+        appId: "1:527831930817:web:05fcfd4b53296068d4c140"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const messagesRef = ref(db, 'messages');
+    const drawingsRef = ref(db, 'drawings');
 
-    <!-- ============ SCRIPT ============ -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-        import { getDatabase, ref, push, onValue, remove, set, onChildAdded } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+    /* ============================
+       DOM
+    ============================ */
+    const $ = id => document.getElementById(id);
+    const loginScreen=$('loginScreen'), chatScreen=$('chatScreen'),
+          nameInput=$('nameInput'), loginBtn=$('loginBtn'), loginError=$('loginError'),
+          headerName=$('headerName'), headerUser=$('headerUser'),
+          messagesArea=$('messagesArea'), emptyState=$('emptyState'),
+          msgInput=$('msgInput'), sendBtn=$('sendBtn'),
+          imgBtn=$('imgBtn'), imgFileInput=$('imgFileInput'),
+          imgPreview=$('imgPreview'), imgPreviewThumb=$('imgPreviewThumb'),
+          imgPreviewRemove=$('imgPreviewRemove'), cooldownBar=$('cooldownBar'),
+          drawToggleBtn=$('drawToggleBtn'), drawOverlay=$('drawOverlay'),
+          drawCanvas=$('drawCanvas'), drawToolbar=$('drawToolbar'),
+          drawTimerFill=$('drawTimerFill'), imgModal=$('imgModal'),
+          imgModalSrc=$('imgModalSrc'), toastContainer=$('toastContainer'),
+          notifBanner=$('notifBanner'), notifAllowBtn=$('notifAllowBtn');
 
-        /* ============================
-           FIREBASE INIT
-        ============================ */
-        const firebaseConfig = {
-            apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
-            authDomain: "palmaxd-32720.firebaseapp.com",
-            databaseURL: "https://palmaxd-32720-default-rtdb.firebaseio.com",
-            projectId: "palmaxd-32720",
-            storageBucket: "palmaxd-32720.firebasestorage.app",
-            messagingSenderId: "527831930817",
-            appId: "1:527831930817:web:05fcfd4b53296068d4c140"
-        };
+    /* ============================
+       ESTADO
+    ============================ */
+    let username = localStorage.getItem('chat_username') || '';
+    let lastSentTime = 0, cooldownInterval = null, pendingImage = null;
+    const renderedIds = new Set();
+    const COOLDOWN_MS = 3000, DRAW_TIMEOUT_MS = 10000;
+    let initialMessagesLoaded = false;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const messagesRef = ref(db, 'messages');
+    // Dibujo
+    let isDrawingMode = false, isDrawing = false;
+    let drawColor = '#ffffff', brushSizeVal = 4, isEraser = false;
+    let lastX = 0, lastY = 0;
+    let currentLocalStroke = null;
+    const activeStrokes = [];       // Trazos activos (locales + remotos)
+    const processedStrokeIds = new Set();
+    let drawTimerStart = null, drawTimerRAF = null;
+    let drawSyncStarted = false;
+    let strokeCleanupInterval = null;
 
-        /* ============================
-           DOM REFERENCES
-        ============================ */
-        const loginScreen = document.getElementById('loginScreen');
-        const chatScreen = document.getElementById('chatScreen');
-        const nameInput = document.getElementById('nameInput');
-        const loginBtn = document.getElementById('loginBtn');
-        const loginError = document.getElementById('loginError');
-        const headerName = document.getElementById('headerName');
-        const headerUser = document.getElementById('headerUser');
-        const messagesArea = document.getElementById('messagesArea');
-        const emptyState = document.getElementById('emptyState');
-        const msgInput = document.getElementById('msgInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const imgBtn = document.getElementById('imgBtn');
-        const imgFileInput = document.getElementById('imgFileInput');
-        const imgPreview = document.getElementById('imgPreview');
-        const imgPreviewThumb = document.getElementById('imgPreviewThumb');
-        const imgPreviewRemove = document.getElementById('imgPreviewRemove');
-        const cooldownBar = document.getElementById('cooldownBar');
-        const drawToggleBtn = document.getElementById('drawToggleBtn');
-        const drawOverlay = document.getElementById('drawOverlay');
-        const drawCanvas = document.getElementById('drawCanvas');
-        const drawToolbar = document.getElementById('drawToolbar');
-        const drawTimerFill = document.getElementById('drawTimerFill');
-        const imgModal = document.getElementById('imgModal');
-        const imgModalSrc = document.getElementById('imgModalSrc');
-        const toastContainer = document.getElementById('toastContainer');
+    // Notificaciones
+    let notifIcon = null;
 
-        /* ============================
-           STATE
-        ============================ */
-        let username = localStorage.getItem('chat_username') || '';
-        let lastSentTime = 0;
-        let cooldownInterval = null;
-        let pendingImage = null; // base64 de imagen pendiente
-        const renderedIds = new Set();
-        const COOLDOWN_MS = 3000;
-        const DRAW_TIMEOUT_MS = 10000;
+    /* ============================
+       UTILIDADES
+    ============================ */
+    function showToast(msg, type='info') {
+        const t = document.createElement('div');
+        t.className = `toast toast-${type}`;
+        t.textContent = msg;
+        toastContainer.appendChild(t);
+        requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show')));
+        setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, 2800);
+    }
 
-        // Estado de dibujo
-        let isDrawingMode = false;
-        let isDrawing = false;
-        let drawColor = '#ffffff';
-        let brushSizeVal = 4;
-        let isEraser = false;
-        let drawTimer = null;
-        let drawTimerStart = null;
-        let drawRAF = null;
-        let lastX = 0, lastY = 0;
+    function formatTime(ts) {
+        return new Date(ts).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+    }
 
-        /* ============================
-           UTILIDADES
-        ============================ */
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
-            toastContainer.appendChild(toast);
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => toast.classList.add('show'));
-            });
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 350);
-            }, 2800);
-        }
+    function getDeletedIds() {
+        try { return JSON.parse(localStorage.getItem('chat_deleted') || '[]'); }
+        catch { return []; }
+    }
+    function addDeletedId(id) {
+        const list = getDeletedIds();
+        if (!list.includes(id)) { list.push(id); localStorage.setItem('chat_deleted', JSON.stringify(list)); }
+    }
 
-        function formatTime(ts) {
-            const d = new Date(ts);
-            return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-        }
+    function escapeHTML(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-        function getDeletedIds() {
-            try { return JSON.parse(localStorage.getItem('chat_deleted') || '[]'); }
-            catch { return []; }
-        }
-
-        function addDeletedId(id) {
-            const list = getDeletedIds();
-            if (!list.includes(id)) {
-                list.push(id);
-                localStorage.setItem('chat_deleted', JSON.stringify(list));
-            }
-        }
-
-        // Comprimir imagen a base64
-        function compressImage(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = () => reject(new Error('Error al leer archivo'));
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onerror = () => reject(new Error('Imagen invalida'));
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX = 600;
-                        let w = img.width, h = img.height;
-                        if (w > MAX) { h = (MAX / w) * h; w = MAX; }
-                        if (h > MAX) { w = (MAX / h) * w; h = MAX; }
-                        canvas.width = Math.max(1, Math.round(w));
-                        canvas.height = Math.max(1, Math.round(h));
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.55));
-                    };
-                    img.src = e.target.result;
+    function compressImage(file) {
+        return new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onerror = () => rej(new Error('Error al leer'));
+            r.onload = e => {
+                const img = new Image();
+                img.onerror = () => rej(new Error('Imagen invalida'));
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > 600) { h = (600/w)*h; w = 600; }
+                    if (h > 600) { w = (600/h)*w; h = 600; }
+                    c.width = Math.max(1, Math.round(w));
+                    c.height = Math.max(1, Math.round(h));
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    res(c.toDataURL('image/jpeg', 0.5));
                 };
-                reader.readAsDataURL(file);
+                img.src = e.target.result;
+            };
+            r.readAsDataURL(file);
+        });
+    }
+
+    /* ============================
+       NOTIFICACIONES DEL NAVEGADOR
+    ============================ */
+    function buildNotifIcon() {
+        const c = document.createElement('canvas');
+        c.width = 64; c.height = 64;
+        const ctx = c.getContext('2d');
+        const g = ctx.createLinearGradient(0, 0, 64, 64);
+        g.addColorStop(0, '#ff5e3a'); g.addColorStop(1, '#ff2d55');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(32, 32, 30, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 30px Arial,sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('P', 32, 33);
+        notifIcon = c.toDataURL('image/png');
+    }
+    buildNotifIcon();
+
+    function checkNotifBanner() {
+        if (!('Notification' in window)) { notifBanner.style.display = 'none'; return; }
+        if (Notification.permission === 'default') { notifBanner.style.display = 'flex'; }
+        else { notifBanner.style.display = 'none'; }
+    }
+
+    notifAllowBtn.addEventListener('click', () => {
+        if (!('Notification' in window)) return;
+        Notification.requestPermission().then(p => {
+            notifBanner.style.display = 'none';
+            if (p === 'granted') showToast('Notificaciones activadas', 'success');
+            else showToast('Notificaciones bloqueadas', 'warning');
+        });
+    });
+
+    function showBrowserNotification(title, body) {
+        if (!('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+        // Mostrar cuando la pestana no esta enfocada
+        if (!document.hidden) return;
+        try {
+            const n = new Notification(title, {
+                body: body, icon: notifIcon,
+                tag: 'palma-chat-' + Date.now(),
+                requireInteraction: false
             });
-        }
+            n.onclick = () => { window.focus(); n.close(); };
+            setTimeout(() => n.close(), 5000);
+        } catch(e) {}
+    }
 
-        function escapeHTML(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
+    /* ============================
+       LOGIN
+    ============================ */
+    function doLogin() {
+        const name = nameInput.value.trim();
+        if (!name) { loginError.textContent = 'Debes ingresar un nombre'; nameInput.focus(); return; }
+        if (name.length < 2) { loginError.textContent = 'Minimo 2 caracteres'; nameInput.focus(); return; }
+        username = name;
+        localStorage.setItem('chat_username', username);
+        loginError.textContent = '';
+        enterChat();
+    }
+    function enterChat() {
+        loginScreen.style.display = 'none';
+        chatScreen.style.display = 'flex';
+        headerName.textContent = username;
+        msgInput.focus();
+        startListening();
+        initDrawCanvas();
+        startDrawSync();
+        startStrokeCleanup();
+        checkNotifBanner();
+    }
+    function showLogin() {
+        chatScreen.style.display = 'none';
+        loginScreen.style.display = 'flex';
+        nameInput.value = username;
+        nameInput.focus();
+        checkNotifBanner();
+    }
+    loginBtn.addEventListener('click', doLogin);
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); loginError.textContent = ''; });
+    headerUser.addEventListener('click', () => { if (isDrawingMode) toggleDrawMode(); showLogin(); });
+    if (username) enterChat(); else nameInput.focus();
 
-        /* ============================
-           LOGIN
-        ============================ */
-        function doLogin() {
-            const name = nameInput.value.trim();
-            if (!name) {
-                loginError.textContent = 'Debes ingresar un nombre';
-                nameInput.focus();
-                return;
-            }
-            if (name.length < 2) {
-                loginError.textContent = 'El nombre debe tener al menos 2 caracteres';
-                nameInput.focus();
-                return;
-            }
-            username = name;
-            localStorage.setItem('chat_username', username);
-            loginError.textContent = '';
-            enterChat();
+    /* ============================
+       ENVIAR MENSAJES
+    ============================ */
+    function canSend() { return (Date.now() - lastSentTime) >= COOLDOWN_MS; }
+    function startCooldown() {
+        lastSentTime = Date.now();
+        sendBtn.disabled = true;
+        const start = Date.now();
+        if (cooldownInterval) clearInterval(cooldownInterval);
+        cooldownInterval = setInterval(() => {
+            const r = Math.max(0, 1 - (Date.now() - start) / COOLDOWN_MS);
+            cooldownBar.style.width = ((1-r)*100) + '%';
+            if (r <= 0) { clearInterval(cooldownInterval); cooldownInterval = null; cooldownBar.style.width = '0%'; sendBtn.disabled = false; }
+        }, 50);
+    }
+    async function sendMessage() {
+        const text = msgInput.value.trim(), image = pendingImage;
+        if (!text && !image) return;
+        if (!canSend()) {
+            showToast(`Espera ${Math.ceil((COOLDOWN_MS - (Date.now()-lastSentTime))/1000)}s`, 'warning');
+            return;
         }
+        sendBtn.disabled = true;
+        msgInput.value = '';
+        clearImagePreview(); autoResizeInput();
+        try {
+            await push(messagesRef, { sender: username, text: text||'', image: image||null, timestamp: Date.now() });
+            startCooldown();
+        } catch(e) { showToast('Error al enviar', 'error'); sendBtn.disabled = false; }
+    }
+    sendBtn.addEventListener('click', sendMessage);
+    msgInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    function autoResizeInput() { msgInput.style.height = 'auto'; msgInput.style.height = Math.min(msgInput.scrollHeight, 120)+'px'; }
+    msgInput.addEventListener('input', autoResizeInput);
 
-        function enterChat() {
-            loginScreen.style.display = 'none';
-            chatScreen.style.display = 'flex';
-            headerName.textContent = username;
+    /* ============================
+       IMAGENES
+    ============================ */
+    imgBtn.addEventListener('click', () => imgFileInput.click());
+    imgFileInput.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        if (!file.type.startsWith('image/')) { showToast('Solo imagenes', 'error'); imgFileInput.value=''; return; }
+        if (file.size > 10*1024*1024) { showToast('Max 10MB', 'error'); imgFileInput.value=''; return; }
+        try {
+            showToast('Procesando...', 'info');
+            pendingImage = await compressImage(file);
+            imgPreviewThumb.src = pendingImage;
+            imgPreview.style.display = 'flex';
             msgInput.focus();
-            startListening();
-        }
+        } catch(e) { showToast('Error al procesar imagen', 'error'); }
+        imgFileInput.value = '';
+    });
+    function clearImagePreview() { pendingImage = null; imgPreview.style.display='none'; imgPreviewThumb.src=''; }
+    imgPreviewRemove.addEventListener('click', clearImagePreview);
+    function openImageModal(src) { imgModalSrc.src = src; imgModal.style.display = 'flex'; }
+    imgModal.addEventListener('click', () => { imgModal.style.display='none'; imgModalSrc.src=''; });
 
-        function showLogin() {
-            chatScreen.style.display = 'none';
-            loginScreen.style.display = 'flex';
-            nameInput.value = username;
-            nameInput.focus();
-        }
-
-        loginBtn.addEventListener('click', doLogin);
-        nameInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') doLogin();
-            loginError.textContent = '';
-        });
-
-        headerUser.addEventListener('click', () => {
-            if (isDrawingMode) toggleDrawMode();
-            showLogin();
-        });
-
-        // Auto-login si ya hay nombre guardado
-        if (username) {
-            enterChat();
-        } else {
-            nameInput.focus();
-        }
-
-        /* ============================
-           MENSAJES - ENVIAR
-        ============================ */
-        function canSend() {
-            return (Date.now() - lastSentTime) >= COOLDOWN_MS;
-        }
-
-        function startCooldown() {
-            lastSentTime = Date.now();
-            sendBtn.disabled = true;
-            const start = Date.now();
-
-            if (cooldownInterval) clearInterval(cooldownInterval);
-            cooldownInterval = setInterval(() => {
-                const elapsed = Date.now() - start;
-                const remaining = Math.max(0, 1 - elapsed / COOLDOWN_MS);
-                cooldownBar.style.width = ((1 - remaining) * 100) + '%';
-                if (remaining <= 0) {
-                    clearInterval(cooldownInterval);
-                    cooldownInterval = null;
-                    cooldownBar.style.width = '0%';
-                    sendBtn.disabled = false;
-                }
-            }, 50);
-        }
-
-        async function sendMessage() {
-            const text = msgInput.value.trim();
-            const image = pendingImage;
-
-            if (!text && !image) return;
-            if (!canSend()) {
-                const wait = Math.ceil((COOLDOWN_MS - (Date.now() - lastSentTime)) / 1000);
-                showToast(`Espera ${wait}s antes de enviar otro mensaje`, 'warning');
-                return;
-            }
-
-            sendBtn.disabled = true;
-            msgInput.value = '';
-            clearImagePreview();
-            autoResizeInput();
-
-            try {
-                const msg = {
-                    sender: username,
-                    text: text || '',
-                    image: image || null,
-                    timestamp: Date.now()
-                };
-                await push(messagesRef, msg);
-                startCooldown();
-            } catch (err) {
-                showToast('Error al enviar mensaje', 'error');
-                console.error(err);
-                sendBtn.disabled = false;
-            }
-        }
-
-        sendBtn.addEventListener('click', sendMessage);
-
-        msgInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // Auto-resize del textarea
-        function autoResizeInput() {
-            msgInput.style.height = 'auto';
-            msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
-        }
-
-        msgInput.addEventListener('input', autoResizeInput);
-
-        /* ============================
-           IMAGENES
-        ============================ */
-        imgBtn.addEventListener('click', () => imgFileInput.click());
-
-        imgFileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            if (!file.type.startsWith('image/')) {
-                showToast('Solo se permiten imagenes', 'error');
-                imgFileInput.value = '';
-                return;
-            }
-
-            if (file.size > 10 * 1024 * 1024) {
-                showToast('La imagen es muy grande (max 10MB)', 'error');
-                imgFileInput.value = '';
-                return;
-            }
-
-            try {
-                showToast('Procesando imagen...', 'info');
-                const base64 = await compressImage(file);
-                pendingImage = base64;
-                imgPreviewThumb.src = base64;
-                imgPreview.style.display = 'flex';
-                msgInput.focus();
-            } catch (err) {
-                showToast('Error al procesar la imagen', 'error');
-                console.error(err);
-            }
-
-            imgFileInput.value = '';
-        });
-
-        function clearImagePreview() {
-            pendingImage = null;
-            imgPreview.style.display = 'none';
-            imgPreviewThumb.src = '';
-        }
-
-        imgPreviewRemove.addEventListener('click', clearImagePreview);
-
-        // Modal de imagen
-        function openImageModal(src) {
-            imgModalSrc.src = src;
-            imgModal.style.display = 'flex';
-        }
-
-        imgModal.addEventListener('click', () => {
-            imgModal.style.display = 'none';
-            imgModalSrc.src = '';
-        });
-
-        /* ============================
-           MENSAJES - RECIBIR
-        ============================ */
-        let listeningStarted = false;
-
-        function startListening() {
-            if (listeningStarted) return;
-            listeningStarted = true;
-
-            onValue(messagesRef, (snapshot) => {
-                const data = snapshot.val();
-                const deletedIds = getDeletedIds();
-
-                if (!data) {
-                    emptyState.style.display = 'flex';
-                    return;
-                }
-
-                emptyState.style.display = 'none';
-
-                // Procesar mensajes nuevos
-                const entries = Object.entries(data);
-                entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-
-                let hasNew = false;
-                entries.forEach(([id, msg]) => {
-                    if (renderedIds.has(id)) return;
-                    if (deletedIds.includes(id)) {
-                        renderedIds.add(id);
-                        return;
-                    }
-                    renderedIds.add(id);
-                    renderMessage(id, msg);
-                    hasNew = true;
+    /* ============================
+       RECIBIR MENSAJES
+    ============================ */
+    let listeningStarted = false;
+    function startListening() {
+        if (listeningStarted) return;
+        listeningStarted = true;
+        onValue(messagesRef, snapshot => {
+            const data = snapshot.val();
+            const deletedIds = getDeletedIds();
+            if (!data) { emptyState.style.display = 'flex'; return; }
+            emptyState.style.display = 'none';
+            const entries = Object.entries(data).sort((a,b) => a[1].timestamp - b[1].timestamp);
+            const newMsgs = [];
+            entries.forEach(([id, msg]) => {
+                if (renderedIds.has(id)) return;
+                if (deletedIds.includes(id)) { renderedIds.add(id); return; }
+                renderedIds.add(id);
+                renderMessage(id, msg);
+                newMsgs.push(msg);
+            });
+            if (newMsgs.length > 0) {
+                requestAnimationFrame(() => {
+                    const near = messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight < 200;
+                    if (near) messagesArea.scrollTop = messagesArea.scrollHeight;
                 });
-
-                if (hasNew) {
-                    requestAnimationFrame(() => {
-                        const nearBottom = messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight < 150;
-                        if (nearBottom) {
-                            messagesArea.scrollTop = messagesArea.scrollHeight;
+                // Notificaciones para mensajes nuevos (solo despues de carga inicial)
+                if (initialMessagesLoaded) {
+                    newMsgs.forEach(msg => {
+                        if (msg.sender !== username) {
+                            showBrowserNotification(
+                                `${msg.sender} en Palma Chat`,
+                                msg.text ? (msg.text.length > 60 ? msg.text.slice(0,60)+'...' : msg.text) : 'Envio una imagen'
+                            );
                         }
                     });
                 }
-            }, (err) => {
-                console.error('Error Firebase:', err);
-                showToast('Error de conexion a la base de datos', 'error');
+            }
+            initialMessagesLoaded = true;
+        }, err => { console.error(err); showToast('Error de conexion', 'error'); });
+    }
+    function renderMessage(id, msg) {
+        const isSelf = msg.sender === username;
+        const row = document.createElement('div');
+        row.className = `msg-row ${isSelf ? 'self' : 'other'}`;
+        row.id = `msg-${id}`;
+        if (!isSelf) { const s = document.createElement('div'); s.className='msg-sender'; s.textContent=escapeHTML(msg.sender); row.appendChild(s); }
+        const bubble = document.createElement('div'); bubble.className='msg-bubble';
+        if (msg.text) { const t = document.createElement('span'); t.textContent=msg.text; bubble.appendChild(t); }
+        if (msg.image) {
+            const img = document.createElement('img'); img.src=msg.image; img.alt='Imagen'; img.loading='lazy';
+            img.addEventListener('click', () => openImageModal(msg.image));
+            bubble.appendChild(img);
+        }
+        if (isSelf) {
+            const del = document.createElement('button'); del.className='msg-delete';
+            del.innerHTML='<i class="fas fa-xmark"></i>'; del.title='Eliminar';
+            del.setAttribute('aria-label','Eliminar mensaje');
+            del.addEventListener('click', e => { e.stopPropagation(); deleteLocalMessage(id); });
+            bubble.appendChild(del);
+        }
+        row.appendChild(bubble);
+        const time = document.createElement('div'); time.className='msg-time'; time.textContent=formatTime(msg.timestamp);
+        row.appendChild(time);
+        messagesArea.appendChild(row);
+    }
+    function deleteLocalMessage(id) {
+        addDeletedId(id);
+        const el = $(`msg-${id}`);
+        if (el) { el.style.transition='all .3s'; el.style.opacity='0'; el.style.transform='scale(.9)'; setTimeout(()=>el.remove(),300); }
+        showToast('Mensaje eliminado', 'success');
+    }
+
+    /* ============================
+       SISTEMA DE DIBUJO EN TIEMPO REAL
+    ============================ */
+    const DRAW_COLORS = ['#ffffff','#ff5e3a','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#af52de','#ff2d55','#8e8e93'];
+
+    // Construir toolbar
+    function buildDrawToolbar() {
+        DRAW_COLORS.forEach((c, i) => {
+            const sw = document.createElement('div');
+            sw.className = `color-swatch ${i===0?'active':''}`;
+            sw.style.background = c;
+            if (c === '#ffffff') sw.style.border = '2px solid rgba(255,255,255,.3)';
+            sw.addEventListener('click', () => {
+                drawColor = c; isEraser = false;
+                drawToolbar.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+                sw.classList.add('active');
+                const eb = $('eraserBtn'); if (eb) eb.classList.remove('active');
             });
-        }
-
-        function renderMessage(id, msg) {
-            const isSelf = msg.sender === username;
-            const row = document.createElement('div');
-            row.className = `msg-row ${isSelf ? 'self' : 'other'}`;
-            row.id = `msg-${id}`;
-
-            // Nombre del remitente (solo para mensajes de otros)
-            if (!isSelf) {
-                const sender = document.createElement('div');
-                sender.className = 'msg-sender';
-                sender.textContent = escapeHTML(msg.sender);
-                row.appendChild(sender);
-            }
-
-            // Burbuja
-            const bubble = document.createElement('div');
-            bubble.className = 'msg-bubble';
-
-            // Texto
-            if (msg.text) {
-                const textNode = document.createElement('span');
-                textNode.textContent = msg.text;
-                bubble.appendChild(textNode);
-            }
-
-            // Imagen
-            if (msg.image) {
-                const img = document.createElement('img');
-                img.src = msg.image;
-                img.alt = 'Imagen compartida';
-                img.loading = 'lazy';
-                img.addEventListener('click', () => openImageModal(msg.image));
-                bubble.appendChild(img);
-            }
-
-            // Boton borrar (solo mensajes propios)
-            if (isSelf) {
-                const delBtn = document.createElement('button');
-                delBtn.className = 'msg-delete';
-                delBtn.innerHTML = '<i class="fas fa-xmark"></i>';
-                delBtn.title = 'Eliminar mensaje';
-                delBtn.setAttribute('aria-label', 'Eliminar este mensaje');
-                delBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    deleteLocalMessage(id);
-                });
-                bubble.appendChild(delBtn);
-            }
-
-            row.appendChild(bubble);
-
-            // Hora
-            const time = document.createElement('div');
-            time.className = 'msg-time';
-            time.textContent = formatTime(msg.timestamp);
-            row.appendChild(time);
-
-            messagesArea.appendChild(row);
-        }
-
-        function deleteLocalMessage(id) {
-            addDeletedId(id);
-            const el = document.getElementById(`msg-${id}`);
-            if (el) {
-                el.style.transition = 'all 0.3s ease';
-                el.style.opacity = '0';
-                el.style.transform = 'scale(0.9)';
-                setTimeout(() => el.remove(), 300);
-            }
-            showToast('Mensaje eliminado de tu dispositivo', 'success');
-        }
-
-        /* ============================
-           MODO DIBUJO
-        ============================ */
-        const DRAW_COLORS = [
-            '#ffffff', '#ff5e3a', '#ff9500', '#ffcc00',
-            '#34c759', '#00c7be', '#007aff', '#af52de',
-            '#ff2d55', '#8e8e93'
-        ];
-
-        // Construir paleta de colores
-        function buildDrawToolbar() {
-            // Colores
-            DRAW_COLORS.forEach((c, i) => {
-                const swatch = document.createElement('div');
-                swatch.className = `color-swatch ${i === 0 ? 'active' : ''}`;
-                swatch.style.background = c;
-                if (c === '#ffffff') swatch.style.border = '2px solid rgba(255,255,255,0.3)';
-                swatch.addEventListener('click', () => {
-                    drawColor = c;
-                    isEraser = false;
-                    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
-                    swatch.classList.add('active');
-                    document.getElementById('eraserBtn')?.classList.remove('active');
-                });
-                drawToolbar.appendChild(swatch);
-            });
-
-            // Separador
-            const sep1 = document.createElement('div');
-            sep1.className = 'draw-sep';
-            drawToolbar.appendChild(sep1);
-
-            // Slider de tamano
-            const slider = document.createElement('input');
-            slider.type = 'range';
-            slider.className = 'brush-slider';
-            slider.min = '2';
-            slider.max = '30';
-            slider.value = '4';
-            slider.title = 'Tamano del pincel';
-            slider.setAttribute('aria-label', 'Tamano del pincel');
-            slider.addEventListener('input', () => { brushSizeVal = parseInt(slider.value); });
-            drawToolbar.appendChild(slider);
-
-            // Separador
-            const sep2 = document.createElement('div');
-            sep2.className = 'draw-sep';
-            drawToolbar.appendChild(sep2);
-
-            // Borrador
-            const eraserBtn = document.createElement('button');
-            eraserBtn.id = 'eraserBtn';
-            eraserBtn.className = 'draw-tool-btn';
-            eraserBtn.innerHTML = '<i class="fas fa-eraser"></i>';
-            eraserBtn.title = 'Borrador';
-            eraserBtn.setAttribute('aria-label', 'Borrador');
-            eraserBtn.addEventListener('click', () => {
-                isEraser = !isEraser;
-                eraserBtn.classList.toggle('active', isEraser);
-                if (isEraser) {
-                    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
-                }
-            });
-            drawToolbar.appendChild(eraserBtn);
-
-            // Limpiar todo
-            const clearBtn = document.createElement('button');
-            clearBtn.className = 'draw-tool-btn';
-            clearBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
-            clearBtn.title = 'Limpiar dibujo';
-            clearBtn.setAttribute('aria-label', 'Limpiar dibujo');
-            clearBtn.addEventListener('click', () => { clearDrawCanvas(); });
-            drawToolbar.appendChild(clearBtn);
-
-            // Separador
-            const sep3 = document.createElement('div');
-            sep3.className = 'draw-sep';
-            drawToolbar.appendChild(sep3);
-
-            // Cerrar modo dibujo
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'draw-tool-btn';
-            closeBtn.innerHTML = '<i class="fas fa-xmark"></i>';
-            closeBtn.title = 'Cerrar modo dibujo';
-            closeBtn.setAttribute('aria-label', 'Cerrar modo dibujo');
-            closeBtn.addEventListener('click', toggleDrawMode);
-            drawToolbar.appendChild(closeBtn);
-        }
-
-        buildDrawToolbar();
-
-        function toggleDrawMode() {
-            isDrawingMode = !isDrawingMode;
-            drawToggleBtn.classList.toggle('active', isDrawingMode);
-
-            if (isDrawingMode) {
-                drawOverlay.style.display = 'block';
-                resizeDrawCanvas();
-                clearDrawCanvas();
-                startDrawTimer();
-            } else {
-                drawOverlay.style.display = 'none';
-                cancelDrawTimer();
-            }
-        }
-
-        drawToggleBtn.addEventListener('click', toggleDrawMode);
-
-        // Canvas sizing con soporte HiDPI
-        function resizeDrawCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            drawCanvas.width = window.innerWidth * dpr;
-            drawCanvas.height = window.innerHeight * dpr;
-            drawCanvas.style.width = window.innerWidth + 'px';
-            drawCanvas.style.height = window.innerHeight + 'px';
-            const ctx = drawCanvas.getContext('2d');
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-
-        window.addEventListener('resize', () => {
-            if (isDrawingMode) resizeDrawCanvas();
+            drawToolbar.appendChild(sw);
         });
+        const sep1 = document.createElement('div'); sep1.className='draw-sep'; drawToolbar.appendChild(sep1);
 
-        function getDrawPos(e) {
-            const rect = drawCanvas.getBoundingClientRect();
-            const touch = e.touches ? e.touches[0] : e;
-            return {
-                x: touch.clientX - rect.left,
-                y: touch.clientY - rect.top
-            };
-        }
+        const slider = document.createElement('input');
+        slider.type='range'; slider.className='brush-slider'; slider.min='2'; slider.max='30'; slider.value='4';
+        slider.title='Tamano'; slider.setAttribute('aria-label','Tamano del pincel');
+        slider.addEventListener('input', () => { brushSizeVal = parseInt(slider.value); });
+        drawToolbar.appendChild(slider);
 
-        function startStroke(e) {
-            e.preventDefault();
-            isDrawing = true;
-            const pos = getDrawPos(e);
-            lastX = pos.x;
-            lastY = pos.y;
-            resetDrawTimer();
+        const sep2 = document.createElement('div'); sep2.className='draw-sep'; drawToolbar.appendChild(sep2);
 
-            // Dibujar un punto
-            const ctx = drawCanvas.getContext('2d');
-            ctx.beginPath();
-            if (isEraser) {
-                ctx.globalCompositeOperation = 'destination-out';
-            } else {
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.strokeStyle = drawColor;
-                ctx.fillStyle = drawColor;
-            }
-            ctx.arc(pos.x, pos.y, brushSizeVal / 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        const eraserBtn = document.createElement('button'); eraserBtn.id='eraserBtn'; eraserBtn.className='draw-tool-btn';
+        eraserBtn.innerHTML='<i class="fas fa-eraser"></i>'; eraserBtn.title='Borrador';
+        eraserBtn.setAttribute('aria-label','Borrador');
+        eraserBtn.addEventListener('click', () => {
+            isEraser = !isEraser; eraserBtn.classList.toggle('active', isEraser);
+            if (isEraser) drawToolbar.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+        });
+        drawToolbar.appendChild(eraserBtn);
 
-        function moveStroke(e) {
-            if (!isDrawing) return;
-            e.preventDefault();
-            const pos = getDrawPos(e);
-            resetDrawTimer();
+        const clearBtn = document.createElement('button'); clearBtn.className='draw-tool-btn';
+        clearBtn.innerHTML='<i class="fas fa-trash-can"></i>'; clearBtn.title='Limpiar';
+        clearBtn.setAttribute('aria-label','Limpiar dibujo');
+        clearBtn.addEventListener('click', () => { redrawAllStrokes(); });
+        drawToolbar.appendChild(clearBtn);
 
-            const ctx = drawCanvas.getContext('2d');
-            ctx.beginPath();
-            ctx.lineWidth = brushSizeVal;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+        const sep3 = document.createElement('div'); sep3.className='draw-sep'; drawToolbar.appendChild(sep3);
 
-            if (isEraser) {
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.strokeStyle = 'rgba(0,0,0,1)';
-            } else {
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.strokeStyle = drawColor;
-            }
+        const closeBtn = document.createElement('button'); closeBtn.className='draw-tool-btn';
+        closeBtn.innerHTML='<i class="fas fa-xmark"></i>'; closeBtn.title='Cerrar';
+        closeBtn.setAttribute('aria-label','Cerrar modo dibujo');
+        closeBtn.addEventListener('click', toggleDrawMode);
+        drawToolbar.appendChild(closeBtn);
+    }
+    buildDrawToolbar();
 
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
+    // Canvas sizing (HiDPI)
+    function resizeDrawCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const w = window.innerWidth || 1, h = window.innerHeight || 1;
+        drawCanvas.width = w * dpr;
+        drawCanvas.height = h * dpr;
+        drawCanvas.style.width = w + 'px';
+        drawCanvas.style.height = h + 'px';
+        const ctx = drawCanvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        redrawAllStrokes();
+    }
 
-            lastX = pos.x;
-            lastY = pos.y;
-        }
+    function initDrawCanvas() { resizeDrawCanvas(); }
+    window.addEventListener('resize', resizeDrawCanvas);
 
-        function endStroke(e) {
-            if (e) e.preventDefault();
-            isDrawing = false;
-        }
+    // Coordenadas normalizadas (0-1) para sincronizar entre dispositivos
+    function getDrawPos(e) {
+        const rect = drawCanvas.getBoundingClientRect();
+        const t = e.touches ? e.touches[0] : e;
+        return { x: (t.clientX - rect.left) / (window.innerWidth || 1), y: (t.clientY - rect.top) / (window.innerHeight || 1) };
+    }
+    function getRawPos(e) {
+        const rect = drawCanvas.getBoundingClientRect();
+        const t = e.touches ? e.touches[0] : e;
+        return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
 
-        // Mouse events
-        drawCanvas.addEventListener('mousedown', startStroke);
-        drawCanvas.addEventListener('mousemove', moveStroke);
-        drawCanvas.addEventListener('mouseup', endStroke);
-        drawCanvas.addEventListener('mouseleave', endStroke);
+    function startStroke(e) {
+        if (!isDrawingMode) return;
+        e.preventDefault(); isDrawing = true;
+        const norm = getDrawPos(e), raw = getRawPos(e);
+        lastX = raw.x; lastY = raw.y;
+        currentLocalStroke = {
+            color: drawColor, size: brushSizeVal, isEraser: isEraser,
+            points: [{ x: norm.x, y: norm.y }],
+            timestamp: Date.now()
+        };
+        resetDrawTimer();
+        // Dibujar punto inicial directamente
+        const ctx = drawCanvas.getContext('2d');
+        ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+        ctx.fillStyle = isEraser ? 'rgba(0,0,0,1)' : drawColor;
+        ctx.beginPath();
+        ctx.arc(raw.x, raw.y, Math.max(1, brushSizeVal/2), 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+    }
 
-        // Touch events (passive: false para poder prevenir scroll)
-        drawCanvas.addEventListener('touchstart', startStroke, { passive: false });
-        drawCanvas.addEventListener('touchmove', moveStroke, { passive: false });
-        drawCanvas.addEventListener('touchend', endStroke, { passive: false });
-        drawCanvas.addEventListener('touchcancel', endStroke, { passive: false });
+    function moveStroke(e) {
+        if (!isDrawing || !isDrawingMode) return;
+        e.preventDefault();
+        const norm = getDrawPos(e), raw = getRawPos(e);
+        // Muestreo: solo agregar punto si se movio suficiente
+        const lp = currentLocalStroke.points[currentLocalStroke.points.length-1];
+        const dx = norm.x-lp.x, dy = norm.y-lp.y;
+        if (dx*dx + dy*dy < 0.000001) return; // ~1px en pantalla
 
-        // Timer de dibujo
-        function resetDrawTimer() {
-            cancelDrawTimer();
-            drawTimerStart = Date.now();
-            updateDrawTimerVisual();
-            drawTimer = setTimeout(() => {
-                clearDrawCanvas();
-                // Reiniciar el timer para que se siga mostrando la barra llena
-                drawTimerStart = null;
-                drawTimerFill.style.width = '100%';
-                if (isDrawingMode) {
-                    drawTimer = setTimeout(() => {}, DRAW_TIMEOUT_MS);
-                    drawTimerStart = Date.now();
-                    updateDrawTimerVisual();
-                    drawTimer = setTimeout(() => {
-                        clearDrawCanvas();
-                        drawTimerStart = null;
-                        drawTimerFill.style.width = '100%';
-                    }, DRAW_TIMEOUT_MS);
-                }
-            }, DRAW_TIMEOUT_MS);
-        }
+        currentLocalStroke.points.push({ x: norm.x, y: norm.y });
+        resetDrawTimer();
 
-        function startDrawTimer() {
-            drawTimerStart = Date.now();
-            drawTimerFill.style.width = '100%';
-            updateDrawTimerVisual();
-            drawTimer = setTimeout(() => {
-                clearDrawCanvas();
-                drawTimerStart = null;
-                drawTimerFill.style.width = '100%';
-            }, DRAW_TIMEOUT_MS);
-        }
+        // Dibujar incrementalmente en canvas
+        const ctx = drawCanvas.getContext('2d');
+        ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+        ctx.strokeStyle = isEraser ? 'rgba(0,0,0,1)' : drawColor;
+        ctx.lineWidth = brushSizeVal;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(raw.x, raw.y); ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
+        lastX = raw.x; lastY = raw.y;
+    }
 
-        function cancelDrawTimer() {
-            if (drawTimer) { clearTimeout(drawTimer); drawTimer = null; }
-            if (drawRAF) { cancelAnimationFrame(drawRAF); drawRAF = null; }
-        }
+    function endStroke(e) {
+        if (!isDrawing) return;
+        if (e) e.preventDefault();
+        isDrawing = false;
+        if (!currentLocalStroke || currentLocalStroke.points.length === 0) { currentLocalStroke = null; return; }
 
-        function updateDrawTimerVisual() {
-            if (!drawTimerStart || !isDrawingMode) return;
-            const elapsed = Date.now() - drawTimerStart;
-            const remaining = Math.max(0, 1 - elapsed / DRAW_TIMEOUT_MS);
-            drawTimerFill.style.width = (remaining * 100) + '%';
-            if (remaining > 0) {
-                drawRAF = requestAnimationFrame(updateDrawTimerVisual);
-            }
-        }
+        // Enviar trazo a Firebase
+        const strokeRef = push(drawingsRef);
+        const strokeId = strokeRef.key;
+        processedStrokeIds.add(strokeId);
+        const strokeData = {
+            color: currentLocalStroke.color,
+            size: currentLocalStroke.size,
+            isEraser: currentLocalStroke.isEraser,
+            points: currentLocalStroke.points,
+            timestamp: currentLocalStroke.timestamp
+        };
+        activeStrokes.push({ ...strokeData, firebaseId: strokeId });
+        set(strokeRef, strokeData).catch(err => console.error('Error enviando trazo:', err));
+        currentLocalStroke = null;
+    }
 
-        function clearDrawCanvas() {
-            const ctx = drawCanvas.getContext('2d');
+    drawCanvas.addEventListener('mousedown', startStroke);
+    drawCanvas.addEventListener('mousemove', moveStroke);
+    drawCanvas.addEventListener('mouseup', endStroke);
+    drawCanvas.addEventListener('mouseleave', endStroke);
+    drawCanvas.addEventListener('touchstart', startStroke, { passive: false });
+    drawCanvas.addEventListener('touchmove', moveStroke, { passive: false });
+    drawCanvas.addEventListener('touchend', endStroke, { passive: false });
+    drawCanvas.addEventListener('touchcancel', endStroke, { passive: false });
+
+    // Dibujar un trazo completo en el canvas
+    function drawStroke(stroke) {
+        if (!stroke.points || stroke.points.length === 0) return;
+        const ctx = drawCanvas.getContext('2d');
+        const w = window.innerWidth || 1, h = window.innerHeight || 1;
+        ctx.lineWidth = stroke.size;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+        if (stroke.isEraser) {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+            ctx.fillStyle = 'rgba(0,0,0,1)';
+        } else {
             ctx.globalCompositeOperation = 'source-over';
-            ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            ctx.strokeStyle = stroke.color;
+            ctx.fillStyle = stroke.color;
         }
 
-        // Esc para cerrar modo dibujo
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && isDrawingMode) {
-                toggleDrawMode();
+        if (stroke.points.length === 1) {
+            ctx.beginPath();
+            ctx.arc(stroke.points[0].x * w, stroke.points[0].y * h, Math.max(1, stroke.size/2), 0, Math.PI*2);
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(stroke.points[0].x * w, stroke.points[0].y * h);
+            for (let i = 1; i < stroke.points.length; i++) {
+                ctx.lineTo(stroke.points[i].x * w, stroke.points[i].y * h);
             }
+            ctx.stroke();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // Redibujar todo (usado cuando llegan trazos remotos o se limpia)
+    function redrawAllStrokes() {
+        const ctx = drawCanvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+        activeStrokes.forEach(s => drawStroke(s));
+        if (currentLocalStroke && currentLocalStroke.points.length > 0) drawStroke(currentLocalStroke);
+    }
+
+    // Sincronizar trazos desde Firebase
+    function startDrawSync() {
+        if (drawSyncStarted) return;
+        drawSyncStarted = true;
+
+        onChildAdded(drawingsRef, snapshot => {
+            const stroke = snapshot.val();
+            if (!stroke || !stroke.points) return;
+            // Ignorar si ya expiro
+            if (Date.now() - stroke.timestamp > DRAW_TIMEOUT_MS) {
+                remove(ref(db, `drawings/${snapshot.key}`));
+                return;
+            }
+            // Ignorar si ya lo procesamos (trazo local)
+            if (processedStrokeIds.has(snapshot.key)) return;
+            processedStrokeIds.add(snapshot.key);
+            activeStrokes.push({ ...stroke, firebaseId: snapshot.key });
+            redrawAllStrokes();
         });
-    </script>
+
+        onChildRemoved(drawingsRef, snapshot => {
+            const idx = activeStrokes.findIndex(s => s.firebaseId === snapshot.key);
+            if (idx !== -1) { activeStrokes.splice(idx, 1); redrawAllStrokes(); }
+        });
+    }
+
+    // Limpieza periodica de trazos expirados
+    function startStrokeCleanup() {
+        if (strokeCleanupInterval) return;
+        strokeCleanupInterval = setInterval(async () => {
+            const now = Date.now();
+            // Limpiar trazos locales expirados
+            let changed = false;
+            for (let i = activeStrokes.length - 1; i >= 0; i--) {
+                if (now - activeStrokes[i].timestamp > DRAW_TIMEOUT_MS) {
+                    activeStrokes.splice(i, 1);
+                    changed = true;
+                }
+            }
+            if (changed) redrawAllStrokes();
+
+            // Limpiar trazos expirados de Firebase
+            try {
+                const snap = await get(drawingsRef);
+                const data = snap.val();
+                if (!data) return;
+                Object.entries(data).forEach(([id, stroke]) => {
+                    if (now - stroke.timestamp > DRAW_TIMEOUT_MS + 1000) {
+                        remove(ref(db, `drawings/${id}`));
+                    }
+                });
+            } catch(e) {}
+        }, 2500);
+    }
+
+    // Timer visual del modo dibujo
+    function resetDrawTimer() {
+        drawTimerStart = Date.now();
+        drawTimerFill.style.width = '100%';
+    }
+    function updateDrawTimerVisual() {
+        if (!isDrawingMode || !drawTimerStart) { drawTimerFill.style.width = '100%'; return; }
+        const r = Math.max(0, 1 - (Date.now() - drawTimerStart) / DRAW_TIMEOUT_MS);
+        drawTimerFill.style.width = (r * 100) + '%';
+    }
+    setInterval(updateDrawTimerVisual, 60);
+
+    // Toggle modo dibujo
+    function toggleDrawMode() {
+        isDrawingMode = !isDrawingMode;
+        drawOverlay.classList.toggle('active', isDrawingMode);
+        drawToggleBtn.classList.toggle('active', isDrawingMode);
+        if (isDrawingMode) {
+            resizeDrawCanvas();
+            resetDrawTimer();
+        }
+    }
+    drawToggleBtn.addEventListener('click', toggleDrawMode);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && isDrawingMode) toggleDrawMode(); });
+
+</script>
 </body>
 </html>
