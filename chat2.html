@@ -351,20 +351,25 @@
           speakingWave=$('speakingWave'), speakingLabel=$('speakingLabel');
 
     /* ========== ESTADO GENERAL ========== */
-    let username = localStorage.getItem('chat_username') || '';
-    let lastSentTime = 0, cooldownInterval = null, pendingImage = null;
-    const renderedIds = new Set();
-    const COOLDOWN_MS = 3000, DRAW_TIMEOUT_MS = 10000;
-    let initialMessagesLoaded = false;
+    /* ========== ESTADO GENERAL ========== */
+let username = localStorage.getItem('chat_username') || '';
+let lastSentTime = 0, cooldownInterval = null, pendingImage = null;
+const renderedIds = new Set();
+const COOLDOWN_MS = 3000, DRAW_TIMEOUT_MS = 10000;
+let initialMessagesLoaded = false;
 
-    /* Dibujo */
-    let isDrawingMode=false, isDrawing=false;
-    let drawColor='#ffffff', brushSizeVal=4, isEraser=false;
-    let lastX=0, lastY=0, currentStroke=null;
-    const activeStrokes=[], processedStrokeIds=new Set();
-    let drawTimerStart=null, drawSyncStarted=false, strokeCleanupInterval=null;
+/* Dibujo */
+let isDrawingMode = false, isDrawing = false;
+let drawColor = '#ffffff', brushSizeVal = 4, isEraser = false;
+let lastX = 0, lastY = 0, currentStroke = null;
+const activeStrokes = [], processedStrokeIds = new Set();
+let drawTimerStart = null, drawSyncStarted = false, strokeCleanupInterval = null;
 
-    let notifIcon = null;
+let notifIcon = null;
+
+/* Chat listeners */
+let listeningStarted = false;        // ← MOVER AQUÍ, antes de startListening
+let msgListenerUnsub = null;
 
     /* ========== UTILIDADES ========== */
     function showToast(msg, type='info'){
@@ -485,10 +490,11 @@
     };
     imgPreviewRemove.onclick=()=>{pendingImage=null;imgPreview.style.display='none';};
 
-    let listeningStarted=false, msgListenerUnsub=null;
-    function startListening(){
-        if(listeningStarted)return;listeningStarted=true;
-        msgListenerUnsub=onValue(messagesRef,snap=>{
+
+    function startListening() {
+    if (listeningStarted) return;
+    listeningStarted = true;
+    msgListenerUnsub = onValue(messagesRef, snap => {
             const data=snap.val();
             if(!data){emptyState.style.display='flex';return;}
             emptyState.style.display='none';
