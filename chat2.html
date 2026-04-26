@@ -442,12 +442,43 @@ let msgListenerUnsub = null;
         chatScreen.style.display='none';loginScreen.style.display='flex';
         nameInput.value='';setTimeout(()=>nameInput.focus(),100);
     }
+    function playJoinSound(){
+    try{
+        const ctx=new(window.AudioContext||window.webkitAudioContext)();
+        
+        // Nota 1
+        const o1=ctx.createOscillator();
+        const g1=ctx.createGain();
+        o1.connect(g1);g1.connect(ctx.destination);
+        o1.type='sine';o1.frequency.setValueAtTime(880,ctx.currentTime);
+        o1.frequency.exponentialRampToValueAtTime(1320,ctx.currentTime+0.15);
+        g1.gain.setValueAtTime(0,ctx.currentTime);
+        g1.gain.linearRampToValueAtTime(0.8,ctx.currentTime+0.02);
+        g1.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);
+        o1.start(ctx.currentTime);o1.stop(ctx.currentTime+0.5);
+
+        // Nota 2 (eco)
+        const o2=ctx.createOscillator();
+        const g2=ctx.createGain();
+        o2.connect(g2);g2.connect(ctx.destination);
+        o2.type='sine';o2.frequency.setValueAtTime(1320,ctx.currentTime+0.18);
+        o2.frequency.exponentialRampToValueAtTime(1760,ctx.currentTime+0.35);
+        g2.gain.setValueAtTime(0,ctx.currentTime+0.18);
+        g2.gain.linearRampToValueAtTime(0.6,ctx.currentTime+0.2);
+        g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.8);
+        o2.start(ctx.currentTime+0.18);o2.stop(ctx.currentTime+0.8);
+
+        setTimeout(()=>ctx.close(),1000);
+    }catch(e){}
+}
     function enterChat(){
-        loginScreen.style.display='none';chatScreen.style.display='flex';
-        headerName.textContent=username;
-        startListening();initDraw();startDrawSync();startStrokeCleanup();
-        setTimeout(()=>msgInput.focus(),100);
-    }
+    loginScreen.style.display='none';chatScreen.style.display='flex';
+    headerName.textContent=username;
+    startListening();initDraw();startDrawSync();startStrokeCleanup();
+    setTimeout(()=>msgInput.focus(),100);
+    // AGREGAR ESTO:
+    setTimeout(()=>{ messagesArea.scrollTop=messagesArea.scrollHeight; },300);
+}
     loginBtn.onclick=doLogin;
     nameInput.onkeydown=e=>{if(e.key==='Enter')doLogin();loginError.textContent='';};
     logoutBtn.onclick=doLogout;
@@ -1095,10 +1126,13 @@ while (peer.pendingCandidates.length > 0) {
 
         /* Nuevos peers que se unen después de mí */
         const unsubAdd=onChildAdded(ref(db,'voiceRoom/peers'),snap=>{
-            const peerId=snap.key,data=snap.val();
-            if(!data||peerId===myVoiceId||voicePeers[peerId])return;
-            renderVoiceUsers();
-            sendBrowserNotif('Palma Chat',`${data.name} se unió al canal de voz`);
+    const peerId=snap.key,data=snap.val();
+    if(!data||peerId===myVoiceId||voicePeers[peerId])return;
+    renderVoiceUsers();
+    // Notificación con sonido
+    playJoinSound();
+    sendBrowserNotif('🔔 Palma Chat',`${data.name} se unió al canal de voz`);
+    showToast(`🎙 ${data.name} se unió al canal de voz`,'success');
             /* Determinista: ID menor crea la oferta */
             if(myVoiceId<peerId){
                 createPeerConnection(peerId,data.name);
@@ -1162,10 +1196,11 @@ while (peer.pendingCandidates.length > 0) {
 </script><style>/* ===== BOTÓN VOZ GIGANTE ===== */
 #voiceBigBtn{
     position:fixed;
-    bottom:24px;
-    right:24px;
-    width:100px;
-    height:100px;
+    bottom:80px;          /* justo encima del footer */
+    left:50%;
+    transform:translateX(-50%);
+    width:150px;
+    height:150px;
     border-radius:50%;
     border:4px solid rgba(255,255,255,.25);
     background:#6a6a82;
