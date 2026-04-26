@@ -912,7 +912,7 @@ voiceToggleBtn.querySelector('i').style.animation='';
         addSystemMessage(`${username} se unió al canal de voz`);
         showToast('Canal de voz activo','success');
  }
-
+window.joinVoice = joinVoice;
     /* --- Salir del canal — limpieza COMPLETA --- */
     function leaveVoice(){
         notifyNativeVoiceLeave();
