@@ -22,20 +22,20 @@
         ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
 
         /* ===== LOGIN ===== */
-        #loginScreen{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:var(--bg);overflow:hidden}
+        #loginScreen{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:var(--bg);overflow:hidden;pointer-events:auto}
         .login-bg{position:absolute;inset:0;pointer-events:none;z-index:0}
         .blob{position:absolute;border-radius:50%;filter:blur(100px);opacity:.4;animation:blobF 8s ease-in-out infinite alternate}
         .blob-1{width:350px;height:350px;background:radial-gradient(circle,var(--accent),transparent 70%);top:-10%;left:-5%}
         .blob-2{width:280px;height:280px;background:radial-gradient(circle,var(--accent2),transparent 70%);bottom:-10%;right:-5%;animation-delay:-3s;animation-duration:10s}
         .blob-3{width:200px;height:200px;background:radial-gradient(circle,#ff9f0a,transparent 70%);top:50%;left:60%;animation-delay:-5s;animation-duration:12s}
         @keyframes blobF{0%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.1)}66%{transform:translate(-20px,30px) scale(.9)}100%{transform:translate(15px,15px) scale(1.05)}}
-        .login-card{position:relative;z-index:1;background:rgba(23,23,40,.75);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:48px 40px;width:90%;max-width:420px;text-align:center;animation:cardIn .6s cubic-bezier(.16,1,.3,1) both}
+        .login-card{position:relative;z-index:9001;background:rgba(23,23,40,.75);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:48px 40px;width:90%;max-width:420px;text-align:center;animation:cardIn .6s cubic-bezier(.16,1,.3,1) both;pointer-events:auto}
         @keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
         .login-icon{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:30px;color:#fff;box-shadow:0 8px 32px var(--accent-glow)}
         .login-card h1{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--fg),var(--fg2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
         .login-card p{color:var(--muted);font-size:14px;margin-bottom:32px}
-        /* SIN value="bin", SIN z-index en el input para evitar conflictos de stacking */
-        .login-input{width:100%;padding:14px 18px;background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:14px;color:var(--fg);font-size:16px;font-family:inherit;outline:none;transition:all .3s;margin-bottom:16px;-webkit-user-select:text;user-select:text}
+        /* FIX: pointer-events:auto y z-index alto para asegurar escritura */
+        .login-input{width:100%;padding:14px 18px;background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:14px;color:var(--fg);font-size:16px;font-family:inherit;outline:none;transition:all .3s;margin-bottom:16px;-webkit-user-select:text;user-select:text;pointer-events:auto !important;position:relative;z-index:9002}
         .login-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:rgba(255,255,255,.06)}
         .login-input::placeholder{color:var(--muted)}
         .login-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .3s;box-shadow:0 4px 20px var(--accent-glow)}
@@ -689,7 +689,11 @@ let msgListenerUnsub = null;
        6. Lógica determinista con onChildAdded (no onValue)
        7. Web Audio API para detectar quién habla
     ========================================================== */
-    const ICE_CONFIG={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+    const ICE_CONFIG={
+        iceServers:[{urls:'stun:stun.l.google.com:19302'}],
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require'
+    };
 
     const myVoiceId=(()=>{
         let id=localStorage.getItem('chat_voice_id');
@@ -728,6 +732,17 @@ let msgListenerUnsub = null;
             audioAnalyzers[peerId]={analyser,source};
         }catch(e){console.warn('AudioContext error:',e);}
     }
+
+    /* FIX: Asegurar que AudioContext se active con CUALQUIER toque en la pantalla */
+    const resumeAudio = () => {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        // También intentar reproducir audios que pudieran estar pausados por el navegador
+        document.querySelectorAll('audio').forEach(a => {
+            if (a.paused && a.srcObject) a.play().catch(()=>{});
+        });
+    };
+    document.addEventListener('click', resumeAudio);
+    document.addEventListener('touchstart', resumeAudio);
     function checkSpeaking(){
         const buf=new Uint8Array(128);
         let loudest=null,loudestLevel=10;
@@ -772,6 +787,9 @@ let msgListenerUnsub = null;
 
         voiceActive=true;isMuted=false;
         const joinedAt=Date.now();
+
+        // Resume AudioContext inmediatamente
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
         /* Presencia en Firebase con limpieza automática al desconectar */
         const pRef=ref(db,`voiceRoom/peers/${myVoiceId}`);
@@ -903,26 +921,32 @@ voicePeers[peerId] = {
                 audio.setAttribute('playsinline','');         /* ← VITAL para iOS */
                 audio.setAttribute('webkit-playsinline',''); /* ← Safari legacy */
                 audio.preload='auto';
-                audio.style.display='none';
+                // FIX: No usar display:none, algunos navegadores bloquean audio invisible
+                audio.style.position='fixed';
+                audio.style.pointerEvents='none';
+                audio.style.opacity='0';
+                audio.style.left='-9999px';
                 audioContainer.appendChild(audio);
             }
             if(event.streams&&event.streams[0]){
                 audio.srcObject=event.streams[0];
+                audio.muted = false; // Asegurar que NO esté muteado
 
                 /* Configurar detector de habla con Web Audio API */
                 setupAnalyzer(peerId,event.streams[0]);
 
-                /* CRÍTICO: autoplay bloqueado en móvil si no hubo interacción previa.
-                   Usamos { once:true } para que el listener se elimine solo. */
-                audio.play().catch(()=>{
-                    const retry=()=>{
-                        audioContainer.querySelectorAll('audio').forEach(a=>{
-                            if(a.paused&&a.srcObject)a.play().catch(()=>{});
-                        });
-                    };
-                    document.addEventListener('click',retry,{once:true});
-                    document.addEventListener('touchstart',retry,{once:true});
-                });
+                /* CRÍTICO: autoplay bloqueado en móvil si no hubo interacción previa. */
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.warn('[VOZ] Autoplay bloqueado, esperando interacción...', error);
+                        const retry=()=>{
+                            audio.play().catch(()=>{});
+                        };
+                        document.addEventListener('click',retry,{once:true});
+                        document.addEventListener('touchstart',retry,{once:true});
+                    });
+                }
             }
         };
 
@@ -998,7 +1022,11 @@ while (peer.pendingCandidates.length > 0) {
             await peer.pc.setRemoteDescription(new RTCSessionDescription({type:'answer',sdp:signal.sdp}));
             while(peer.pendingCandidates.length>0){
                 const cand=peer.pendingCandidates.shift();
-                try{await peer.pc.addIceCandidate(new RTCIceCandidate(cand));}catch(e){}
+                try{
+                    await peer.pc.addIceCandidate(cand);
+                }catch(e){
+                    console.warn('[VOZ] Error al añadir candidato pendiente en handleAnswer:',e);
+                }
             }
         }catch(e){console.error('Error handling answer from',signal.from,e);}
     }
@@ -1007,37 +1035,40 @@ while (peer.pendingCandidates.length > 0) {
        CRÍTICO: si el PC aún no existe, usar iceCandidateQueue (no crear entrada parcial).
        Si el PC existe pero no tiene remoteDescription, encolar en pendingCandidates. */
     async function handleCandidate(signal) {
-    const fromId = signal.from;
-    const rawCandidate = signal.candidate;
-    
-    // ← FIX: Reconstruir candidato con valores por defecto si vienen null
-    const candidateInit = {
-        candidate: rawCandidate.candidate,
-        sdpMid: rawCandidate.sdpMid !== null ? rawCandidate.sdpMid : '0',
-        sdpMLineIndex: rawCandidate.sdpMLineIndex !== null ? rawCandidate.sdpMLineIndex : 0,
-        usernameFragment: rawCandidate.usernameFragment || undefined
-    };
-    
-    const peer = voicePeers[fromId];
-    
-    // Si no hay PC, encolar en queue global
-    if (!peer) {
-        if (!iceCandidateQueue[fromId]) iceCandidateQueue[fromId] = [];
-        iceCandidateQueue[fromId].push(candidateInit);
-        return;
-    }
-    
-    if (peer.pc.remoteDescription && peer.pc.remoteDescription.type) {
-        try {
-            // ← FIX: Pasar el objeto plano directamente, no new RTCIceCandidate
-            await peer.pc.addIceCandidate(candidateInit);
-        } catch (err) {
-            console.error(`[VOZ] addIceCandidate error for ${fromId}:`, err);
+        const fromId = signal.from;
+        const rawCandidate = signal.candidate;
+        
+        // FIX: Verificación profunda para evitar TypeError
+        if (!rawCandidate || typeof rawCandidate.candidate === 'undefined') {
+            console.warn('[VOZ] Candidato ICE inválido recibido de', fromId);
+            return;
         }
-    } else {
-        peer.pendingCandidates.push(candidateInit);
+        
+        const candidateInit = {
+            candidate: rawCandidate.candidate,
+            sdpMid: rawCandidate.sdpMid !== null ? rawCandidate.sdpMid : '0',
+            sdpMLineIndex: rawCandidate.sdpMLineIndex !== null ? rawCandidate.sdpMLineIndex : 0,
+            usernameFragment: rawCandidate.usernameFragment || undefined
+        };
+        
+        const peer = voicePeers[fromId];
+        
+        if (!peer) {
+            if (!iceCandidateQueue[fromId]) iceCandidateQueue[fromId] = [];
+            iceCandidateQueue[fromId].push(candidateInit);
+            return;
+        }
+        
+        if (peer.pc.remoteDescription && peer.pc.remoteDescription.type) {
+            try {
+                await peer.pc.addIceCandidate(candidateInit);
+            } catch (err) {
+                console.error(`[VOZ] Error al añadir candidato ICE para ${fromId}:`, err);
+            }
+        } else {
+            peer.pendingCandidates.push(candidateInit);
+        }
     }
-}
 
     /* --- Enviar señal a Firebase --- */
     function sendSignal(toId,data){
