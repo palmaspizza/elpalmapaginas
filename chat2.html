@@ -526,6 +526,22 @@ function triggerNativeAlert(isVoiceJoin) {
         setTimeout(()=>ctx.close(),1000);
     }catch(e){}
 }
+/* ========== SONIDOS DE VOZ PARA ADULTOS MAYORES ========== */
+function playCallConnectedSound(){
+    try{
+        const audio = new Audio('Testan escuchando.mp3');
+        audio.volume = 1.0;
+        audio.play().catch(e => console.log('Audio blocked:', e));
+    }catch(e){ console.error('Error playing connected sound:', e); }
+}
+
+function playCallEndedSound(){
+    try{
+        const audio = new Audio('Cortaste la llamada.mp3');
+        audio.volume = 1.0;
+        audio.play().catch(e => console.log('Audio blocked:', e));
+    }catch(e){ console.error('Error playing ended sound:', e); }
+}
     function enterChat(){
     loginScreen.style.display='none';chatScreen.style.display='flex';
     headerName.textContent=username;
@@ -934,14 +950,21 @@ function hideSpeaking(){
         voiceGlow.classList.add('active');
         isMuted=false;updateMuteUI();renderVoiceUsers();
         speakingInterval=setInterval(checkSpeaking,120);
-        voiceJoining=false;
+                voiceJoining=false;
         addSystemMessage(`${username} se unió al canal de voz`);
         showToast('Canal de voz activo','success');
+        
+        /* 🔊 Reproducir audio de conexión exitosa */
+        playCallConnectedSound();
     }
 window.joinVoice = joinVoice;
     /* --- Salir del canal — limpieza COMPLETA --- */
-    function leaveVoice(){
+        function leaveVoice(){
         notifyNativeVoiceLeave();
+        
+        /* 🔊 Reproducir audio de llamada cortada */
+        playCallEndedSound();
+        
         voiceActive=false;
         remove(ref(db,`voiceRoom/peers/${myVoiceId}`));
         remove(ref(db,`voiceRoom/signals/${myVoiceId}`));
@@ -981,7 +1004,8 @@ window.joinVoice = joinVoice;
         addSystemMessage(`${username} salió del canal de voz`);
         showToast('Canal de voz desactivado','info');
     }
-
+const audio = new Audio('Testan escuchando.mp3');
+const audio = new Audio('Cortaste la llamada.mp3');
     /* --- Crear RTCPeerConnection --- */
     function createPeerConnection(peerId,peerName){
         if(voicePeers[peerId])return; /* Ya existe */
