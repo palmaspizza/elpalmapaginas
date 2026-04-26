@@ -169,6 +169,34 @@
             #voicePanel{bottom:70px;right:8px;width:195px;border-radius:14px}
             .voice-user-item{font-size:12px;padding:6px 12px}
         }
+        /* ===== ANIMACIÓN DE HABLA ===== */
+#speakingWave{
+    position:fixed;inset:0;z-index:49;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .4s ease;
+}
+#speakingWave.visible{opacity:1}
+.sw-ring{
+    position:absolute;border-radius:50%;
+    border:2px solid rgba(52,199,89,.22);
+    width:60px;height:60px;
+}
+.sw-ring:nth-child(1){animation:swRing 2s ease-out infinite 0s}
+.sw-ring:nth-child(2){animation:swRing 2s ease-out infinite .45s}
+.sw-ring:nth-child(3){animation:swRing 2s ease-out infinite .9s}
+.sw-ring:nth-child(4){animation:swRing 2s ease-out infinite 1.35s}
+@keyframes swRing{
+    0%{width:60px;height:60px;opacity:.9;border-color:rgba(52,199,89,.5)}
+    100%{width:min(95vw,95vh);height:min(95vw,95vh);opacity:0;border-color:rgba(52,199,89,.05)}
+}
+#speakingLabel{
+    position:absolute;bottom:100px;left:50%;transform:translateX(-50%);
+    background:rgba(16,16,32,.88);backdrop-filter:blur(14px);
+    border:1px solid rgba(52,199,89,.25);border-radius:24px;
+    padding:7px 18px;font-size:13px;font-weight:700;
+    color:var(--voice);white-space:nowrap;letter-spacing:.3px;
+    box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
     </style>
 </head>
 <body>
@@ -184,7 +212,7 @@
         <div class="login-icon"><i class="fas fa-comments"></i></div>
         <h1>Palma Chat</h1>
         <p>Ingresa tu nombre para unirte a la conversación</p>
-        <input type="text" value="bin" class="login-input" id="nameInput" placeholder="Tu nombre..." maxlength="20" autocomplete="off">
+      <input type="text" class="login-input" value="Nombre: " id="nameInput" placeholder="Tu nombre..." maxlength="20" autocomplete="off" autofocus>
         <div class="login-error" id="loginError"></div>
         <button class="login-btn" id="loginBtn">Entrar al chat</button>
         <div class="notif-banner" id="notifBanner" style="display:none">
@@ -626,215 +654,421 @@
         if (isDrawingMode) redrawDrawings();
     };
 
-    // WEBRTC VOICE CHAT
-    const ICE_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-    const myVoiceId = localStorage.getItem('chat_voice_id') || ('v_' + Math.random().toString(36).substr(2, 9));
-    localStorage.setItem('chat_voice_id', myVoiceId);
+   // WEBRTC VOICE CHAT
+const ICE_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const myVoiceId = localStorage.getItem('chat_voice_id') || ('v_' + Math.random().toString(36).substr(2, 9));
+localStorage.setItem('chat_voice_id', myVoiceId);
 
-    let voiceActive = false, localStream = null;
-    const voicePeers = {}; // id -> { pc, pendingCandidates: [] }
-    const voiceUnsubs = [];
+let voiceActive = false, localStream = null, isMuted = false;
+const voicePeers = {};       // peerId -> { pc, pendingCandidates: [] }
+const voiceUnsubs = [];
+const pendingCandidatesQueue = {}; // candidatos que llegan antes de crear el PC
+let speakingCheckInterval = null;
+let audioCtx = null;
+const audioAnalyzers = {};   // peerId -> { analyser, source }
 
-    async function joinVoice() {
-        if (!username) return;
-        try {
-            const voiceEmpty = document.querySelector('.voice-empty');
-            if (voiceEmpty) voiceEmpty.textContent = 'Conectando...';
-            
-            localStream = await navigator.mediaDevices.getUserMedia({
-                audio: { 
-                    echoCancellation: true, 
-                    noiseSuppression: true, 
-                    autoGainControl: true,
-                    sampleRate: 44100
-                },
-                video: false
-            });
-            
-            // Forzar que el stream local no se reproduzca en el propio dispositivo (feedback loop)
-            // Pero asegurar que está activo
-            localStream.getAudioTracks().forEach(track => track.enabled = true);
-            
-            const pRef = ref(db, `voiceRoom/peers/${myVoiceId}`);
-            await set(pRef, { name: username, ts: Date.now() });
-            onDisconnect(pRef).remove();
+const speakingWave  = document.getElementById('speakingWave');
+const speakingLabel = document.getElementById('speakingLabel');
 
-            // Listener para usuarios en tiempo real
-            onValue(ref(db, 'voiceRoom/peers'), snap => {
-                const peers = snap.val() || {};
-                renderVoiceUsers(peers);
-                // Iniciar llamadas con nuevos peers
-                Object.keys(peers).forEach(peerId => {
-                    if (peerId !== myVoiceId && !voicePeers[peerId] && myVoiceId < peerId) {
-                        initiateCall(peerId);
-                    }
-                });
-            });
+/* --- Animación de habla --- */
+function showSpeakingAnim(name) {
+    speakingLabel.textContent = '🎙 ' + name + ' está hablando';
+    speakingWave.style.display = 'flex';
+    requestAnimationFrame(() => speakingWave.classList.add('visible'));
+}
+function hideSpeakingAnim() {
+    speakingWave.classList.remove('visible');
+    setTimeout(() => { if (!speakingWave.classList.contains('visible')) speakingWave.style.display = 'none'; }, 400);
+}
 
-            voiceToggleBtn.classList.add('active');
-            voicePanel.classList.add('visible');
-            voiceGlow.classList.add('active');
-            voiceActive = true;
-            setupVoiceListeners();
-            sendBrowserNotif('Voz activa', 'Te has unido al canal de voz');
-        } catch(e) {
-            console.error(e);
-            showToast('Error al acceder al micro (Asegúrate de dar permisos)', 'error');
-            leaveVoice();
-        }
+/* --- Detección de audio (Web Audio API) --- */
+function setupAudioAnalyzer(peerId, stream) {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const source   = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.4;
+        source.connect(analyser);
+        // NO conectar a destination — el audio ya sale por el <audio> element
+        audioAnalyzers[peerId] = { analyser, source };
+    } catch(e) { console.warn('AudioAnalyser error:', e); }
+}
+
+function checkSpeaking() {
+    const buf = new Uint8Array(128);
+    let loudestPeer = null, loudestLevel = 12; // umbral
+
+    Object.entries(audioAnalyzers).forEach(([peerId, { analyser }]) => {
+        analyser.getByteFrequencyData(buf);
+        const avg = buf.reduce((a, b) => a + b, 0) / buf.length;
+        if (avg > loudestLevel) { loudestLevel = avg; loudestPeer = peerId; }
+    });
+
+    if (loudestPeer && voicePeers[loudestPeer]) {
+        showSpeakingAnim(voicePeers[loudestPeer].name || 'Alguien');
+    } else {
+        hideSpeakingAnim();
     }
+}
 
-    async function leaveVoice() {
-        voiceActive = false;
-        remove(ref(db, `voiceRoom/peers/${myVoiceId}`));
-        remove(ref(db, `voiceRoom/signals/${myVoiceId}`));
-        
-        Object.values(voicePeers).forEach(p => {
-            p.pc.close();
-            p.audio?.remove();
+function teardownAudio() {
+    if (speakingCheckInterval) { clearInterval(speakingCheckInterval); speakingCheckInterval = null; }
+    Object.values(audioAnalyzers).forEach(({ source }) => { try { source.disconnect(); } catch(e){} });
+    Object.keys(audioAnalyzers).forEach(k => delete audioAnalyzers[k]);
+    if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
+    hideSpeakingAnim();
+}
+
+/* --- Unirse al canal de voz --- */
+async function joinVoice() {
+    if (!username) return;
+    try {
+        const voiceEmpty = document.querySelector('.voice-empty');
+        if (voiceEmpty) voiceEmpty.textContent = 'Conectando...';
+
+        /* CRÍTICO: echoCancellation + noiseSuppression + autoGainControl
+           son obligatorios para que los micrófonos de móviles funcionen sin distorsión.
+           NO incluir sampleRate — falla en algunos dispositivos móviles. */
+        localStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl:  true
+            },
+            video: false
         });
-        localStream?.getTracks().forEach(t => t.stop());
-        voiceUnsubs.forEach(u => u());
-        
-        voiceToggleBtn.classList.remove('active');
-        voicePanel.classList.remove('visible');
-        voiceGlow.classList.remove('active');
-    }
 
-    function createPeerConnection(peerId) {
-        const pc = new RTCPeerConnection(ICE_CONFIG);
-        voicePeers[peerId] = { pc, pendingCandidates: [] };
+        const pRef = ref(db, `voiceRoom/peers/${myVoiceId}`);
+        await set(pRef, { name: username, ts: Date.now() });
+        onDisconnect(pRef).remove();
 
-        pc.onicecandidate = e => {
-            if (e.candidate) {
-                const sRef = ref(db, `voiceRoom/signals/${peerId}`);
-                push(sRef, { type: 'candidate', candidate: e.candidate, from: myVoiceId });
-            }
-        };
-
-        pc.ontrack = e => {
-            console.log('Recibiendo audio de:', peerId);
-            let audio = document.getElementById(`audio_${peerId}`);
-            if (!audio) {
-                audio = document.createElement('audio');
-                audio.id = `audio_${peerId}`;
-                audio.autoplay = true;
-                audio.playsInline = true; // Crucial para iOS
-                audioContainer.appendChild(audio);
-            }
-            audio.srcObject = e.streams[0];
-            
-            // Fallback para autoplay en móviles
-            const playAudio = () => {
-                audio.play().catch(err => {
-                    console.log("Autoplay bloqueado, esperando interacción...", err);
-                    document.addEventListener('click', () => audio.play(), { once: true });
-                    document.addEventListener('touchstart', () => audio.play(), { once: true });
-                });
-            };
-            playAudio();
-        };
-
-        if (localStream) {
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-        }
-
-        return pc;
-    }
-
-    async function initiateCall(peerId) {
-        console.log('Iniciando llamada a:', peerId);
-        const pc = createPeerConnection(peerId);
+        // Limpiar señales viejas dirigidas a mí antes de escuchar
         try {
-            const offer = await pc.createOffer({
-                offerToReceiveAudio: true,
-                offerToReceiveVideo: false
+            const old = await get(ref(db, `voiceRoom/signals/${myVoiceId}`));
+            if (old.val()) Object.keys(old.val()).forEach(k => remove(ref(db, `voiceRoom/signals/${myVoiceId}/${k}`)));
+        } catch(e){}
+
+        setupVoiceListeners();
+
+        // Conectar con peers ya presentes
+        try {
+            const snap = await get(ref(db, 'voiceRoom/peers'));
+            const peers = snap.val() || {};
+            Object.entries(peers).forEach(([peerId, data]) => {
+                if (peerId === myVoiceId) return;
+                if (myVoiceId < peerId) {   // Determinista: ID menor crea la oferta
+                    createPeerConnection(peerId, data.name);
+                    createOffer(peerId);
+                }
             });
-            await pc.setLocalDescription(offer);
-            const sRef = ref(db, `voiceRoom/signals/${peerId}`);
-            push(sRef, { type: 'offer', sdp: offer.sdp, from: myVoiceId });
-        } catch (e) { console.error(e); }
+        } catch(e){ console.error('Error getting peers:', e); }
+
+        voiceToggleBtn.classList.add('active');
+        voicePanel.classList.add('visible');
+        voiceGlow.classList.add('active');
+        voiceActive = true;
+        isMuted = false;
+        updateMuteUI();
+        renderVoiceUsers();
+        speakingCheckInterval = setInterval(checkSpeaking, 120);
+
+        sendBrowserNotif('Voz activa', `${username} se unió al canal de voz`);
+        showToast('Canal de voz activo', 'success');
+
+    } catch(e) {
+        console.error(e);
+        const msg = e.name === 'NotAllowedError' ? 'Permiso de micrófono denegado' : 'No se pudo acceder al micrófono';
+        showToast(msg, 'error');
+        leaveVoice();
+    }
+}
+
+/* --- Salir del canal --- */
+function leaveVoice() {
+    voiceActive = false;
+    remove(ref(db, `voiceRoom/peers/${myVoiceId}`));
+    remove(ref(db, `voiceRoom/signals/${myVoiceId}`));
+
+    // Cerrar TODAS las conexiones y elementos <audio>
+    Object.entries(voicePeers).forEach(([peerId, p]) => {
+        try { p.pc.close(); } catch(e){}
+        const audioEl = document.getElementById(`audio_${peerId}`);
+        if (audioEl) { audioEl.pause(); audioEl.srcObject = null; audioEl.remove(); }
+    });
+    Object.keys(voicePeers).forEach(k => delete voicePeers[k]);
+    Object.keys(pendingCandidatesQueue).forEach(k => delete pendingCandidatesQueue[k]);
+
+    // Detener stream local → libera el micrófono físico
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+
+    // Destruir TODOS los listeners de Firebase de voz → evita fugas y duplicados
+    voiceUnsubs.forEach(fn => { try { fn(); } catch(e){} });
+    voiceUnsubs.length = 0;
+
+    teardownAudio();
+
+    voiceToggleBtn.classList.remove('active', 'muted');
+    voiceToggleBtn.querySelector('i').className = 'fas fa-microphone';
+    voicePanel.classList.remove('visible');
+    voiceGlow.classList.remove('active');
+    renderVoiceUsers();
+}
+
+/* --- Crear RTCPeerConnection --- */
+function createPeerConnection(peerId, peerName) {
+    if (voicePeers[peerId]) return;
+
+    const pc = new RTCPeerConnection(ICE_CONFIG);
+    voicePeers[peerId] = { pc, name: peerName || 'Desconocido', pendingCandidates: [] };
+
+    // Aplicar candidatos encolados que llegaron antes de crear el PC
+    if (pendingCandidatesQueue[peerId]) {
+        voicePeers[peerId].pendingCandidates.push(...pendingCandidatesQueue[peerId]);
+        delete pendingCandidatesQueue[peerId];
     }
 
-    async function handleOffer(signal) {
-        const peerId = signal.from;
-        console.log('Recibida oferta de:', peerId);
-        const pc = createPeerConnection(peerId);
-        try {
-            await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: signal.sdp }));
-            
-            // Añadir candidatos pendientes
-            const p = voicePeers[peerId];
-            if (p.pendingCandidates) {
-                for (const cand of p.pendingCandidates) {
-                    await pc.addIceCandidate(new RTCIceCandidate(cand));
-                }
-                p.pendingCandidates = [];
+    // Agregar tracks del stream local
+    if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    /* CRÍTICO: Serializar ICE candidate como objeto plano.
+       RTCIceCandidate tiene sus propiedades como getters de prototipo,
+       no como propiedades propias. Firebase solo serializa propiedades propias,
+       lo que resultaría en {} vacío si se pasa el objeto directamente. */
+    pc.onicecandidate = event => {
+        if (!event.candidate) return;
+        sendSignal(peerId, {
+            type: 'candidate',
+            candidate: {
+                candidate:     event.candidate.candidate,
+                sdpMid:        event.candidate.sdpMid,
+                sdpMLineIndex: event.candidate.sdpMLineIndex
             }
-
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            const sRef = ref(db, `voiceRoom/signals/${peerId}`);
-            push(sRef, { type: 'answer', sdp: answer.sdp, from: myVoiceId });
-        } catch (e) { console.error(e); }
-    }
-
-    async function handleAnswer(signal) {
-        const p = voicePeers[signal.from];
-        if (p) {
-            console.log('Recibida respuesta de:', signal.from);
-            await p.pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
-            
-            // Añadir candidatos pendientes
-            if (p.pendingCandidates) {
-                for (const cand of p.pendingCandidates) {
-                    await p.pc.addIceCandidate(new RTCIceCandidate(cand));
-                }
-                p.pendingCandidates = [];
-            }
-        }
-    }
-
-    async function handleCandidate(signal) {
-        const p = voicePeers[signal.from];
-        if (p && p.pc.remoteDescription) {
-            await p.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-        } else if (p) {
-            p.pendingCandidates.push(signal.candidate);
-        } else {
-            // Si el peer no existe aún, lo creamos (esto puede pasar si el candidato llega antes que la oferta)
-            voicePeers[signal.from] = { pendingCandidates: [signal.candidate] };
-        }
-    }
-
-    function setupVoiceListeners() {
-        const sRef = ref(db, `voiceRoom/signals/${myVoiceId}`);
-        voiceUnsubs.push(onChildAdded(sRef, snap => {
-            const signal = snap.val();
-            remove(snap.ref);
-            if (signal.type === 'offer') handleOffer(signal);
-            else if (signal.type === 'answer') handleAnswer(signal);
-            else if (signal.type === 'candidate') handleCandidate(signal);
-        }));
-    }
-
-    function renderVoiceUsers(peers) {
-        voiceUsers.innerHTML = Object.entries(peers).map(([id, p]) => `
-            <div class="voice-user-item ${id===myVoiceId?'me':''}">
-                <span class="voice-user-dot"></span> ${p.name || 'Usuario'}
-            </div>
-        `).join('') || '<div class="voice-empty">Solo estás tú</div>';
-    }
-
-    voiceToggleBtn.onclick = () => voiceActive ? leaveVoice() : joinVoice();
-    voiceLeaveBtn.onclick = leaveVoice;
-    voiceMuteBtn.onclick = () => {
-        const t = localStream.getAudioTracks()[0];
-        t.enabled = !t.enabled;
-        voiceMuteBtn.classList.toggle('muted-active', !t.enabled);
-        voiceMuteBtn.innerHTML = t.enabled ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
+        });
     };
 
-</script>
+    /* CRÍTICO: playsInline como setAttribute es necesario en iOS Safari.
+       La propiedad JS audio.playsInline = true NO es suficiente en iOS. */
+    pc.ontrack = event => {
+        let audio = document.getElementById(`audio_${peerId}`);
+        if (!audio) {
+            audio = document.createElement('audio');
+            audio.id = `audio_${peerId}`;
+            audio.setAttribute('autoplay', '');
+            audio.setAttribute('playsinline', '');         // ← VITAL iOS
+            audio.setAttribute('webkit-playsinline', ''); // ← Safari legacy
+            audio.preload = 'auto';
+            audio.style.display = 'none';
+            audioContainer.appendChild(audio);
+        }
+        if (event.streams && event.streams[0]) {
+            audio.srcObject = event.streams[0];
+
+            // Configurar detector de nivel de audio para animación de habla
+            setupAudioAnalyzer(peerId, event.streams[0]);
+
+            /* CRÍTICO: Autoplay bloqueado en móvil si no hay interacción reciente.
+               El listener 'once:true' lo reintenta con la siguiente interacción del usuario
+               y se elimina solo — no acumula listeners. */
+            audio.play().catch(() => {
+                const retryPlay = () => {
+                    audioContainer.querySelectorAll('audio').forEach(a => {
+                        if (a.paused && a.srcObject) a.play().catch(()=>{});
+                    });
+                };
+                document.addEventListener('click',      retryPlay, { once: true });
+                document.addEventListener('touchstart', retryPlay, { once: true });
+            });
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        renderVoiceUsers();
+        const s = pc.connectionState;
+        if (s === 'disconnected' || s === 'failed' || s === 'closed') {
+            removeVoicePeer(peerId);
+        }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+        if (pc.iceConnectionState === 'failed') {
+            try { pc.restartIce(); } catch(e){}
+        }
+    };
+}
+
+/* --- Crear y enviar oferta --- */
+async function createOffer(peerId) {
+    const peer = voicePeers[peerId];
+    if (!peer) return;
+    try {
+        const offer = await peer.pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: false });
+        await peer.pc.setLocalDescription(offer);
+        sendSignal(peerId, { type: 'offer', sdp: offer.sdp });
+    } catch(e) { console.error('Error creando oferta para', peerId, e); }
+}
+
+/* --- Recibir oferta --- */
+async function handleOffer(signal) {
+    const fromId = signal.from;
+    if (!voicePeers[fromId]) {
+        try {
+            const snap = await get(ref(db, `voiceRoom/peers/${fromId}`));
+            createPeerConnection(fromId, snap.val()?.name || 'Desconocido');
+        } catch(e) { createPeerConnection(fromId, 'Desconocido'); }
+    }
+    const peer = voicePeers[fromId];
+    if (!peer || !peer.pc) return;
+    try {
+        await peer.pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: signal.sdp }));
+        // Procesar cola de candidatos ICE que llegaron antes que la oferta
+        while (peer.pendingCandidates.length > 0) {
+            const cand = peer.pendingCandidates.shift();
+            try { await peer.pc.addIceCandidate(new RTCIceCandidate(cand)); } catch(e){}
+        }
+        const answer = await peer.pc.createAnswer();
+        await peer.pc.setLocalDescription(answer);
+        sendSignal(fromId, { type: 'answer', sdp: answer.sdp });
+    } catch(e) { console.error('Error en handleOffer:', e); }
+}
+
+/* --- Recibir respuesta --- */
+async function handleAnswer(signal) {
+    const peer = voicePeers[signal.from];
+    if (!peer || !peer.pc) return;
+    try {
+        await peer.pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
+        while (peer.pendingCandidates.length > 0) {
+            const cand = peer.pendingCandidates.shift();
+            try { await peer.pc.addIceCandidate(new RTCIceCandidate(cand)); } catch(e){}
+        }
+    } catch(e) { console.error('Error en handleAnswer:', e); }
+}
+
+/* --- Recibir ICE candidate ---
+   CRÍTICO: Si llega antes de setRemoteDescription, encolar.
+   Si no existe el PC todavía, usar pendingCandidatesQueue. */
+async function handleCandidate(signal) {
+    const peer = voicePeers[signal.from];
+    if (!peer) {
+        // PC aún no creado → encolar en queue global (no crear entrada sin PC)
+        if (!pendingCandidatesQueue[signal.from]) pendingCandidatesQueue[signal.from] = [];
+        pendingCandidatesQueue[signal.from].push(signal.candidate);
+        return;
+    }
+    if (peer.pc.remoteDescription && peer.pc.remoteDescription.type) {
+        try { await peer.pc.addIceCandidate(new RTCIceCandidate(signal.candidate)); }
+        catch(e) { console.error('Error addIceCandidate:', e); }
+    } else {
+        peer.pendingCandidates.push(signal.candidate);
+    }
+}
+
+/* --- Enviar señal a Firebase --- */
+function sendSignal(toId, data) {
+    const sRef = push(ref(db, `voiceRoom/signals/${toId}`));
+    set(sRef, { ...data, from: myVoiceId, createdAt: Date.now() })
+        .catch(e => console.error('Error enviando señal:', e));
+}
+
+/* --- Eliminar peer y liberar recursos --- */
+function removeVoicePeer(peerId) {
+    const peer = voicePeers[peerId];
+    if (!peer) return;
+    try { peer.pc.close(); } catch(e){}
+    const audioEl = document.getElementById(`audio_${peerId}`);
+    if (audioEl) { audioEl.pause(); audioEl.srcObject = null; audioEl.remove(); }
+    if (audioAnalyzers[peerId]) {
+        try { audioAnalyzers[peerId].source.disconnect(); } catch(e){}
+        delete audioAnalyzers[peerId];
+    }
+    delete voicePeers[peerId];
+    renderVoiceUsers();
+}
+
+/* --- Configurar listeners de Firebase para señales y peers --- */
+function setupVoiceListeners() {
+    // Señales dirigidas a mí
+    const unsubSignals = onChildAdded(ref(db, `voiceRoom/signals/${myVoiceId}`), async snap => {
+        const signal = snap.val();
+        if (!signal) return;
+        remove(snap.ref).catch(()=>{}); // Borrar señal leída
+        if (signal.from === myVoiceId) return;
+        if (signal.createdAt && signal.createdAt < Date.now() - 30000) return; // Ignorar señales > 30s
+
+        if      (signal.type === 'offer')     await handleOffer(signal);
+        else if (signal.type === 'answer')    await handleAnswer(signal);
+        else if (signal.type === 'candidate') await handleCandidate(signal);
+    });
+    voiceUnsubs.push(unsubSignals);
+
+    // Nuevos peers que se unen
+    const unsubPeersAdded = onChildAdded(ref(db, 'voiceRoom/peers'), snap => {
+        const peerId = snap.key;
+        const data   = snap.val();
+        if (!data || peerId === myVoiceId || voicePeers[peerId]) return;
+        renderVoiceUsers();
+        sendBrowserNotif('Palma Chat', `${data.name} se unió al canal de voz`);
+        // Determinista: el ID menor crea la oferta, el mayor espera
+        if (myVoiceId < peerId) {
+            createPeerConnection(peerId, data.name);
+            createOffer(peerId);
+        }
+    });
+    voiceUnsubs.push(unsubPeersAdded);
+
+    // Peers que se van
+    const unsubPeersRemoved = onChildRemoved(ref(db, 'voiceRoom/peers'), snap => {
+        if (snap.key !== myVoiceId) { removeVoicePeer(snap.key); renderVoiceUsers(); }
+    });
+    voiceUnsubs.push(unsubPeersRemoved);
+}
+
+/* --- Mute / Unmute: NO destruir el stream, solo deshabilitar el track --- */
+function toggleMute() {
+    if (!localStream || !voiceActive) return;
+    isMuted = !isMuted;
+    localStream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
+    updateMuteUI();
+    showToast(isMuted ? 'Micrófono silenciado' : 'Micrófono activo', isMuted ? 'warning' : 'success');
+}
+
+function updateMuteUI() {
+    voiceMuteBtn.classList.toggle('muted-active', isMuted);
+    voiceMuteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+    voiceToggleBtn.classList.toggle('muted', isMuted);
+}
+
+function renderVoiceUsers() {
+    const peers = Object.entries(voicePeers);
+    if (!voiceActive && peers.length === 0) { voiceUsers.innerHTML = '<div class="voice-empty">Conectando...</div>'; return; }
+    let html = `<div class="voice-user-item me"><span class="voice-user-dot"></span>${username}${isMuted ? ' <i class="fas fa-microphone-slash" style="font-size:9px;opacity:.5"></i>' : ''} <span style="margin-left:auto;font-size:10px;opacity:.4">(tú)</span></div>`;
+    if (peers.length === 0) {
+        html += '<div class="voice-empty">Esperando a otros...</div>';
+    } else {
+        peers.forEach(([, p]) => {
+            const s = p.pc.connectionState;
+            const icon = s === 'connected' ? '' : s === 'connecting' || s === 'new' ? ' <i class="fas fa-spinner fa-spin" style="font-size:9px;margin-left:auto;opacity:.5"></i>' : ' <i class="fas fa-circle-xmark" style="font-size:9px;color:var(--error);margin-left:auto"></i>';
+            html += `<div class="voice-user-item"><span class="voice-user-dot" style="${s!=='connected'?'opacity:.3':''}"></span>${p.name || '?'}${icon}</div>`;
+        });
+    }
+    voiceUsers.innerHTML = html;
+}
+
+voiceToggleBtn.onclick = () => voiceActive ? leaveVoice() : joinVoice();
+voiceLeaveBtn.onclick  = leaveVoice;
+voiceMuteBtn.onclick   = toggleMute;
+
+// Actualizar estado de conexión periódicamente
+setInterval(() => { if (voiceActive) renderVoiceUsers(); }, 2000);
+
+</script><div id="speakingWave" style="display:none">
+    <div class="sw-ring"></div>
+    <div class="sw-ring"></div>
+    <div class="sw-ring"></div>
+    <div class="sw-ring"></div>
+    <div id="speakingLabel"></div>
+</div>
 </body>
 </html>
