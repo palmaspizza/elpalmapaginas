@@ -204,6 +204,40 @@
         }
         @keyframes spin{to{transform:rotate(360deg)}}
     </style>
+    <script>
+// ── Palma Chat Android Bridge ──
+(function(){
+  var IS_NATIVE = typeof AndroidBridge !== 'undefined';
+  window.isPalmaNative = function(){ return IS_NATIVE; };
+  window.notifyNativeVoiceJoin = function(username){
+    if(!IS_NATIVE) return;
+    AndroidBridge.onVoiceChannelJoin(username || 'Usuario');
+  };
+  window.notifyNativeVoiceLeave = function(){
+    if(!IS_NATIVE) return;
+    AndroidBridge.onVoiceChannelLeave();
+  };
+  window.showNativeIncomingCall = function(callerName){
+    if(!IS_NATIVE) return;
+    AndroidBridge.showIncomingCall(callerName || 'Usuario');
+  };
+  window.triggerNativeAlert = function(isVoice){
+    if(!IS_NATIVE) return;
+    AndroidBridge.vibrateStrong();
+    if(isVoice){ AndroidBridge.playAlarmSound(); }
+    else { AndroidBridge.playMessageSound(); }
+    AndroidBridge.bringAppToFront();
+  };
+  window.onNativeMessage = function(msg){
+    window.dispatchEvent(new CustomEvent('palmaNativeMessage',{detail:msg}));
+  };
+  window.onAndroidBridgeReady = function(){
+    IS_NATIVE = typeof AndroidBridge !== 'undefined';
+    window.dispatchEvent(new CustomEvent('palmaBridgeReady'));
+  };
+  window.PALMA_NATIVE_APP = IS_NATIVE;
+})();
+</script>
 </head>
 <body>
 
@@ -563,10 +597,11 @@ function triggerNativeAlert(isVoiceJoin) {
                 });
                 if(initialMessagesLoaded){
                     newMsgs.forEach(msg=>{
-                        if(msg.sender!==username)
-                            sendBrowserNotif(`${msg.sender} en Palma Chat`,msg.text||'📷 Imagen');
-                            triggerNativeAlert(false);
-                    });
+    if(msg.sender!==username){
+        sendBrowserNotif(`${msg.sender} en Palma Chat`,msg.text||'📷 Imagen');
+        triggerNativeAlert(false);
+    }
+});
                 }
             }
             initialMessagesLoaded=true;
@@ -813,6 +848,7 @@ function hideSpeaking(){
 
     /* --- Unirse al canal --- */
     async function joinVoice(){
+        notifyNativeVoiceJoin(username); 
         if(voiceJoining||voiceActive)return;
         voiceJoining=true;
         voiceToggleBtn.querySelector('i').className='fas fa-spinner';
@@ -875,10 +911,11 @@ voiceToggleBtn.querySelector('i').style.animation='';
         voiceJoining=false;
         addSystemMessage(`${username} se unió al canal de voz`);
         showToast('Canal de voz activo','success');
-    }
+ }
 
     /* --- Salir del canal — limpieza COMPLETA --- */
     function leaveVoice(){
+        notifyNativeVoiceLeave();
         voiceActive=false;
         remove(ref(db,`voiceRoom/peers/${myVoiceId}`));
         remove(ref(db,`voiceRoom/signals/${myVoiceId}`));
@@ -1126,6 +1163,7 @@ while (peer.pendingCandidates.length > 0) {
 
     /* --- Listeners Firebase: señales, peers que entran, peers que salen --- */
     function setupVoiceListeners(joinedAt){
+
         /* Señales dirigidas a mí */
         const unsubSig=onChildAdded(ref(db,`voiceRoom/signals/${myVoiceId}`),async snap=>{
             const signal=snap.val();if(!signal)return;
@@ -1149,6 +1187,7 @@ while (peer.pendingCandidates.length > 0) {
     sendBrowserNotif('🔔 Palma Chat',`${data.name} se unió al canal de voz`);
     showToast(`🎙 ${data.name} se unió al canal de voz`,'success');
         triggerNativeAlert(true);
+        showNativeIncomingCall(data.name);
             /* Determinista: ID menor crea la oferta */
             if(myVoiceId<peerId){
                 createPeerConnection(peerId,data.name);
