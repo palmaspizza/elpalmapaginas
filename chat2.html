@@ -54,20 +54,22 @@
         .icon-btn.active{background:var(--accent-soft);color:var(--accent);border-color:rgba(255,94,58,.2)}
         .cooldown-container{height:3px;background:transparent;flex-shrink:0;overflow:hidden;position:relative;z-index:600}
         .cooldown-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:0 2px 2px 0;transition:width .1s linear}
-        .messages-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+        .messages-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;position:relative}
         .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);text-align:center}
         .empty-state i{font-size:48px;opacity:.3}
         .empty-state p{font-size:14px;max-width:260px;line-height:1.5}
 
         /* Mensajes */
-        .msg-row{display:flex;flex-direction:column;max-width:75%;animation:msgIn .35s cubic-bezier(.16,1,.3,1) both;position:relative}
+        .msg-row{display:flex;flex-direction:column;max-width:75%;animation:msgIn .35s cubic-bezier(.16,1,.3,1) both;position:relative;z-index:10}
         .msg-row.self{align-self:flex-end;align-items:flex-end}
         .msg-row.other{align-self:flex-start;align-items:flex-start}
+        .msg-row.system-msg{align-self:center;align-items:center;max-width:90%}
         @keyframes msgIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
         .msg-sender{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;padding:0 4px;text-transform:uppercase;letter-spacing:.5px}
         .msg-bubble{padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.5;position:relative;word-break:break-word}
         .msg-row.self .msg-bubble{background:linear-gradient(135deg,var(--accent),#e0442a);color:#fff;border-bottom-right-radius:6px;box-shadow:0 2px 12px rgba(255,94,58,.15)}
         .msg-row.other .msg-bubble{background:var(--card);border:1px solid rgba(255,255,255,.04);color:var(--fg);border-bottom-left-radius:6px}
+        .msg-row.system-msg .msg-bubble{background:rgba(52,199,89,0.08);border:1px solid rgba(52,199,89,0.12);color:var(--success);font-size:12px;border-radius:12px;padding:6px 14px;text-align:center}
         .msg-bubble img{max-width:100%;max-height:300px;border-radius:12px;margin-top:6px;cursor:pointer;transition:opacity .2s;display:block}
         .msg-bubble img:hover{opacity:.85}
         .msg-time{font-size:10px;color:var(--muted);margin-top:3px;padding:0 4px}
@@ -93,8 +95,8 @@
         .send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
 
         /* ===== DIBUJO ===== */
-        #drawOverlay{position:fixed;inset:0;z-index:500;pointer-events:none}
-        #drawOverlay.active{pointer-events:auto;background:rgba(0,0,0,.12)}
+        #drawOverlay{position:fixed;inset:0;z-index:500;pointer-events:none;display:none}
+        #drawOverlay.active{pointer-events:auto;background:rgba(0,0,0,.12);display:block}
         #drawCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
         #drawOverlay.active #drawCanvas{cursor:crosshair}
         .draw-timer-bar{position:absolute;top:0;left:0;right:0;height:4px;background:rgba(255,255,255,.05);z-index:10;display:none}
@@ -105,6 +107,9 @@
         @keyframes toolbarIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         .color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all .2s;flex-shrink:0}
         .color-swatch.active{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.2);transform:scale(1.1)}
+        .draw-sep{width:1px;height:24px;background:rgba(255,255,255,.08);flex-shrink:0}
+        .brush-slider{width:70px;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.1);border-radius:2px;outline:none;cursor:pointer}
+        .brush-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
         .draw-tool-btn{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);color:var(--fg2);font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
         .draw-tool-btn.active{background:var(--accent-soft);color:var(--accent);border-color:rgba(255,94,58,.2)}
         .draw-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(23,23,40,.8);backdrop-filter:blur(20px);padding:8px 16px;border-radius:12px;font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,.06);z-index:20;display:none;animation:toolbarIn .4s .15s cubic-bezier(.16,1,.3,1) both;white-space:nowrap}
@@ -112,6 +117,7 @@
 
         /* ===== VOICE CHAT ===== */
         .voice-btn.active{background:var(--voice-soft);color:var(--voice);border-color:rgba(52,199,89,.2)}
+        .voice-btn.active.muted{color:var(--muted);background:rgba(255,255,255,.04);border-color:var(--border)}
         @keyframes voiceRing{0%,100%{box-shadow:0 0 0 0 rgba(52,199,89,.3)}50%{box-shadow:0 0 0 7px rgba(52,199,89,0)}}
         .voice-btn.active:not(.muted){animation:voiceRing 2s ease-in-out infinite}
         .voice-glow{position:fixed;top:-60px;left:50%;transform:translateX(-50%);width:350px;height:120px;background:radial-gradient(ellipse,rgba(52,199,89,.07) 0%,transparent 70%);pointer-events:none;z-index:599;opacity:0;transition:opacity .6s}
@@ -135,7 +141,7 @@
         .voice-empty{padding:14px;text-align:center;font-size:12px;color:var(--muted)}
         #audioContainer{display:none}
 
-        /* ===== TOASTS ===== */
+        /* ===== MODALES & TOASTS ===== */
         #toastContainer{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
         .toast{padding:10px 18px;background:rgba(23,23,40,.92);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.06);border-radius:12px;font-size:13px;color:var(--fg);box-shadow:0 4px 20px rgba(0,0,0,.3);transform:translateX(100%);opacity:0;transition:all .35s cubic-bezier(.16,1,.3,1);pointer-events:auto;max-width:300px}
         .toast.show{transform:translateX(0);opacity:1}
@@ -158,8 +164,10 @@
             .header-user span{display:none}
             .draw-toolbar{padding:8px 10px;gap:6px}
             .color-swatch{width:24px;height:24px}
+            .brush-slider{width:50px}
             .draw-hint{font-size:11px;padding:6px 12px}
             #voicePanel{bottom:70px;right:8px;width:195px;border-radius:14px}
+            .voice-user-item{font-size:12px;padding:6px 12px}
         }
     </style>
 </head>
@@ -236,7 +244,7 @@
     <div class="draw-timer-bar"><div class="draw-timer-fill" id="drawTimerFill"></div></div>
     <canvas id="drawCanvas"></canvas>
     <div class="draw-toolbar" id="drawToolbar"></div>
-    <div class="draw-hint">Dibuja sobre la pantalla. Se borrará en 10 segundos.</div>
+    <div class="draw-hint">Dibuja sobre la pantalla. Los dibujos son permanentes.</div>
 </div>
 
 <!-- Voice panel -->
@@ -277,7 +285,7 @@
     const messagesRef = ref(db, 'messages');
     const drawingsRef = ref(db, 'drawings');
 
-    // DOM UTILS
+    // DOM
     const $ = id => document.getElementById(id);
     const loginScreen=$('loginScreen'), chatScreen=$('chatScreen'),
           nameInput=$('nameInput'), loginBtn=$('loginBtn'), loginError=$('loginError'),
@@ -297,21 +305,20 @@
           voiceUsers=$('voiceUsers'), voiceGlow=$('voiceGlow'),
           audioContainer=$('audioContainer');
 
-    // STATE
+    // ESTADO
     let username = localStorage.getItem('chat_username') || '';
     let lastSentTime = 0, cooldownInterval = null, pendingImage = null;
     const renderedIds = new Set();
-    const COOLDOWN_MS = 3000, DRAW_TIMEOUT_MS = 10000;
+    const COOLDOWN_MS = 3000;
     let initialMessagesLoaded = false;
     let isDrawingMode = false, isDrawing = false;
     let drawColor = '#ffffff', brushSizeVal = 4, isEraser = false;
     let lastX = 0, lastY = 0;
     const activeStrokes = [];
     const processedStrokeIds = new Set();
-    let drawTimerStart = null;
     let notifIcon = null;
 
-    // UTILS
+    // UTILIDADES
     function showToast(msg, type='info') {
         const t = document.createElement('div');
         t.className = `toast toast-${type}`;
@@ -330,7 +337,7 @@
     }
 
     function compressImage(file) {
-        return new Promise((res) => {
+        return new Promise((res, rej) => {
             const r = new FileReader();
             r.onload = e => {
                 const img = new Image();
@@ -350,7 +357,7 @@
         });
     }
 
-    // NOTIFICATIONS
+    // NOTIFICACIONES
     function buildNotifIcon() {
         const c = document.createElement('canvas'); c.width = 64; c.height = 64;
         const ctx = c.getContext('2d');
@@ -372,7 +379,7 @@
     notifAllowBtn.onclick = () => Notification.requestPermission().then(() => notifBanner.style.display='none');
     if (Notification.permission === 'default') notifBanner.style.display='flex';
 
-    // LOGIN & PERSISTENCE
+    // LOGIN & PERSISTENCIA
     function doLogin() {
         const val = nameInput.value.trim();
         if (!val) return loginError.textContent = 'Escribe un nombre';
@@ -438,6 +445,7 @@
     sendBtn.onclick = sendMessage;
     msgInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
     msgInput.oninput = () => { msgInput.style.height = 'auto'; msgInput.style.height = msgInput.scrollHeight + 'px'; };
+
     imgBtn.onclick = () => imgFileInput.click();
     imgFileInput.onchange = async e => {
         const file = e.target.files[0]; if (!file) return;
@@ -473,6 +481,7 @@
         const row = document.createElement('div');
         row.className = `msg-row ${isMe ? 'self' : 'other'}`;
         row.id = `msg-${id}`;
+        
         let html = '';
         if (!isMe) html += `<div class="msg-sender">${msg.sender}</div>`;
         html += `<div class="msg-bubble">`;
@@ -480,6 +489,7 @@
         if (msg.image) html += `<img src="${msg.image}" onclick="openModal('${msg.image}')">`;
         if (isMe) html += `<button class="msg-delete" onclick="deleteMsg('${id}')"><i class="fas fa-x"></i></button>`;
         html += `</div><div class="msg-time">${formatTime(msg.timestamp)}</div>`;
+        
         row.innerHTML = html;
         messagesArea.appendChild(row);
     }
@@ -487,12 +497,12 @@
     window.deleteMsg = id => {
         addDeletedId(id);
         $(`msg-${id}`)?.remove();
-        showToast('Mensaje ocultado localmente', 'info');
+        showToast('Mensaje ocultado', 'info');
     };
     window.openModal = src => { imgModalSrc.src = src; imgModal.style.display = 'flex'; };
     imgModal.onclick = () => imgModal.style.display = 'none';
 
-    // DRAWING LOGIC
+    // DIBUJO
     function initDraw() {
         const dpr = window.devicePixelRatio || 1;
         const resize = () => {
@@ -504,6 +514,7 @@
         window.onresize = resize; resize();
         buildDrawTools();
         startDrawSync();
+        messagesArea.addEventListener('scroll', redrawDrawings);
     }
 
     function buildDrawTools() {
@@ -522,7 +533,13 @@
 
     function getPos(e) {
         const t = e.touches ? e.touches[0] : e;
-        return { x: t.clientX / window.innerWidth, y: t.clientY / window.innerHeight };
+        const rect = messagesArea.getBoundingClientRect();
+        // X es normalizado al ancho del viewport
+        // Y es normalizado pero sumando el scroll para que sea absoluto al contenido
+        return { 
+            x: t.clientX / window.innerWidth, 
+            y: (t.clientY - rect.top + messagesArea.scrollTop) / 1000 // Usamos 1000 como base para normalizar Y
+        };
     }
 
     let currentStroke = null;
@@ -532,14 +549,20 @@
         const p = getPos(e);
         lastX = p.x; lastY = p.y;
         currentStroke = { color: drawColor, size: brushSizeVal, isEraser, points: [p], timestamp: Date.now() };
-        resetDrawTimer();
     };
 
     drawCanvas.onpointermove = e => {
         if (!isDrawing) return;
         const p = getPos(e);
         currentStroke.points.push(p);
-        drawSegment(lastX, lastY, p.x, p.y, drawColor, brushSizeVal, isEraser);
+        
+        // Dibujar en pantalla (ajustando por scroll)
+        const rect = messagesArea.getBoundingClientRect();
+        const y1_screen = (lastY * 1000) - messagesArea.scrollTop;
+        const y2_screen = (p.y * 1000) - messagesArea.scrollTop;
+        
+        drawSegment(lastX, y1_screen / window.innerHeight, p.x, y2_screen / window.innerHeight, drawColor, brushSizeVal, isEraser);
+        
         lastX = p.x; lastY = p.y;
     };
 
@@ -565,9 +588,20 @@
     function redrawDrawings() {
         const ctx = drawCanvas.getContext('2d');
         ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        const rect = messagesArea.getBoundingClientRect();
+        const scroll = messagesArea.scrollTop;
+        const vh = window.innerHeight;
+
         activeStrokes.forEach(s => {
             for (let i=1; i<s.points.length; i++) {
-                drawSegment(s.points[i-1].x, s.points[i-1].y, s.points[i].x, s.points[i].y, s.color, s.size, s.isEraser);
+                const p1 = s.points[i-1], p2 = s.points[i];
+                const y1_screen = (p1.y * 1000) - scroll;
+                const y2_screen = (p2.y * 1000) - scroll;
+                
+                // Solo dibujar si está en el viewport (aproximadamente)
+                if ((y1_screen > -50 && y1_screen < vh + 50) || (y2_screen > -50 && y2_screen < vh + 50)) {
+                    drawSegment(p1.x, y1_screen / vh, p2.x, y2_screen / vh, s.color, s.size, s.isEraser);
+                }
             }
         });
     }
@@ -576,7 +610,6 @@
         onChildAdded(drawingsRef, snap => {
             const s = snap.val();
             if (processedStrokeIds.has(snap.key)) return;
-            if (Date.now() - s.timestamp > DRAW_TIMEOUT_MS) return remove(snap.ref);
             activeStrokes.push({ ...s, id: snap.key });
             redrawDrawings();
         });
@@ -584,24 +617,13 @@
             const idx = activeStrokes.findIndex(x => x.id === snap.key);
             if (idx !== -1) { activeStrokes.splice(idx, 1); redrawDrawings(); }
         });
-        setInterval(() => {
-            const now = Date.now();
-            activeStrokes.filter(s => now - s.timestamp > DRAW_TIMEOUT_MS).forEach(s => remove(ref(db, `drawings/${s.id}`)));
-        }, 2000);
     }
-
-    function resetDrawTimer() { drawTimerStart = Date.now(); }
-    setInterval(() => {
-        if (drawTimerStart) {
-            let p = Math.max(0, 1 - (Date.now() - drawTimerStart) / DRAW_TIMEOUT_MS);
-            drawTimerFill.style.width = (p * 100) + '%';
-        }
-    }, 100);
 
     drawToggleBtn.onclick = () => {
         isDrawingMode = !isDrawingMode;
         drawOverlay.classList.toggle('active', isDrawingMode);
         drawToggleBtn.classList.toggle('active', isDrawingMode);
+        if (isDrawingMode) redrawDrawings();
     };
 
     // WEBRTC VOICE CHAT
@@ -610,27 +632,46 @@
     localStorage.setItem('chat_voice_id', myVoiceId);
 
     let voiceActive = false, localStream = null;
-    const voicePeers = {}; // id -> { pc, audio, pendingCandidates: [] }
+    const voicePeers = {}; // id -> { pc, pendingCandidates: [] }
     const voiceUnsubs = [];
 
     async function joinVoice() {
+        if (!username) return;
         try {
+            const voiceEmpty = document.querySelector('.voice-empty');
+            if (voiceEmpty) voiceEmpty.textContent = 'Conectando...';
             localStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
                 video: false
             });
-            voiceActive = true;
+            
+            const pRef = ref(db, `voiceRoom/peers/${myVoiceId}`);
+            await set(pRef, { name: username, ts: Date.now() });
+            onDisconnect(pRef).remove();
+
+            // Listener para usuarios en tiempo real
+            onValue(ref(db, 'voiceRoom/peers'), snap => {
+                const peers = snap.val() || {};
+                renderVoiceUsers(peers);
+                // Iniciar llamadas con nuevos peers
+                Object.keys(peers).forEach(peerId => {
+                    if (peerId !== myVoiceId && !voicePeers[peerId] && myVoiceId < peerId) {
+                        initiateCall(peerId);
+                    }
+                });
+            });
+
             voiceToggleBtn.classList.add('active');
             voicePanel.classList.add('visible');
             voiceGlow.classList.add('active');
-
-            const pRef = ref(db, `voiceRoom/peers/${myVoiceId}`);
-            set(pRef, { name: username, ts: Date.now() });
-            onDisconnect(pRef).remove();
-
+            voiceActive = true;
             setupVoiceListeners();
             sendBrowserNotif('Voz activa', 'Te has unido al canal de voz');
-        } catch(e) { showToast('Error al acceder al micro', 'error'); }
+        } catch(e) {
+            console.error(e);
+            showToast('Error al acceder al micro', 'error');
+            leaveVoice();
+        }
     }
 
     async function leaveVoice() {
@@ -644,12 +685,10 @@
         });
         localStream?.getTracks().forEach(t => t.stop());
         voiceUnsubs.forEach(u => u());
-        voiceUnsubs.length = 0;
         
         voiceToggleBtn.classList.remove('active');
         voicePanel.classList.remove('visible');
         voiceGlow.classList.remove('active');
-        for (const id in voicePeers) delete voicePeers[id];
     }
 
     function setupVoiceListeners() {
@@ -657,8 +696,9 @@
         const sRef = ref(db, `voiceRoom/signals/${myVoiceId}`);
         voiceUnsubs.push(onChildAdded(sRef, snap => {
             const signal = snap.val();
-            remove(snap.ref);
-            if (signal.createdAt < Date.now() - 10000) return;
+            remove(snap.ref); // Borrar inmediatamente
+            if (signal.createdAt < Date.now() - 10000) return; // Ignorar viejas
+
             handleSignal(signal);
         }));
 
@@ -667,13 +707,16 @@
         voiceUnsubs.push(onChildAdded(pRef, snap => {
             const peerId = snap.key;
             if (peerId === myVoiceId) return;
-            // Lógica determinística: ID menor ofrece
+            // LÓGICA DETERMINÍSTICA: ID menor ofrece
             if (myVoiceId < peerId) initiateCall(peerId);
             renderVoiceUsers();
         }));
         voiceUnsubs.push(onChildRemoved(pRef, snap => {
-            const p = voicePeers[snap.key];
-            if (p) { p.pc.close(); p.audio?.remove(); delete voicePeers[snap.key]; }
+            if (voicePeers[snap.key]) {
+                voicePeers[snap.key].pc.close();
+                voicePeers[snap.key].audio?.remove();
+                delete voicePeers[snap.key];
+            }
             renderVoiceUsers();
         }));
     }
@@ -688,6 +731,7 @@
     function createPC(peerId) {
         const pc = new RTCPeerConnection(ICE_CONFIG);
         voicePeers[peerId] = { pc, pendingCandidates: [] };
+
         localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
         pc.onicecandidate = e => {
@@ -697,9 +741,9 @@
         pc.ontrack = e => {
             const audio = document.createElement('audio');
             audio.autoplay = true;
-            audio.playsInline = true; // Vital para iOS
+            audio.playsInline = true; // VITAL iOS
             audio.srcObject = e.streams[0];
-            // Fallback autoplay móvil
+            // FALLBACK AUTOPLAY MÓVIL
             audio.play().catch(() => {
                 const resume = () => { audio.play(); document.removeEventListener('click', resume); document.removeEventListener('touchstart', resume); };
                 document.addEventListener('click', resume); document.addEventListener('touchstart', resume);
@@ -707,6 +751,7 @@
             audioContainer.appendChild(audio);
             voicePeers[peerId].audio = audio;
         };
+
         return pc;
     }
 
@@ -720,6 +765,7 @@
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             sendSignal(from, { type: 'answer', sdp: answer.sdp });
+            // Procesar candidatos encolados
             voicePeers[from].pendingCandidates.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)));
             voicePeers[from].pendingCandidates = [];
         } else if (signal.type === 'answer') {
@@ -740,15 +786,12 @@
         push(ref(db, `voiceRoom/signals/${to}`), { ...data, from: myVoiceId, createdAt: Date.now() });
     }
 
-    function renderVoiceUsers() {
-        get(ref(db, `voiceRoom/peers`)).then(snap => {
-            const peers = snap.val() || {};
-            voiceUsers.innerHTML = Object.entries(peers).map(([id, p]) => `
-                <div class="voice-user-item ${id===myVoiceId?'me':''}">
-                    <span class="voice-user-dot"></span> ${p.name}
-                </div>
-            `).join('') || '<div class="voice-empty">Solo estás tú</div>';
-        });
+    function renderVoiceUsers(peers) {
+        voiceUsers.innerHTML = Object.entries(peers).map(([id, p]) => `
+            <div class="voice-user-item ${id===myVoiceId?'me':''}">
+                <span class="voice-user-dot"></span> ${p.name || 'Usuario'}
+            </div>
+        `).join('') || '<div class="voice-empty">Solo estás tú</div>';
     }
 
     voiceToggleBtn.onclick = () => voiceActive ? leaveVoice() : joinVoice();
