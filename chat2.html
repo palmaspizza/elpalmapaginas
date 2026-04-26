@@ -23,21 +23,29 @@
 
         /* ===== LOGIN ===== */
         #loginScreen{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:var(--bg);overflow:hidden}
-        .login-bg{position:absolute;inset:0;pointer-events:none}
+        .login-bg{position:absolute;inset:0;pointer-events:none;z-index:0}
         .blob{position:absolute;border-radius:50%;filter:blur(100px);opacity:.4;animation:blobF 8s ease-in-out infinite alternate}
         .blob-1{width:350px;height:350px;background:radial-gradient(circle,var(--accent),transparent 70%);top:-10%;left:-5%}
         .blob-2{width:280px;height:280px;background:radial-gradient(circle,var(--accent2),transparent 70%);bottom:-10%;right:-5%;animation-delay:-3s;animation-duration:10s}
         .blob-3{width:200px;height:200px;background:radial-gradient(circle,#ff9f0a,transparent 70%);top:50%;left:60%;animation-delay:-5s;animation-duration:12s}
         @keyframes blobF{0%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.1)}66%{transform:translate(-20px,30px) scale(.9)}100%{transform:translate(15px,15px) scale(1.05)}}
-        .login-card{position:relative;z-index:2001;background:rgba(23,23,40,.75);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:48px 40px;width:90%;max-width:420px;text-align:center;animation:cardIn .6s cubic-bezier(.16,1,.3,1) both}
+        .login-card{position:relative;z-index:1;background:rgba(23,23,40,.75);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:48px 40px;width:90%;max-width:420px;text-align:center;animation:cardIn .6s cubic-bezier(.16,1,.3,1) both}
         @keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
         .login-icon{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:30px;color:#fff;box-shadow:0 8px 32px var(--accent-glow)}
         .login-card h1{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--fg),var(--fg2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
         .login-card p{color:var(--muted);font-size:14px;margin-bottom:32px}
-        .login-input{width:100%;padding:14px 18px;background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:14px;color:var(--fg);font-size:16px;font-family:inherit;outline:none;transition:all .3s;margin-bottom:16px;position:relative;z-index:2002}
+        /* SIN value="bin", SIN z-index en el input para evitar conflictos de stacking */
+        .login-input{width:100%;padding:14px 18px;background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:14px;color:var(--fg);font-size:16px;font-family:inherit;outline:none;transition:all .3s;margin-bottom:16px;-webkit-user-select:text;user-select:text}
         .login-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:rgba(255,255,255,.06)}
+        .login-input::placeholder{color:var(--muted)}
         .login-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .3s;box-shadow:0 4px 20px var(--accent-glow)}
+        .login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px var(--accent-glow)}
+        .login-btn:active{transform:translateY(0)}
         .login-error{color:var(--error);font-size:13px;margin-top:-8px;margin-bottom:12px;min-height:20px}
+        .notif-banner{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-top:16px;text-align:left;display:flex;align-items:center;gap:12px}
+        .notif-banner i{font-size:20px;color:var(--warning);flex-shrink:0}
+        .notif-banner p{font-size:13px;color:var(--fg2);line-height:1.4;flex:1}
+        .notif-banner button{padding:6px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;flex-shrink:0}
 
         /* ===== CHAT ===== */
         #chatScreen{display:none;flex-direction:column;height:100dvh;background:var(--bg);background-image:radial-gradient(ellipse at 15% 80%,rgba(255,94,58,.025) 0%,transparent 50%),radial-gradient(ellipse at 85% 15%,rgba(255,45,85,.02) 0%,transparent 50%)}
@@ -60,7 +68,7 @@
         .empty-state p{font-size:14px;max-width:260px;line-height:1.5}
 
         /* Mensajes */
-        .msg-row{display:flex;flex-direction:column;max-width:75%;animation:msgIn .35s cubic-bezier(.16,1,.3,1) both;position:relative;z-index:10}
+        .msg-row{display:flex;flex-direction:column;max-width:75%;animation:msgIn .35s cubic-bezier(.16,1,.3,1) both;position:relative}
         .msg-row.self{align-self:flex-end;align-items:flex-end}
         .msg-row.other{align-self:flex-start;align-items:flex-start}
         .msg-row.system-msg{align-self:center;align-items:center;max-width:90%}
@@ -74,8 +82,9 @@
         .msg-bubble img:hover{opacity:.85}
         .msg-time{font-size:10px;color:var(--muted);margin-top:3px;padding:0 4px}
         .msg-row.self .msg-time{text-align:right}
+        /* Botón eliminar: siempre visible en táctil, hover en desktop */
         .msg-delete{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--error);border:2px solid var(--bg);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:1;transition:all .2s;z-index:2}
-        @media (min-width: 1024px) { .msg-delete { opacity: 0; } .msg-row.self:hover .msg-delete { opacity: 1; } }
+        @media(hover:hover){.msg-delete{opacity:0}.msg-row.self:hover .msg-delete{opacity:1}}
         .msg-delete:hover{transform:scale(1.15)}
 
         /* Input */
@@ -102,18 +111,19 @@
         .draw-timer-bar{position:absolute;top:0;left:0;right:0;height:4px;background:rgba(255,255,255,.05);z-index:10;display:none}
         #drawOverlay.active .draw-timer-bar{display:block}
         .draw-timer-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:0 2px 2px 0;transition:width .05s linear}
-        .draw-toolbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(23,23,40,.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:10px 16px;display:none;align-items:center;gap:10px;z-index:20;animation:toolbarIn .3s cubic-bezier(.16,1,.3,1) both;box-shadow:0 8px 32px rgba(0,0,0,.4);flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
-        #drawOverlay.active .draw-toolbar{display:flex}
+        .draw-toolbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(23,23,40,.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:10px 16px;display:none;align-items:center;gap:10px;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,.4);flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
+        #drawOverlay.active .draw-toolbar{display:flex;animation:toolbarIn .3s cubic-bezier(.16,1,.3,1) both}
         @keyframes toolbarIn{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         .color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all .2s;flex-shrink:0}
         .color-swatch.active{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.2);transform:scale(1.1)}
         .draw-sep{width:1px;height:24px;background:rgba(255,255,255,.08);flex-shrink:0}
         .brush-slider{width:70px;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.1);border-radius:2px;outline:none;cursor:pointer}
-        .brush-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+        .brush-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
+        .brush-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
         .draw-tool-btn{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);color:var(--fg2);font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
         .draw-tool-btn.active{background:var(--accent-soft);color:var(--accent);border-color:rgba(255,94,58,.2)}
-        .draw-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(23,23,40,.8);backdrop-filter:blur(20px);padding:8px 16px;border-radius:12px;font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,.06);z-index:20;display:none;animation:toolbarIn .4s .15s cubic-bezier(.16,1,.3,1) both;white-space:nowrap}
-        #drawOverlay.active .draw-hint{display:block}
+        .draw-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(23,23,40,.8);backdrop-filter:blur(20px);padding:8px 16px;border-radius:12px;font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,.06);z-index:20;display:none;white-space:nowrap}
+        #drawOverlay.active .draw-hint{display:block;animation:toolbarIn .4s .15s cubic-bezier(.16,1,.3,1) both}
 
         /* ===== VOICE CHAT ===== */
         .voice-btn.active{background:var(--voice-soft);color:var(--voice);border-color:rgba(52,199,89,.2)}
@@ -122,7 +132,7 @@
         .voice-btn.active:not(.muted){animation:voiceRing 2s ease-in-out infinite}
         .voice-glow{position:fixed;top:-60px;left:50%;transform:translateX(-50%);width:350px;height:120px;background:radial-gradient(ellipse,rgba(52,199,89,.07) 0%,transparent 70%);pointer-events:none;z-index:599;opacity:0;transition:opacity .6s}
         .voice-glow.active{opacity:1}
-        #voicePanel{position:fixed;bottom:82px;right:12px;width:230px;background:rgba(20,20,36,.94);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.06);border-radius:18px;z-index:600;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45);display:none;flex-direction:column}
+        #voicePanel{position:fixed;bottom:82px;right:12px;width:230px;background:rgba(20,20,36,.94);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.06);border-radius:18px;z-index:601;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45);display:none;flex-direction:column}
         #voicePanel.visible{display:flex;animation:voicePanelIn .35s cubic-bezier(.16,1,.3,1) both}
         @keyframes voicePanelIn{from{opacity:0;transform:translateY(12px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
         .voice-panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04)}
@@ -134,12 +144,41 @@
         .voice-panel-btns .vbtn.muted-active{background:rgba(255,159,10,.12);color:var(--warning);border-color:rgba(255,159,10,.2)}
         .voice-panel-btns .vbtn.leave-btn:hover{background:rgba(255,69,58,.15);color:var(--error);border-color:rgba(255,69,58,.2)}
         #voiceUsers{padding:6px 0;max-height:160px;overflow-y:auto}
-        .voice-user-item{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:13px;color:var(--fg2);animation:msgIn .25s cubic-bezier(.16,1,.3,1) both}
+        .voice-user-item{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:13px;color:var(--fg2)}
         .voice-user-dot{width:7px;height:7px;border-radius:50%;background:var(--voice);flex-shrink:0;box-shadow:0 0 6px rgba(52,199,89,.35)}
         .voice-user-item.me{color:var(--muted);font-style:italic}
         .voice-user-item.me .voice-user-dot{background:var(--accent);box-shadow:0 0 6px var(--accent-glow)}
         .voice-empty{padding:14px;text-align:center;font-size:12px;color:var(--muted)}
         #audioContainer{display:none}
+
+        /* ===== SPEAKING ANIMATION ===== */
+        #speakingWave{
+            position:fixed;inset:0;z-index:49;pointer-events:none;
+            display:flex;align-items:center;justify-content:center;
+            opacity:0;transition:opacity .4s ease;
+        }
+        #speakingWave.visible{opacity:1}
+        .sw-ring{
+            position:absolute;border-radius:50%;
+            border:2px solid rgba(52,199,89,.25);
+            width:60px;height:60px;
+        }
+        .sw-ring:nth-child(1){animation:swRing 2.2s ease-out infinite 0s}
+        .sw-ring:nth-child(2){animation:swRing 2.2s ease-out infinite .5s}
+        .sw-ring:nth-child(3){animation:swRing 2.2s ease-out infinite 1s}
+        .sw-ring:nth-child(4){animation:swRing 2.2s ease-out infinite 1.5s}
+        @keyframes swRing{
+            0%  {width:60px;height:60px;opacity:.95;border-color:rgba(52,199,89,.6);border-width:3px}
+            100%{width:min(94vw,94vh);height:min(94vw,94vh);opacity:0;border-color:rgba(52,199,89,.02);border-width:1px}
+        }
+        #speakingLabel{
+            position:absolute;bottom:100px;left:50%;transform:translateX(-50%);
+            background:rgba(16,16,32,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+            border:1px solid rgba(52,199,89,.3);border-radius:24px;
+            padding:8px 20px;font-size:13px;font-weight:700;
+            color:var(--voice);white-space:nowrap;letter-spacing:.3px;
+            box-shadow:0 4px 24px rgba(0,0,0,.5);
+        }
 
         /* ===== MODALES & TOASTS ===== */
         #toastContainer{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
@@ -149,14 +188,9 @@
         .toast-error{border-left:3px solid var(--error)}
         .toast-warning{border-left:3px solid var(--warning)}
         .toast-info{border-left:3px solid var(--accent)}
-        #imgModal{display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.9);align-items:center;justify-content:center;cursor:pointer;animation:fadeIn .2s ease}
+        #imgModal{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.9);align-items:center;justify-content:center;cursor:pointer}
         #imgModal img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-
-        .notif-banner{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-top:16px;text-align:left;display:flex;align-items:center;gap:12px}
-        .notif-banner i{font-size:20px;color:var(--warning);flex-shrink:0}
-        .notif-banner p{font-size:13px;color:var(--fg2);line-height:1.4;flex:1}
-        .notif-banner button{padding:6px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
 
         @media(max-width:480px){
             .msg-row{max-width:88%}
@@ -165,43 +199,15 @@
             .draw-toolbar{padding:8px 10px;gap:6px}
             .color-swatch{width:24px;height:24px}
             .brush-slider{width:50px}
-            .draw-hint{font-size:11px;padding:6px 12px}
             #voicePanel{bottom:70px;right:8px;width:195px;border-radius:14px}
             .voice-user-item{font-size:12px;padding:6px 12px}
         }
-        /* ===== ANIMACIÓN DE HABLA ===== */
-#speakingWave{
-    position:fixed;inset:0;z-index:49;pointer-events:none;
-    display:flex;align-items:center;justify-content:center;
-    opacity:0;transition:opacity .4s ease;
-}
-#speakingWave.visible{opacity:1}
-.sw-ring{
-    position:absolute;border-radius:50%;
-    border:2px solid rgba(52,199,89,.22);
-    width:60px;height:60px;
-}
-.sw-ring:nth-child(1){animation:swRing 2s ease-out infinite 0s}
-.sw-ring:nth-child(2){animation:swRing 2s ease-out infinite .45s}
-.sw-ring:nth-child(3){animation:swRing 2s ease-out infinite .9s}
-.sw-ring:nth-child(4){animation:swRing 2s ease-out infinite 1.35s}
-@keyframes swRing{
-    0%{width:60px;height:60px;opacity:.9;border-color:rgba(52,199,89,.5)}
-    100%{width:min(95vw,95vh);height:min(95vw,95vh);opacity:0;border-color:rgba(52,199,89,.05)}
-}
-#speakingLabel{
-    position:absolute;bottom:100px;left:50%;transform:translateX(-50%);
-    background:rgba(16,16,32,.88);backdrop-filter:blur(14px);
-    border:1px solid rgba(52,199,89,.25);border-radius:24px;
-    padding:7px 18px;font-size:13px;font-weight:700;
-    color:var(--voice);white-space:nowrap;letter-spacing:.3px;
-    box-shadow:0 4px 20px rgba(0,0,0,.4);
-}
+        @keyframes spin{to{transform:rotate(360deg)}}
     </style>
 </head>
 <body>
 
-<!-- Login -->
+<!-- Login — SIN value hardcodeado en el input -->
 <div id="loginScreen">
     <div class="login-bg">
         <div class="blob blob-1"></div>
@@ -212,7 +218,7 @@
         <div class="login-icon"><i class="fas fa-comments"></i></div>
         <h1>Palma Chat</h1>
         <p>Ingresa tu nombre para unirte a la conversación</p>
-      <input type="text" class="login-input" value="Nombre: " id="nameInput" placeholder="Tu nombre..." maxlength="20" autocomplete="off" autofocus>
+        <input type="text" class="login-input" id="nameInput" placeholder="Tu nombre..." maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off">
         <div class="login-error" id="loginError"></div>
         <button class="login-btn" id="loginBtn">Entrar al chat</button>
         <div class="notif-banner" id="notifBanner" style="display:none">
@@ -272,7 +278,7 @@
     <div class="draw-timer-bar"><div class="draw-timer-fill" id="drawTimerFill"></div></div>
     <canvas id="drawCanvas"></canvas>
     <div class="draw-toolbar" id="drawToolbar"></div>
-    <div class="draw-hint">Dibuja sobre la pantalla. Los dibujos son permanentes.</div>
+    <div class="draw-hint">Dibuja sobre la pantalla. Se borra en 10 segundos.</div>
 </div>
 
 <!-- Voice panel -->
@@ -289,6 +295,15 @@
     </div>
 </div>
 
+<!-- Animación de habla (ocupa casi toda la pantalla) -->
+<div id="speakingWave">
+    <div class="sw-ring"></div>
+    <div class="sw-ring"></div>
+    <div class="sw-ring"></div>
+    <div class="sw-ring"></div>
+    <div id="speakingLabel"></div>
+</div>
+
 <div class="voice-glow" id="voiceGlow"></div>
 <div id="imgModal"><img id="imgModalSrc" src="" alt="Ampliada"></div>
 <div id="audioContainer"></div>
@@ -296,9 +311,10 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, remove, set, get, onChildAdded, onChildRemoved, onDisconnect } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, remove, set, get, onChildAdded, onChildRemoved, onDisconnect }
+        from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
 
-    // FIREBASE CONFIG
+    /* ========== FIREBASE ========== */
     const firebaseConfig = {
         apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
         authDomain: "palmaxd-32720.firebaseapp.com",
@@ -309,11 +325,11 @@
         appId: "1:527831930817:web:05fcfd4b53296068d4c140"
     };
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const db  = getDatabase(app);
     const messagesRef = ref(db, 'messages');
     const drawingsRef = ref(db, 'drawings');
 
-    // DOM
+    /* ========== DOM ========== */
     const $ = id => document.getElementById(id);
     const loginScreen=$('loginScreen'), chatScreen=$('chatScreen'),
           nameInput=$('nameInput'), loginBtn=$('loginBtn'), loginError=$('loginError'),
@@ -331,744 +347,738 @@
           voiceToggleBtn=$('voiceToggleBtn'), voicePanel=$('voicePanel'),
           voiceMuteBtn=$('voiceMuteBtn'), voiceLeaveBtn=$('voiceLeaveBtn'),
           voiceUsers=$('voiceUsers'), voiceGlow=$('voiceGlow'),
-          audioContainer=$('audioContainer');
+          audioContainer=$('audioContainer'),
+          speakingWave=$('speakingWave'), speakingLabel=$('speakingLabel');
 
-    // ESTADO
+    /* ========== ESTADO GENERAL ========== */
     let username = localStorage.getItem('chat_username') || '';
     let lastSentTime = 0, cooldownInterval = null, pendingImage = null;
     const renderedIds = new Set();
-    const COOLDOWN_MS = 3000;
+    const COOLDOWN_MS = 3000, DRAW_TIMEOUT_MS = 10000;
     let initialMessagesLoaded = false;
-    let isDrawingMode = false, isDrawing = false;
-    let drawColor = '#ffffff', brushSizeVal = 4, isEraser = false;
-    let lastX = 0, lastY = 0;
-    const activeStrokes = [];
-    const processedStrokeIds = new Set();
+
+    /* Dibujo */
+    let isDrawingMode=false, isDrawing=false;
+    let drawColor='#ffffff', brushSizeVal=4, isEraser=false;
+    let lastX=0, lastY=0, currentStroke=null;
+    const activeStrokes=[], processedStrokeIds=new Set();
+    let drawTimerStart=null, drawSyncStarted=false, strokeCleanupInterval=null;
+
     let notifIcon = null;
 
-    // UTILIDADES
-    function showToast(msg, type='info') {
-        const t = document.createElement('div');
-        t.className = `toast toast-${type}`;
-        t.textContent = msg;
+    /* ========== UTILIDADES ========== */
+    function showToast(msg, type='info'){
+        const t=document.createElement('div');
+        t.className=`toast toast-${type}`;t.textContent=msg;
         toastContainer.appendChild(t);
-        requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show')));
-        setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, 2800);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+        setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),350);},2800);
     }
-
-    function formatTime(ts) { return new Date(ts).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' }); }
-
-    function getDeletedIds() { return JSON.parse(localStorage.getItem('chat_deleted') || '[]'); }
-    function addDeletedId(id) {
-        const list = getDeletedIds();
-        if (!list.includes(id)) { list.push(id); localStorage.setItem('chat_deleted', JSON.stringify(list)); }
-    }
-
-    function compressImage(file) {
-        return new Promise((res, rej) => {
-            const r = new FileReader();
-            r.onload = e => {
-                const img = new Image();
-                img.onload = () => {
-                    const c = document.createElement('canvas');
-                    let w = img.width, h = img.height;
-                    const max = 600;
-                    if (w > max) { h *= max/w; w = max; }
-                    if (h > max) { w *= max/h; h = max; }
-                    c.width = w; c.height = h;
-                    c.getContext('2d').drawImage(img, 0, 0, w, h);
-                    res(c.toDataURL('image/jpeg', 0.5));
+    function formatTime(ts){return new Date(ts).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});}
+    function getDeletedIds(){try{return JSON.parse(localStorage.getItem('chat_deleted')||'[]');}catch{return[];}}
+    function addDeletedId(id){const l=getDeletedIds();if(!l.includes(id)){l.push(id);localStorage.setItem('chat_deleted',JSON.stringify(l));}}
+    function escapeHTML(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+    function compressImage(file){
+        return new Promise((res,rej)=>{
+            const r=new FileReader();
+            r.onerror=()=>rej(new Error('read'));
+            r.onload=e=>{
+                const img=new Image();
+                img.onerror=()=>rej(new Error('img'));
+                img.onload=()=>{
+                    const c=document.createElement('canvas');
+                    let w=img.width,h=img.height;
+                    if(w>600){h=(600/w)*h;w=600;}if(h>600){w=(600/h)*w;h=600;}
+                    c.width=Math.max(1,Math.round(w));c.height=Math.max(1,Math.round(h));
+                    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+                    res(c.toDataURL('image/jpeg',0.5));
                 };
-                img.src = e.target.result;
+                img.src=e.target.result;
             };
             r.readAsDataURL(file);
         });
     }
 
-    // NOTIFICACIONES
-    function buildNotifIcon() {
-        const c = document.createElement('canvas'); c.width = 64; c.height = 64;
-        const ctx = c.getContext('2d');
-        const g = ctx.createLinearGradient(0, 0, 64, 64);
-        g.addColorStop(0, '#ff5e3a'); g.addColorStop(1, '#ff2d55');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(32,32,30,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 32px Space Grotesk'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('P', 32, 33);
-        notifIcon = c.toDataURL();
-    }
-    buildNotifIcon();
-
-    function sendBrowserNotif(title, body) {
-        if (document.hidden && Notification.permission === 'granted') {
-            new Notification(title, { body, icon: notifIcon });
+    /* ========== NOTIFICACIONES ========== */
+    (function buildNotifIcon(){
+        const c=document.createElement('canvas');c.width=64;c.height=64;
+        const ctx=c.getContext('2d');
+        const g=ctx.createLinearGradient(0,0,64,64);
+        g.addColorStop(0,'#ff5e3a');g.addColorStop(1,'#ff2d55');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(32,32,30,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff';ctx.font='bold 30px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText('P',32,33);
+        notifIcon=c.toDataURL();
+    })();
+    function sendBrowserNotif(title,body){
+        if(document.hidden&&Notification.permission==='granted'){
+            try{new Notification(title,{body,icon:notifIcon});}catch(e){}
         }
     }
+    if('Notification' in window&&Notification.permission==='default') notifBanner.style.display='flex';
+    notifAllowBtn.onclick=()=>Notification.requestPermission().then(()=>notifBanner.style.display='none');
 
-    notifAllowBtn.onclick = () => Notification.requestPermission().then(() => notifBanner.style.display='none');
-    if (Notification.permission === 'default') notifBanner.style.display='flex';
-
-    // LOGIN & PERSISTENCIA
-    function doLogin() {
-        const val = nameInput.value.trim();
-        if (!val) return loginError.textContent = 'Escribe un nombre';
-        username = val;
-        localStorage.setItem('chat_username', username);
+    /* ========== LOGIN ========== */
+    function doLogin(){
+        const val=nameInput.value.trim();
+        if(!val){loginError.textContent='Escribe un nombre';nameInput.focus();return;}
+        if(val.length<2){loginError.textContent='Mínimo 2 caracteres';nameInput.focus();return;}
+        username=val;localStorage.setItem('chat_username',username);loginError.textContent='';
         enterChat();
     }
-
-    async function doLogout() {
-        if (voiceActive) await leaveVoice();
-        localStorage.removeItem('chat_username');
-        username = '';
-        chatScreen.style.display = 'none';
-        loginScreen.style.display = 'flex';
-        nameInput.focus();
+    function doLogout(){
+        if(voiceActive)leaveVoice();
+        if(msgListenerUnsub){msgListenerUnsub();msgListenerUnsub=null;listeningStarted=false;renderedIds.clear();}
+        localStorage.removeItem('chat_username');username='';
+        chatScreen.style.display='none';loginScreen.style.display='flex';
+        nameInput.value='';setTimeout(()=>nameInput.focus(),100);
     }
-
-    function enterChat() {
-        loginScreen.style.display = 'none';
-        chatScreen.style.display = 'flex';
-        headerName.textContent = username;
-        startListening();
-        initDraw();
+    function enterChat(){
+        loginScreen.style.display='none';chatScreen.style.display='flex';
+        headerName.textContent=username;
+        startListening();initDraw();startDrawSync();startStrokeCleanup();
+        setTimeout(()=>msgInput.focus(),100);
     }
+    loginBtn.onclick=doLogin;
+    nameInput.onkeydown=e=>{if(e.key==='Enter')doLogin();loginError.textContent='';};
+    logoutBtn.onclick=doLogout;
+    if(username)enterChat();else setTimeout(()=>nameInput.focus(),100);
 
-    loginBtn.onclick = doLogin;
-    nameInput.onkeydown = e => e.key === 'Enter' && doLogin();
-    logoutBtn.onclick = doLogout;
-    if (username) enterChat();
-
-    // CHAT LOGIC
-    function canSend() { return Date.now() - lastSentTime > COOLDOWN_MS; }
-
-    function startCooldown() {
-        lastSentTime = Date.now();
-        sendBtn.disabled = true;
-        let start = Date.now();
-        if (cooldownInterval) clearInterval(cooldownInterval);
-        cooldownInterval = setInterval(() => {
-            let p = Math.min(1, (Date.now() - start) / COOLDOWN_MS);
-            cooldownBar.style.width = (p * 100) + '%';
-            if (p >= 1) {
-                clearInterval(cooldownInterval);
-                cooldownBar.style.width = '0%';
-                sendBtn.disabled = false;
-            }
-        }, 50);
+    /* ========== MENSAJES ========== */
+    function canSend(){return Date.now()-lastSentTime>COOLDOWN_MS;}
+    function startCooldown(){
+        lastSentTime=Date.now();sendBtn.disabled=true;
+        const start=Date.now();
+        if(cooldownInterval)clearInterval(cooldownInterval);
+        cooldownInterval=setInterval(()=>{
+            const p=Math.min(1,(Date.now()-start)/COOLDOWN_MS);
+            cooldownBar.style.width=(p*100)+'%';
+            if(p>=1){clearInterval(cooldownInterval);cooldownBar.style.width='0%';sendBtn.disabled=false;}
+        },50);
     }
-
-    async function sendMessage() {
-        const text = msgInput.value.trim();
-        if (!text && !pendingImage) return;
-        if (!canSend()) return showToast('Espera el cooldown', 'warning');
-
-        try {
-            await push(messagesRef, { sender: username, text, image: pendingImage, timestamp: Date.now() });
-            msgInput.value = ''; pendingImage = null; imgPreview.style.display = 'none';
-            msgInput.style.height = 'auto';
+    async function sendMessage(){
+        const text=msgInput.value.trim();
+        if(!text&&!pendingImage)return;
+        if(!canSend())return showToast('Espera el cooldown','warning');
+        sendBtn.disabled=true;
+        const img=pendingImage;msgInput.value='';pendingImage=null;imgPreview.style.display='none';
+        msgInput.style.height='auto';
+        try{
+            await push(messagesRef,{sender:username,text,image:img||null,timestamp:Date.now()});
             startCooldown();
-        } catch(e) { showToast('Error al enviar', 'error'); }
+        }catch(e){showToast('Error al enviar','error');sendBtn.disabled=false;}
     }
+    sendBtn.onclick=sendMessage;
+    msgInput.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}};
+    msgInput.oninput=()=>{msgInput.style.height='auto';msgInput.style.height=Math.min(msgInput.scrollHeight,120)+'px';};
 
-    sendBtn.onclick = sendMessage;
-    msgInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
-    msgInput.oninput = () => { msgInput.style.height = 'auto'; msgInput.style.height = msgInput.scrollHeight + 'px'; };
-
-    imgBtn.onclick = () => imgFileInput.click();
-    imgFileInput.onchange = async e => {
-        const file = e.target.files[0]; if (!file) return;
-        pendingImage = await compressImage(file);
-        imgPreviewThumb.src = pendingImage;
-        imgPreview.style.display = 'flex';
+    imgBtn.onclick=()=>imgFileInput.click();
+    imgFileInput.onchange=async e=>{
+        const file=e.target.files[0];if(!file)return;
+        if(!file.type.startsWith('image/')){showToast('Solo imágenes','error');imgFileInput.value='';return;}
+        try{
+            showToast('Procesando...','info');
+            pendingImage=await compressImage(file);
+            imgPreviewThumb.src=pendingImage;imgPreview.style.display='flex';
+        }catch(e){showToast('Error al procesar imagen','error');}
+        imgFileInput.value='';
     };
-    imgPreviewRemove.onclick = () => { pendingImage = null; imgPreview.style.display = 'none'; };
+    imgPreviewRemove.onclick=()=>{pendingImage=null;imgPreview.style.display='none';};
 
-    function startListening() {
-        onValue(messagesRef, snap => {
-            const data = snap.val();
-            if (!data) return emptyState.style.display = 'flex';
-            emptyState.style.display = 'none';
-            const deleted = getDeletedIds();
-            const sorted = Object.entries(data).sort((a,b) => a[1].timestamp - b[1].timestamp);
-            
-            sorted.forEach(([id, msg]) => {
-                if (renderedIds.has(id) || deleted.includes(id)) return;
+    let listeningStarted=false, msgListenerUnsub=null;
+    function startListening(){
+        if(listeningStarted)return;listeningStarted=true;
+        msgListenerUnsub=onValue(messagesRef,snap=>{
+            const data=snap.val();
+            if(!data){emptyState.style.display='flex';return;}
+            emptyState.style.display='none';
+            const deleted=getDeletedIds();
+            const sorted=Object.entries(data).sort((a,b)=>a[1].timestamp-b[1].timestamp);
+            const newMsgs=[];
+            sorted.forEach(([id,msg])=>{
+                if(renderedIds.has(id))return;
                 renderedIds.add(id);
-                renderMessage(id, msg);
-                if (initialMessagesLoaded && msg.sender !== username) {
-                    sendBrowserNotif(`Mensaje de ${msg.sender}`, msg.text || '📷 Imagen');
-                }
+                if(deleted.includes(id))return;
+                renderMessage(id,msg);newMsgs.push(msg);
             });
-            initialMessagesLoaded = true;
-            messagesArea.scrollTop = messagesArea.scrollHeight;
+            if(newMsgs.length>0){
+                requestAnimationFrame(()=>{
+                    const near=messagesArea.scrollHeight-messagesArea.scrollTop-messagesArea.clientHeight<200;
+                    if(near)messagesArea.scrollTop=messagesArea.scrollHeight;
+                });
+                if(initialMessagesLoaded){
+                    newMsgs.forEach(msg=>{
+                        if(msg.sender!==username)
+                            sendBrowserNotif(`${msg.sender} en Palma Chat`,msg.text||'📷 Imagen');
+                    });
+                }
+            }
+            initialMessagesLoaded=true;
         });
     }
-
-    function renderMessage(id, msg) {
-        const isMe = msg.sender === username;
-        const row = document.createElement('div');
-        row.className = `msg-row ${isMe ? 'self' : 'other'}`;
-        row.id = `msg-${id}`;
-        
-        let html = '';
-        if (!isMe) html += `<div class="msg-sender">${msg.sender}</div>`;
-        html += `<div class="msg-bubble">`;
-        if (msg.text) html += `<span>${msg.text}</span>`;
-        if (msg.image) html += `<img src="${msg.image}" onclick="openModal('${msg.image}')">`;
-        if (isMe) html += `<button class="msg-delete" onclick="deleteMsg('${id}')"><i class="fas fa-x"></i></button>`;
-        html += `</div><div class="msg-time">${formatTime(msg.timestamp)}</div>`;
-        
-        row.innerHTML = html;
+    function renderMessage(id,msg){
+        const isMe=msg.sender===username;
+        const row=document.createElement('div');
+        row.className=`msg-row ${isMe?'self':'other'}`;row.id=`msg-${id}`;
+        if(!isMe){const s=document.createElement('div');s.className='msg-sender';s.textContent=escapeHTML(msg.sender);row.appendChild(s);}
+        const bubble=document.createElement('div');bubble.className='msg-bubble';
+        if(msg.text){const t=document.createElement('span');t.textContent=msg.text;bubble.appendChild(t);}
+        if(msg.image){
+            const img=document.createElement('img');img.src=msg.image;img.alt='';img.loading='lazy';
+            img.onclick=()=>{imgModalSrc.src=msg.image;imgModal.style.display='flex';};
+            bubble.appendChild(img);
+        }
+        if(isMe){
+            const del=document.createElement('button');del.className='msg-delete';
+            del.innerHTML='<i class="fas fa-x"></i>';del.title='Eliminar';
+            del.onclick=e=>{e.stopPropagation();addDeletedId(id);const el=$(`msg-${id}`);if(el){el.style.transition='all .3s';el.style.opacity='0';el.style.transform='scale(.9)';setTimeout(()=>el.remove(),300);}showToast('Mensaje ocultado','info');};
+            bubble.appendChild(del);
+        }
+        row.appendChild(bubble);
+        const time=document.createElement('div');time.className='msg-time';time.textContent=formatTime(msg.timestamp);
+        row.appendChild(time);
         messagesArea.appendChild(row);
     }
-
-    window.deleteMsg = id => {
-        addDeletedId(id);
-        $(`msg-${id}`)?.remove();
-        showToast('Mensaje ocultado', 'info');
-    };
-    window.openModal = src => { imgModalSrc.src = src; imgModal.style.display = 'flex'; };
-    imgModal.onclick = () => imgModal.style.display = 'none';
-
-    // DIBUJO
-    function initDraw() {
-        const dpr = window.devicePixelRatio || 1;
-        const resize = () => {
-            drawCanvas.width = window.innerWidth * dpr;
-            drawCanvas.height = window.innerHeight * dpr;
-            drawCanvas.getContext('2d').scale(dpr, dpr);
-            redrawDrawings();
-        };
-        window.onresize = resize; resize();
-        buildDrawTools();
-        startDrawSync();
-        messagesArea.addEventListener('scroll', redrawDrawings);
+    function addSystemMessage(text){
+        const row=document.createElement('div');row.className='msg-row system-msg';
+        const bubble=document.createElement('div');bubble.className='msg-bubble';
+        bubble.innerHTML=`<i class="fas fa-microphone" style="margin-right:6px;font-size:11px"></i>${escapeHTML(text)}`;
+        row.appendChild(bubble);messagesArea.appendChild(row);
+        requestAnimationFrame(()=>{messagesArea.scrollTop=messagesArea.scrollHeight;});
     }
+    imgModal.onclick=()=>{imgModal.style.display='none';imgModalSrc.src='';};
 
-    function buildDrawTools() {
-        const colors = ['#ffffff','#ff5e3a','#34c759','#007aff','#ffcc00'];
-        colors.forEach(c => {
-            const s = document.createElement('div');
-            s.className = 'color-swatch'; s.style.background = c;
-            s.onclick = () => { drawColor = c; isEraser = false; };
+    /* ========== DIBUJO ========== */
+    const DRAW_COLORS=['#ffffff','#ff5e3a','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#af52de','#ff2d55','#8e8e93'];
+    function buildDrawTools(){
+        DRAW_COLORS.forEach((c,i)=>{
+            const s=document.createElement('div');s.className=`color-swatch ${i===0?'active':''}`;
+            s.style.background=c;if(c==='#ffffff')s.style.border='2px solid rgba(255,255,255,.3)';
+            s.onclick=()=>{drawColor=c;isEraser=false;drawToolbar.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('active'));s.classList.add('active');const eb=$('eraserBtn');if(eb)eb.classList.remove('active');};
             drawToolbar.appendChild(s);
         });
-        const eb = document.createElement('button');
-        eb.className = 'draw-tool-btn'; eb.innerHTML = '<i class="fas fa-eraser"></i>';
-        eb.onclick = () => isEraser = !isEraser;
+        const sep1=document.createElement('div');sep1.className='draw-sep';drawToolbar.appendChild(sep1);
+        const slider=document.createElement('input');slider.type='range';slider.className='brush-slider';slider.min='2';slider.max='30';slider.value='4';
+        slider.oninput=()=>{brushSizeVal=parseInt(slider.value);};drawToolbar.appendChild(slider);
+        const sep2=document.createElement('div');sep2.className='draw-sep';drawToolbar.appendChild(sep2);
+        const eb=document.createElement('button');eb.id='eraserBtn';eb.className='draw-tool-btn';eb.innerHTML='<i class="fas fa-eraser"></i>';eb.title='Borrador';
+        eb.onclick=()=>{isEraser=!isEraser;eb.classList.toggle('active',isEraser);if(isEraser)drawToolbar.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('active'));};
         drawToolbar.appendChild(eb);
+        const cb=document.createElement('button');cb.className='draw-tool-btn';cb.innerHTML='<i class="fas fa-trash-can"></i>';cb.title='Limpiar';
+        cb.onclick=redrawStrokes;drawToolbar.appendChild(cb);
+        const sep3=document.createElement('div');sep3.className='draw-sep';drawToolbar.appendChild(sep3);
+        const xb=document.createElement('button');xb.className='draw-tool-btn';xb.innerHTML='<i class="fas fa-xmark"></i>';xb.title='Cerrar';
+        xb.onclick=toggleDraw;drawToolbar.appendChild(xb);
+    }
+    buildDrawTools();
+
+    function resizeCanvas(){
+        const dpr=window.devicePixelRatio||1,w=window.innerWidth,h=window.innerHeight;
+        drawCanvas.width=w*dpr;drawCanvas.height=h*dpr;
+        drawCanvas.style.width=w+'px';drawCanvas.style.height=h+'px';
+        drawCanvas.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
+        redrawStrokes();
+    }
+    function initDraw(){resizeCanvas();}
+    window.addEventListener('resize',resizeCanvas);
+
+    function getNorm(e){const t=e.touches?e.touches[0]:e;return{x:t.clientX/(window.innerWidth||1),y:t.clientY/(window.innerHeight||1)};}
+    function getRaw(e){const t=e.touches?e.touches[0]:e;return{x:t.clientX,y:t.clientY};}
+
+    function startStroke(e){
+        if(!isDrawingMode)return;e.preventDefault();isDrawing=true;
+        const n=getNorm(e),r=getRaw(e);lastX=r.x;lastY=r.y;
+        currentStroke={color:drawColor,size:brushSizeVal,isEraser,points:[{x:n.x,y:n.y}],timestamp:Date.now()};
+        resetDrawTimer();
+        const ctx=drawCanvas.getContext('2d');
+        ctx.globalCompositeOperation=isEraser?'destination-out':'source-over';
+        ctx.fillStyle=isEraser?'rgba(0,0,0,1)':drawColor;
+        ctx.beginPath();ctx.arc(r.x,r.y,Math.max(1,brushSizeVal/2),0,Math.PI*2);ctx.fill();
+        ctx.globalCompositeOperation='source-over';
+    }
+    function moveStroke(e){
+        if(!isDrawing||!isDrawingMode)return;e.preventDefault();
+        const n=getNorm(e),r=getRaw(e);
+        const lp=currentStroke.points[currentStroke.points.length-1];
+        if((n.x-lp.x)**2+(n.y-lp.y)**2<0.000001)return;
+        currentStroke.points.push({x:n.x,y:n.y});resetDrawTimer();
+        const ctx=drawCanvas.getContext('2d');
+        ctx.globalCompositeOperation=isEraser?'destination-out':'source-over';
+        ctx.strokeStyle=isEraser?'rgba(0,0,0,1)':drawColor;
+        ctx.lineWidth=brushSizeVal;ctx.lineCap='round';ctx.lineJoin='round';
+        ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(r.x,r.y);ctx.stroke();
+        ctx.globalCompositeOperation='source-over';
+        lastX=r.x;lastY=r.y;
+    }
+    function endStroke(e){
+        if(!isDrawing)return;if(e)e.preventDefault();isDrawing=false;
+        if(!currentStroke||!currentStroke.points.length){currentStroke=null;return;}
+        const sRef=push(drawingsRef),sId=sRef.key;
+        processedStrokeIds.add(sId);
+        const sd={color:currentStroke.color,size:currentStroke.size,isEraser:currentStroke.isEraser,points:currentStroke.points,timestamp:currentStroke.timestamp};
+        activeStrokes.push({...sd,firebaseId:sId});
+        set(sRef,sd).catch(console.error);
+        currentStroke=null;
+    }
+    drawCanvas.addEventListener('mousedown',startStroke);drawCanvas.addEventListener('mousemove',moveStroke);
+    drawCanvas.addEventListener('mouseup',endStroke);drawCanvas.addEventListener('mouseleave',endStroke);
+    drawCanvas.addEventListener('touchstart',startStroke,{passive:false});drawCanvas.addEventListener('touchmove',moveStroke,{passive:false});
+    drawCanvas.addEventListener('touchend',endStroke,{passive:false});drawCanvas.addEventListener('touchcancel',endStroke,{passive:false});
+
+    function drawStroke(s){
+        if(!s.points||!s.points.length)return;
+        const ctx=drawCanvas.getContext('2d'),w=window.innerWidth,h=window.innerHeight;
+        ctx.lineWidth=s.size;ctx.lineCap='round';ctx.lineJoin='round';
+        if(s.isEraser){ctx.globalCompositeOperation='destination-out';ctx.strokeStyle='rgba(0,0,0,1)';ctx.fillStyle='rgba(0,0,0,1)';}
+        else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle=s.color;ctx.fillStyle=s.color;}
+        if(s.points.length===1){ctx.beginPath();ctx.arc(s.points[0].x*w,s.points[0].y*h,Math.max(1,s.size/2),0,Math.PI*2);ctx.fill();}
+        else{ctx.beginPath();ctx.moveTo(s.points[0].x*w,s.points[0].y*h);for(let i=1;i<s.points.length;i++)ctx.lineTo(s.points[i].x*w,s.points[i].y*h);ctx.stroke();}
+        ctx.globalCompositeOperation='source-over';
+    }
+    function redrawStrokes(){
+        const ctx=drawCanvas.getContext('2d'),dpr=window.devicePixelRatio||1;
+        ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+        ctx.setTransform(dpr,0,0,dpr,0,0);activeStrokes.forEach(s=>drawStroke(s));
+        if(currentStroke&&currentStroke.points.length)drawStroke(currentStroke);
+    }
+    function startDrawSync(){
+        if(drawSyncStarted)return;drawSyncStarted=true;
+        onChildAdded(drawingsRef,snap=>{
+            const s=snap.val();if(!s||!s.points)return;
+            if(Date.now()-s.timestamp>DRAW_TIMEOUT_MS){remove(ref(db,`drawings/${snap.key}`));return;}
+            if(processedStrokeIds.has(snap.key))return;
+            processedStrokeIds.add(snap.key);activeStrokes.push({...s,firebaseId:snap.key});redrawStrokes();
+        });
+        onChildRemoved(drawingsRef,snap=>{
+            const idx=activeStrokes.findIndex(s=>s.firebaseId===snap.key);
+            if(idx!==-1){activeStrokes.splice(idx,1);redrawStrokes();}
+        });
+    }
+    function startStrokeCleanup(){
+        if(strokeCleanupInterval)return;
+        strokeCleanupInterval=setInterval(async()=>{
+            const now=Date.now();let changed=false;
+            for(let i=activeStrokes.length-1;i>=0;i--){if(now-activeStrokes[i].timestamp>DRAW_TIMEOUT_MS){activeStrokes.splice(i,1);changed=true;}}
+            if(changed)redrawStrokes();
+            try{const snap=await get(drawingsRef);const data=snap.val();if(!data)return;Object.entries(data).forEach(([id,s])=>{if(now-s.timestamp>DRAW_TIMEOUT_MS+1000)remove(ref(db,`drawings/${id}`));});}catch(e){}
+        },2500);
+    }
+    function resetDrawTimer(){drawTimerStart=Date.now();drawTimerFill.style.width='100%';}
+    setInterval(()=>{if(!isDrawingMode||!drawTimerStart){drawTimerFill.style.width='100%';return;}drawTimerFill.style.width=(Math.max(0,1-(Date.now()-drawTimerStart)/DRAW_TIMEOUT_MS)*100)+'%';},60);
+    function toggleDraw(){
+        isDrawingMode=!isDrawingMode;drawOverlay.classList.toggle('active',isDrawingMode);drawToggleBtn.classList.toggle('active',isDrawingMode);
+        if(isDrawingMode){resizeCanvas();resetDrawTimer();}
+    }
+    drawToggleBtn.onclick=toggleDraw;
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&isDrawingMode)toggleDraw();});
+
+
+    /* ==========================================================
+       WEBRTC VOICE CHAT — FIXES CRÍTICOS APLICADOS:
+       1. ICE candidates serializados como objeto plano (no RTCIceCandidate)
+       2. playsInline via setAttribute (obligatorio iOS)
+       3. Queue separado para candidatos que llegan antes del PC
+       4. getUserMedia sin sampleRate (rompe en móviles)
+       5. leaveVoice limpia TODOS los listeners
+       6. Lógica determinista con onChildAdded (no onValue)
+       7. Web Audio API para detectar quién habla
+    ========================================================== */
+    const ICE_CONFIG={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+
+    const myVoiceId=(()=>{
+        let id=localStorage.getItem('chat_voice_id');
+        if(!id){id='v_'+Math.random().toString(36).substr(2,9);localStorage.setItem('chat_voice_id',id);}
+        return id;
+    })();
+
+    let voiceActive=false, voiceJoining=false, localStream=null, isMuted=false;
+    const voicePeers={};           // peerId → { pc, name, pendingCandidates[] }
+    const iceCandidateQueue={};    // candidatos que llegan ANTES de crear el PC
+    const voiceUnsubs=[];
+    let speakingInterval=null;
+    let audioCtx=null;
+    const audioAnalyzers={};       // peerId → { analyser, source }
+
+    /* --- Animación de habla --- */
+    function showSpeaking(name){
+        speakingLabel.textContent='🎙 '+name+' está hablando';
+        speakingWave.style.display='flex';
+        requestAnimationFrame(()=>speakingWave.classList.add('visible'));
+    }
+    function hideSpeaking(){
+        speakingWave.classList.remove('visible');
+        setTimeout(()=>{if(!speakingWave.classList.contains('visible'))speakingWave.style.display='none';},400);
     }
 
-    function getPos(e) {
-        const t = e.touches ? e.touches[0] : e;
-        const rect = messagesArea.getBoundingClientRect();
-        // X es normalizado al ancho del viewport
-        // Y es normalizado pero sumando el scroll para que sea absoluto al contenido
-        return { 
-            x: t.clientX / window.innerWidth, 
-            y: (t.clientY - rect.top + messagesArea.scrollTop) / 1000 // Usamos 1000 como base para normalizar Y
+    /* --- Web Audio API: detector de nivel para saber quién habla --- */
+    function setupAnalyzer(peerId,stream){
+        try{
+            if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+            if(audioCtx.state==='suspended')audioCtx.resume();
+            const source=audioCtx.createMediaStreamSource(stream);
+            const analyser=audioCtx.createAnalyser();
+            analyser.fftSize=256;analyser.smoothingTimeConstant=0.5;
+            source.connect(analyser); /* NO conectar a destination — el audio ya sale por el <audio> */
+            audioAnalyzers[peerId]={analyser,source};
+        }catch(e){console.warn('AudioContext error:',e);}
+    }
+    function checkSpeaking(){
+        const buf=new Uint8Array(128);
+        let loudest=null,loudestLevel=10;
+        Object.entries(audioAnalyzers).forEach(([peerId,{analyser}])=>{
+            analyser.getByteFrequencyData(buf);
+            const avg=buf.reduce((a,b)=>a+b,0)/buf.length;
+            if(avg>loudestLevel){loudestLevel=avg;loudest=peerId;}
+        });
+        if(loudest&&voicePeers[loudest])showSpeaking(voicePeers[loudest].name||'Alguien');
+        else hideSpeaking();
+    }
+    function teardownAudio(){
+        if(speakingInterval){clearInterval(speakingInterval);speakingInterval=null;}
+        Object.values(audioAnalyzers).forEach(({source})=>{try{source.disconnect();}catch(e){}});
+        Object.keys(audioAnalyzers).forEach(k=>delete audioAnalyzers[k]);
+        if(audioCtx){audioCtx.close().catch(()=>{});audioCtx=null;}
+        hideSpeaking();
+    }
+
+    /* --- Unirse al canal --- */
+    async function joinVoice(){
+        if(voiceJoining||voiceActive)return;
+        voiceJoining=true;
+        voiceToggleBtn.querySelector('i').className='fas fa-spinner';
+        voiceToggleBtn.querySelector('i').style.animation='spin 1s linear infinite';
+
+        /* CRÍTICO: echoCancellation + noiseSuppression + autoGainControl obligatorios.
+           NO incluir sampleRate — falla en Android y algunos iOS. */
+        try{
+            localStream=await navigator.mediaDevices.getUserMedia({
+                audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},
+                video:false
+            });
+        }catch(e){
+            voiceJoining=false;
+            voiceToggleBtn.querySelector('i').className='fas fa-microphone';
+            voiceToggleBtn.querySelector('i').style.animation='';
+            const msg=e.name==='NotAllowedError'||e.name==='PermissionDeniedError'
+                ?'Permiso de micrófono denegado':'No se pudo acceder al micrófono';
+            showToast(msg,'error');return;
+        }
+
+        voiceActive=true;isMuted=false;
+        const joinedAt=Date.now();
+
+        /* Presencia en Firebase con limpieza automática al desconectar */
+        const pRef=ref(db,`voiceRoom/peers/${myVoiceId}`);
+        await set(pRef,{name:username,ts:joinedAt});
+        onDisconnect(pRef).remove();
+
+        /* Limpiar señales viejas antes de escuchar */
+        try{
+            const old=await get(ref(db,`voiceRoom/signals/${myVoiceId}`));
+            if(old.val())Object.keys(old.val()).forEach(k=>remove(ref(db,`voiceRoom/signals/${myVoiceId}/${k}`)));
+        }catch(e){}
+
+        setupVoiceListeners(joinedAt);
+
+        /* Conectar con peers ya presentes al momento de unirse */
+        try{
+            const snap=await get(ref(db,'voiceRoom/peers'));
+            const peers=snap.val()||{};
+            Object.entries(peers).forEach(([peerId,data])=>{
+                if(peerId===myVoiceId)return;
+                /* Determinista: el ID lexicográficamente menor crea la oferta */
+                if(myVoiceId<peerId){
+                    createPeerConnection(peerId,data.name);
+                    createOffer(peerId);
+                }
+                /* Si myVoiceId > peerId, el otro creará la oferta y la recibiremos */
+            });
+        }catch(e){console.error('Error getting peers:',e);}
+
+        voiceToggleBtn.classList.add('active');
+        voiceToggleBtn.querySelector('i').className='fas fa-microphone';
+        voiceToggleBtn.querySelector('i').style.animation='';
+        voicePanel.classList.add('visible');
+        voiceGlow.classList.add('active');
+        isMuted=false;updateMuteUI();renderVoiceUsers();
+        speakingInterval=setInterval(checkSpeaking,120);
+        voiceJoining=false;
+        addSystemMessage(`${username} se unió al canal de voz`);
+        showToast('Canal de voz activo','success');
+    }
+
+    /* --- Salir del canal — limpieza COMPLETA --- */
+    function leaveVoice(){
+        voiceActive=false;
+        remove(ref(db,`voiceRoom/peers/${myVoiceId}`));
+        remove(ref(db,`voiceRoom/signals/${myVoiceId}`));
+
+        /* Cerrar TODAS las conexiones y eliminar elementos <audio> */
+        Object.entries(voicePeers).forEach(([peerId,p])=>{
+            try{p.pc.close();}catch(e){}
+            const el=document.getElementById(`audio_${peerId}`);
+            if(el){el.pause();el.srcObject=null;el.remove();}
+        });
+        Object.keys(voicePeers).forEach(k=>delete voicePeers[k]);
+        Object.keys(iceCandidateQueue).forEach(k=>delete iceCandidateQueue[k]);
+
+        /* Detener stream local → libera el micrófono físico */
+        if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
+
+        /* Destruir TODOS los listeners de Firebase → evita duplicados y fugas */
+        voiceUnsubs.forEach(fn=>{try{fn();}catch(e){}});
+        voiceUnsubs.length=0;
+
+        teardownAudio();
+
+        voiceToggleBtn.classList.remove('active','muted');
+        voiceToggleBtn.querySelector('i').className='fas fa-microphone';
+        voiceToggleBtn.querySelector('i').style.animation='';
+        voicePanel.classList.remove('visible');
+        voiceGlow.classList.remove('active');
+        renderVoiceUsers();
+        addSystemMessage(`${username} salió del canal de voz`);
+        showToast('Canal de voz desactivado','info');
+    }
+
+    /* --- Crear RTCPeerConnection --- */
+    function createPeerConnection(peerId,peerName){
+        if(voicePeers[peerId])return; /* Ya existe */
+
+        const pc=new RTCPeerConnection(ICE_CONFIG);
+        voicePeers[peerId]={pc,name:peerName||'Desconocido',pendingCandidates:[]};
+
+        /* Aplicar candidatos ICE encolados que llegaron antes de crear el PC */
+        if(iceCandidateQueue[peerId]){
+            voicePeers[peerId].pendingCandidates.push(...iceCandidateQueue[peerId]);
+            delete iceCandidateQueue[peerId];
+        }
+
+        /* Agregar tracks del stream local */
+        if(localStream)localStream.getTracks().forEach(track=>pc.addTrack(track,localStream));
+
+        /* CRÍTICO: serializar ICE candidate como objeto plano.
+           RTCIceCandidate tiene sus propiedades en el prototipo (getters),
+           NO como propiedades propias. Firebase serializa solo propiedades propias,
+           resultando en {} vacío si se pasa el objeto directamente.
+           Sin candidatos ICE la conexión P2P NUNCA se establece. */
+        pc.onicecandidate=event=>{
+            if(!event.candidate)return;
+            sendSignal(peerId,{
+                type:'candidate',
+                candidate:{
+                    candidate:    event.candidate.candidate,
+                    sdpMid:       event.candidate.sdpMid,
+                    sdpMLineIndex:event.candidate.sdpMLineIndex
+                }
+            });
+        };
+
+        /* CRÍTICO: playsInline debe ser un atributo HTML en iOS Safari.
+           La propiedad JS audio.playsInline = true NO es suficiente en iOS. */
+        pc.ontrack=event=>{
+            let audio=document.getElementById(`audio_${peerId}`);
+            if(!audio){
+                audio=document.createElement('audio');
+                audio.id=`audio_${peerId}`;
+                audio.setAttribute('autoplay','');
+                audio.setAttribute('playsinline','');         /* ← VITAL para iOS */
+                audio.setAttribute('webkit-playsinline',''); /* ← Safari legacy */
+                audio.preload='auto';
+                audio.style.display='none';
+                audioContainer.appendChild(audio);
+            }
+            if(event.streams&&event.streams[0]){
+                audio.srcObject=event.streams[0];
+
+                /* Configurar detector de habla con Web Audio API */
+                setupAnalyzer(peerId,event.streams[0]);
+
+                /* CRÍTICO: autoplay bloqueado en móvil si no hubo interacción previa.
+                   Usamos { once:true } para que el listener se elimine solo. */
+                audio.play().catch(()=>{
+                    const retry=()=>{
+                        audioContainer.querySelectorAll('audio').forEach(a=>{
+                            if(a.paused&&a.srcObject)a.play().catch(()=>{});
+                        });
+                    };
+                    document.addEventListener('click',retry,{once:true});
+                    document.addEventListener('touchstart',retry,{once:true});
+                });
+            }
+        };
+
+        pc.onconnectionstatechange=()=>{
+            renderVoiceUsers();
+            const s=pc.connectionState;
+            if(s==='disconnected'||s==='failed'||s==='closed')removeVoicePeer(peerId);
+        };
+        pc.oniceconnectionstatechange=()=>{
+            if(pc.iceConnectionState==='failed')try{pc.restartIce();}catch(e){}
         };
     }
 
-    let currentStroke = null;
-    drawCanvas.onpointerdown = e => {
-        if (!isDrawingMode) return;
-        isDrawing = true;
-        const p = getPos(e);
-        lastX = p.x; lastY = p.y;
-        currentStroke = { color: drawColor, size: brushSizeVal, isEraser, points: [p], timestamp: Date.now() };
-    };
-
-    drawCanvas.onpointermove = e => {
-        if (!isDrawing) return;
-        const p = getPos(e);
-        currentStroke.points.push(p);
-        
-        // Dibujar en pantalla (ajustando por scroll)
-        const rect = messagesArea.getBoundingClientRect();
-        const y1_screen = (lastY * 1000) - messagesArea.scrollTop;
-        const y2_screen = (p.y * 1000) - messagesArea.scrollTop;
-        
-        drawSegment(lastX, y1_screen / window.innerHeight, p.x, y2_screen / window.innerHeight, drawColor, brushSizeVal, isEraser);
-        
-        lastX = p.x; lastY = p.y;
-    };
-
-    drawCanvas.onpointerup = () => {
-        if (!isDrawing) return;
-        isDrawing = false;
-        const sRef = push(drawingsRef);
-        set(sRef, currentStroke);
-        processedStrokeIds.add(sRef.key);
-        activeStrokes.push({ ...currentStroke, id: sRef.key });
-    };
-
-    function drawSegment(x1, y1, x2, y2, col, size, eraser) {
-        const ctx = drawCanvas.getContext('2d');
-        const w = window.innerWidth, h = window.innerHeight;
-        ctx.beginPath(); ctx.lineWidth = size; ctx.lineCap = 'round';
-        ctx.globalCompositeOperation = eraser ? 'destination-out' : 'source-over';
-        ctx.strokeStyle = col;
-        ctx.moveTo(x1 * w, y1 * h); ctx.lineTo(x2 * w, y2 * h);
-        ctx.stroke();
+    /* --- Crear y enviar oferta --- */
+    async function createOffer(peerId){
+        const peer=voicePeers[peerId];if(!peer)return;
+        try{
+            const offer=await peer.pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:false});
+            await peer.pc.setLocalDescription(offer);
+            sendSignal(peerId,{type:'offer',sdp:offer.sdp});
+        }catch(e){console.error('Error creating offer for',peerId,e);}
     }
 
-    function redrawDrawings() {
-        const ctx = drawCanvas.getContext('2d');
-        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-        const rect = messagesArea.getBoundingClientRect();
-        const scroll = messagesArea.scrollTop;
-        const vh = window.innerHeight;
-
-        activeStrokes.forEach(s => {
-            for (let i=1; i<s.points.length; i++) {
-                const p1 = s.points[i-1], p2 = s.points[i];
-                const y1_screen = (p1.y * 1000) - scroll;
-                const y2_screen = (p2.y * 1000) - scroll;
-                
-                // Solo dibujar si está en el viewport (aproximadamente)
-                if ((y1_screen > -50 && y1_screen < vh + 50) || (y2_screen > -50 && y2_screen < vh + 50)) {
-                    drawSegment(p1.x, y1_screen / vh, p2.x, y2_screen / vh, s.color, s.size, s.isEraser);
-                }
+    /* --- Recibir oferta --- */
+    async function handleOffer(signal){
+        const fromId=signal.from;
+        if(!voicePeers[fromId]){
+            try{
+                const snap=await get(ref(db,`voiceRoom/peers/${fromId}`));
+                createPeerConnection(fromId,snap.val()?.name||'Desconocido');
+            }catch(e){createPeerConnection(fromId,'Desconocido');}
+        }
+        const peer=voicePeers[fromId];if(!peer||!peer.pc)return;
+        try{
+            await peer.pc.setRemoteDescription(new RTCSessionDescription({type:'offer',sdp:signal.sdp}));
+            /* Procesar candidatos ICE encolados que llegaron antes de la oferta */
+            while(peer.pendingCandidates.length>0){
+                const cand=peer.pendingCandidates.shift();
+                try{await peer.pc.addIceCandidate(new RTCIceCandidate(cand));}catch(e){}
             }
-        });
+            const answer=await peer.pc.createAnswer();
+            await peer.pc.setLocalDescription(answer);
+            sendSignal(fromId,{type:'answer',sdp:answer.sdp});
+        }catch(e){console.error('Error handling offer from',fromId,e);}
     }
 
-    function startDrawSync() {
-        onChildAdded(drawingsRef, snap => {
-            const s = snap.val();
-            if (processedStrokeIds.has(snap.key)) return;
-            activeStrokes.push({ ...s, id: snap.key });
-            redrawDrawings();
-        });
-        onChildRemoved(drawingsRef, snap => {
-            const idx = activeStrokes.findIndex(x => x.id === snap.key);
-            if (idx !== -1) { activeStrokes.splice(idx, 1); redrawDrawings(); }
-        });
+    /* --- Recibir respuesta --- */
+    async function handleAnswer(signal){
+        const peer=voicePeers[signal.from];if(!peer||!peer.pc)return;
+        try{
+            await peer.pc.setRemoteDescription(new RTCSessionDescription({type:'answer',sdp:signal.sdp}));
+            while(peer.pendingCandidates.length>0){
+                const cand=peer.pendingCandidates.shift();
+                try{await peer.pc.addIceCandidate(new RTCIceCandidate(cand));}catch(e){}
+            }
+        }catch(e){console.error('Error handling answer from',signal.from,e);}
     }
 
-    drawToggleBtn.onclick = () => {
-        isDrawingMode = !isDrawingMode;
-        drawOverlay.classList.toggle('active', isDrawingMode);
-        drawToggleBtn.classList.toggle('active', isDrawingMode);
-        if (isDrawingMode) redrawDrawings();
-    };
-
-   // WEBRTC VOICE CHAT
-const ICE_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-const myVoiceId = localStorage.getItem('chat_voice_id') || ('v_' + Math.random().toString(36).substr(2, 9));
-localStorage.setItem('chat_voice_id', myVoiceId);
-
-let voiceActive = false, localStream = null, isMuted = false;
-const voicePeers = {};       // peerId -> { pc, pendingCandidates: [] }
-const voiceUnsubs = [];
-const pendingCandidatesQueue = {}; // candidatos que llegan antes de crear el PC
-let speakingCheckInterval = null;
-let audioCtx = null;
-const audioAnalyzers = {};   // peerId -> { analyser, source }
-
-const speakingWave  = document.getElementById('speakingWave');
-const speakingLabel = document.getElementById('speakingLabel');
-
-/* --- Animación de habla --- */
-function showSpeakingAnim(name) {
-    speakingLabel.textContent = '🎙 ' + name + ' está hablando';
-    speakingWave.style.display = 'flex';
-    requestAnimationFrame(() => speakingWave.classList.add('visible'));
-}
-function hideSpeakingAnim() {
-    speakingWave.classList.remove('visible');
-    setTimeout(() => { if (!speakingWave.classList.contains('visible')) speakingWave.style.display = 'none'; }, 400);
-}
-
-/* --- Detección de audio (Web Audio API) --- */
-function setupAudioAnalyzer(peerId, stream) {
-    try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const source   = audioCtx.createMediaStreamSource(stream);
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.4;
-        source.connect(analyser);
-        // NO conectar a destination — el audio ya sale por el <audio> element
-        audioAnalyzers[peerId] = { analyser, source };
-    } catch(e) { console.warn('AudioAnalyser error:', e); }
-}
-
-function checkSpeaking() {
-    const buf = new Uint8Array(128);
-    let loudestPeer = null, loudestLevel = 12; // umbral
-
-    Object.entries(audioAnalyzers).forEach(([peerId, { analyser }]) => {
-        analyser.getByteFrequencyData(buf);
-        const avg = buf.reduce((a, b) => a + b, 0) / buf.length;
-        if (avg > loudestLevel) { loudestLevel = avg; loudestPeer = peerId; }
-    });
-
-    if (loudestPeer && voicePeers[loudestPeer]) {
-        showSpeakingAnim(voicePeers[loudestPeer].name || 'Alguien');
-    } else {
-        hideSpeakingAnim();
+    /* --- Recibir ICE candidate ---
+       CRÍTICO: si el PC aún no existe, usar iceCandidateQueue (no crear entrada parcial).
+       Si el PC existe pero no tiene remoteDescription, encolar en pendingCandidates. */
+    async function handleCandidate(signal){
+        const peer=voicePeers[signal.from];
+        if(!peer){
+            /* PC todavía no creado → queue global separado, NO crear entrada sin PC */
+            if(!iceCandidateQueue[signal.from])iceCandidateQueue[signal.from]=[];
+            iceCandidateQueue[signal.from].push(signal.candidate);
+            return;
+        }
+        if(peer.pc.remoteDescription&&peer.pc.remoteDescription.type){
+            try{await peer.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));}
+            catch(e){console.error('addIceCandidate error:',e);}
+        }else{
+            /* remoteDescription aún no establecida → encolar */
+            peer.pendingCandidates.push(signal.candidate);
+        }
     }
-}
 
-function teardownAudio() {
-    if (speakingCheckInterval) { clearInterval(speakingCheckInterval); speakingCheckInterval = null; }
-    Object.values(audioAnalyzers).forEach(({ source }) => { try { source.disconnect(); } catch(e){} });
-    Object.keys(audioAnalyzers).forEach(k => delete audioAnalyzers[k]);
-    if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
-    hideSpeakingAnim();
-}
+    /* --- Enviar señal a Firebase --- */
+    function sendSignal(toId,data){
+        const sRef=push(ref(db,`voiceRoom/signals/${toId}`));
+        set(sRef,{...data,from:myVoiceId,createdAt:Date.now()})
+            .catch(e=>console.error('Error sending signal:',e));
+    }
 
-/* --- Unirse al canal de voz --- */
-async function joinVoice() {
-    if (!username) return;
-    try {
-        const voiceEmpty = document.querySelector('.voice-empty');
-        if (voiceEmpty) voiceEmpty.textContent = 'Conectando...';
+    /* --- Eliminar peer y liberar todos sus recursos --- */
+    function removeVoicePeer(peerId){
+        const peer=voicePeers[peerId];if(!peer)return;
+        try{peer.pc.close();}catch(e){}
+        const el=document.getElementById(`audio_${peerId}`);
+        if(el){el.pause();el.srcObject=null;el.remove();}
+        if(audioAnalyzers[peerId]){
+            try{audioAnalyzers[peerId].source.disconnect();}catch(e){}
+            delete audioAnalyzers[peerId];
+        }
+        delete voicePeers[peerId];
+        renderVoiceUsers();
+    }
 
-        /* CRÍTICO: echoCancellation + noiseSuppression + autoGainControl
-           son obligatorios para que los micrófonos de móviles funcionen sin distorsión.
-           NO incluir sampleRate — falla en algunos dispositivos móviles. */
-        localStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl:  true
-            },
-            video: false
+    /* --- Listeners Firebase: señales, peers que entran, peers que salen --- */
+    function setupVoiceListeners(joinedAt){
+        /* Señales dirigidas a mí */
+        const unsubSig=onChildAdded(ref(db,`voiceRoom/signals/${myVoiceId}`),async snap=>{
+            const signal=snap.val();if(!signal)return;
+            remove(snap.ref).catch(()=>{});
+            /* Ignorar señales anteriores a esta sesión */
+            if(signal.createdAt&&signal.createdAt<joinedAt-5000)return;
+            if(signal.from===myVoiceId)return;
+            if(signal.type==='offer')        await handleOffer(signal);
+            else if(signal.type==='answer')  await handleAnswer(signal);
+            else if(signal.type==='candidate')await handleCandidate(signal);
         });
+        voiceUnsubs.push(unsubSig);
 
-        const pRef = ref(db, `voiceRoom/peers/${myVoiceId}`);
-        await set(pRef, { name: username, ts: Date.now() });
-        onDisconnect(pRef).remove();
+        /* Nuevos peers que se unen después de mí */
+        const unsubAdd=onChildAdded(ref(db,'voiceRoom/peers'),snap=>{
+            const peerId=snap.key,data=snap.val();
+            if(!data||peerId===myVoiceId||voicePeers[peerId])return;
+            renderVoiceUsers();
+            sendBrowserNotif('Palma Chat',`${data.name} se unió al canal de voz`);
+            /* Determinista: ID menor crea la oferta */
+            if(myVoiceId<peerId){
+                createPeerConnection(peerId,data.name);
+                createOffer(peerId);
+            }
+            /* Si myVoiceId > peerId, el otro par creará la oferta */
+        });
+        voiceUnsubs.push(unsubAdd);
 
-        // Limpiar señales viejas dirigidas a mí antes de escuchar
-        try {
-            const old = await get(ref(db, `voiceRoom/signals/${myVoiceId}`));
-            if (old.val()) Object.keys(old.val()).forEach(k => remove(ref(db, `voiceRoom/signals/${myVoiceId}/${k}`)));
-        } catch(e){}
+        /* Peers que se van */
+        const unsubRem=onChildRemoved(ref(db,'voiceRoom/peers'),snap=>{
+            if(snap.key!==myVoiceId){removeVoicePeer(snap.key);renderVoiceUsers();}
+        });
+        voiceUnsubs.push(unsubRem);
+    }
 
-        setupVoiceListeners();
-
-        // Conectar con peers ya presentes
-        try {
-            const snap = await get(ref(db, 'voiceRoom/peers'));
-            const peers = snap.val() || {};
-            Object.entries(peers).forEach(([peerId, data]) => {
-                if (peerId === myVoiceId) return;
-                if (myVoiceId < peerId) {   // Determinista: ID menor crea la oferta
-                    createPeerConnection(peerId, data.name);
-                    createOffer(peerId);
-                }
-            });
-        } catch(e){ console.error('Error getting peers:', e); }
-
-        voiceToggleBtn.classList.add('active');
-        voicePanel.classList.add('visible');
-        voiceGlow.classList.add('active');
-        voiceActive = true;
-        isMuted = false;
+    /* --- Mute / Unmute: solo cambia track.enabled, no destruye el stream --- */
+    function toggleMute(){
+        if(!localStream||!voiceActive)return;
+        isMuted=!isMuted;
+        localStream.getAudioTracks().forEach(t=>{t.enabled=!isMuted;});
         updateMuteUI();
-        renderVoiceUsers();
-        speakingCheckInterval = setInterval(checkSpeaking, 120);
-
-        sendBrowserNotif('Voz activa', `${username} se unió al canal de voz`);
-        showToast('Canal de voz activo', 'success');
-
-    } catch(e) {
-        console.error(e);
-        const msg = e.name === 'NotAllowedError' ? 'Permiso de micrófono denegado' : 'No se pudo acceder al micrófono';
-        showToast(msg, 'error');
-        leaveVoice();
+        showToast(isMuted?'Micrófono silenciado':'Micrófono activo',isMuted?'warning':'success');
     }
-}
-
-/* --- Salir del canal --- */
-function leaveVoice() {
-    voiceActive = false;
-    remove(ref(db, `voiceRoom/peers/${myVoiceId}`));
-    remove(ref(db, `voiceRoom/signals/${myVoiceId}`));
-
-    // Cerrar TODAS las conexiones y elementos <audio>
-    Object.entries(voicePeers).forEach(([peerId, p]) => {
-        try { p.pc.close(); } catch(e){}
-        const audioEl = document.getElementById(`audio_${peerId}`);
-        if (audioEl) { audioEl.pause(); audioEl.srcObject = null; audioEl.remove(); }
-    });
-    Object.keys(voicePeers).forEach(k => delete voicePeers[k]);
-    Object.keys(pendingCandidatesQueue).forEach(k => delete pendingCandidatesQueue[k]);
-
-    // Detener stream local → libera el micrófono físico
-    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-
-    // Destruir TODOS los listeners de Firebase de voz → evita fugas y duplicados
-    voiceUnsubs.forEach(fn => { try { fn(); } catch(e){} });
-    voiceUnsubs.length = 0;
-
-    teardownAudio();
-
-    voiceToggleBtn.classList.remove('active', 'muted');
-    voiceToggleBtn.querySelector('i').className = 'fas fa-microphone';
-    voicePanel.classList.remove('visible');
-    voiceGlow.classList.remove('active');
-    renderVoiceUsers();
-}
-
-/* --- Crear RTCPeerConnection --- */
-function createPeerConnection(peerId, peerName) {
-    if (voicePeers[peerId]) return;
-
-    const pc = new RTCPeerConnection(ICE_CONFIG);
-    voicePeers[peerId] = { pc, name: peerName || 'Desconocido', pendingCandidates: [] };
-
-    // Aplicar candidatos encolados que llegaron antes de crear el PC
-    if (pendingCandidatesQueue[peerId]) {
-        voicePeers[peerId].pendingCandidates.push(...pendingCandidatesQueue[peerId]);
-        delete pendingCandidatesQueue[peerId];
+    function updateMuteUI(){
+        voiceMuteBtn.classList.toggle('muted-active',isMuted);
+        voiceMuteBtn.innerHTML=isMuted?'<i class="fas fa-microphone-slash"></i>':'<i class="fas fa-microphone"></i>';
+        voiceToggleBtn.classList.toggle('muted',isMuted);
+        if(voiceActive)voiceToggleBtn.querySelector('i').className=isMuted?'fas fa-microphone-slash':'fas fa-microphone';
     }
 
-    // Agregar tracks del stream local
-    if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-    /* CRÍTICO: Serializar ICE candidate como objeto plano.
-       RTCIceCandidate tiene sus propiedades como getters de prototipo,
-       no como propiedades propias. Firebase solo serializa propiedades propias,
-       lo que resultaría en {} vacío si se pasa el objeto directamente. */
-    pc.onicecandidate = event => {
-        if (!event.candidate) return;
-        sendSignal(peerId, {
-            type: 'candidate',
-            candidate: {
-                candidate:     event.candidate.candidate,
-                sdpMid:        event.candidate.sdpMid,
-                sdpMLineIndex: event.candidate.sdpMLineIndex
-            }
-        });
-    };
-
-    /* CRÍTICO: playsInline como setAttribute es necesario en iOS Safari.
-       La propiedad JS audio.playsInline = true NO es suficiente en iOS. */
-    pc.ontrack = event => {
-        let audio = document.getElementById(`audio_${peerId}`);
-        if (!audio) {
-            audio = document.createElement('audio');
-            audio.id = `audio_${peerId}`;
-            audio.setAttribute('autoplay', '');
-            audio.setAttribute('playsinline', '');         // ← VITAL iOS
-            audio.setAttribute('webkit-playsinline', ''); // ← Safari legacy
-            audio.preload = 'auto';
-            audio.style.display = 'none';
-            audioContainer.appendChild(audio);
-        }
-        if (event.streams && event.streams[0]) {
-            audio.srcObject = event.streams[0];
-
-            // Configurar detector de nivel de audio para animación de habla
-            setupAudioAnalyzer(peerId, event.streams[0]);
-
-            /* CRÍTICO: Autoplay bloqueado en móvil si no hay interacción reciente.
-               El listener 'once:true' lo reintenta con la siguiente interacción del usuario
-               y se elimina solo — no acumula listeners. */
-            audio.play().catch(() => {
-                const retryPlay = () => {
-                    audioContainer.querySelectorAll('audio').forEach(a => {
-                        if (a.paused && a.srcObject) a.play().catch(()=>{});
-                    });
-                };
-                document.addEventListener('click',      retryPlay, { once: true });
-                document.addEventListener('touchstart', retryPlay, { once: true });
+    /* --- Renderizar lista de usuarios en el panel de voz --- */
+    function renderVoiceUsers(){
+        if(!voiceActive){voiceUsers.innerHTML='<div class="voice-empty">Conectando...</div>';return;}
+        let html=`<div class="voice-user-item me"><span class="voice-user-dot"></span>${escapeHTML(username)}${isMuted?' <i class="fas fa-microphone-slash" style="font-size:9px;opacity:.5"></i>':''}<span style="margin-left:auto;font-size:10px;opacity:.4">(tú)</span></div>`;
+        const peers=Object.entries(voicePeers);
+        if(!peers.length){html+='<div class="voice-empty">Esperando a otros...</div>';}
+        else{
+            peers.forEach(([,p])=>{
+                const s=p.pc.connectionState;
+                const icon=s==='connected'?'':s==='connecting'||s==='new'
+                    ?' <i class="fas fa-spinner" style="font-size:9px;opacity:.5;margin-left:auto;animation:spin 1s linear infinite"></i>'
+                    :' <i class="fas fa-circle-xmark" style="font-size:9px;color:var(--error);margin-left:auto"></i>';
+                html+=`<div class="voice-user-item"><span class="voice-user-dot" style="${s!=='connected'?'opacity:.3':''}"></span>${escapeHTML(p.name||'?')}${icon}</div>`;
             });
         }
-    };
-
-    pc.onconnectionstatechange = () => {
-        renderVoiceUsers();
-        const s = pc.connectionState;
-        if (s === 'disconnected' || s === 'failed' || s === 'closed') {
-            removeVoicePeer(peerId);
-        }
-    };
-
-    pc.oniceconnectionstatechange = () => {
-        if (pc.iceConnectionState === 'failed') {
-            try { pc.restartIce(); } catch(e){}
-        }
-    };
-}
-
-/* --- Crear y enviar oferta --- */
-async function createOffer(peerId) {
-    const peer = voicePeers[peerId];
-    if (!peer) return;
-    try {
-        const offer = await peer.pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: false });
-        await peer.pc.setLocalDescription(offer);
-        sendSignal(peerId, { type: 'offer', sdp: offer.sdp });
-    } catch(e) { console.error('Error creando oferta para', peerId, e); }
-}
-
-/* --- Recibir oferta --- */
-async function handleOffer(signal) {
-    const fromId = signal.from;
-    if (!voicePeers[fromId]) {
-        try {
-            const snap = await get(ref(db, `voiceRoom/peers/${fromId}`));
-            createPeerConnection(fromId, snap.val()?.name || 'Desconocido');
-        } catch(e) { createPeerConnection(fromId, 'Desconocido'); }
+        voiceUsers.innerHTML=html;
     }
-    const peer = voicePeers[fromId];
-    if (!peer || !peer.pc) return;
-    try {
-        await peer.pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: signal.sdp }));
-        // Procesar cola de candidatos ICE que llegaron antes que la oferta
-        while (peer.pendingCandidates.length > 0) {
-            const cand = peer.pendingCandidates.shift();
-            try { await peer.pc.addIceCandidate(new RTCIceCandidate(cand)); } catch(e){}
-        }
-        const answer = await peer.pc.createAnswer();
-        await peer.pc.setLocalDescription(answer);
-        sendSignal(fromId, { type: 'answer', sdp: answer.sdp });
-    } catch(e) { console.error('Error en handleOffer:', e); }
-}
 
-/* --- Recibir respuesta --- */
-async function handleAnswer(signal) {
-    const peer = voicePeers[signal.from];
-    if (!peer || !peer.pc) return;
-    try {
-        await peer.pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
-        while (peer.pendingCandidates.length > 0) {
-            const cand = peer.pendingCandidates.shift();
-            try { await peer.pc.addIceCandidate(new RTCIceCandidate(cand)); } catch(e){}
-        }
-    } catch(e) { console.error('Error en handleAnswer:', e); }
-}
+    voiceToggleBtn.onclick=()=>voiceActive?leaveVoice():joinVoice();
+    voiceLeaveBtn.onclick=leaveVoice;
+    voiceMuteBtn.onclick=toggleMute;
+    setInterval(()=>{if(voiceActive)renderVoiceUsers();},2000);
 
-/* --- Recibir ICE candidate ---
-   CRÍTICO: Si llega antes de setRemoteDescription, encolar.
-   Si no existe el PC todavía, usar pendingCandidatesQueue. */
-async function handleCandidate(signal) {
-    const peer = voicePeers[signal.from];
-    if (!peer) {
-        // PC aún no creado → encolar en queue global (no crear entrada sin PC)
-        if (!pendingCandidatesQueue[signal.from]) pendingCandidatesQueue[signal.from] = [];
-        pendingCandidatesQueue[signal.from].push(signal.candidate);
-        return;
-    }
-    if (peer.pc.remoteDescription && peer.pc.remoteDescription.type) {
-        try { await peer.pc.addIceCandidate(new RTCIceCandidate(signal.candidate)); }
-        catch(e) { console.error('Error addIceCandidate:', e); }
-    } else {
-        peer.pendingCandidates.push(signal.candidate);
-    }
-}
-
-/* --- Enviar señal a Firebase --- */
-function sendSignal(toId, data) {
-    const sRef = push(ref(db, `voiceRoom/signals/${toId}`));
-    set(sRef, { ...data, from: myVoiceId, createdAt: Date.now() })
-        .catch(e => console.error('Error enviando señal:', e));
-}
-
-/* --- Eliminar peer y liberar recursos --- */
-function removeVoicePeer(peerId) {
-    const peer = voicePeers[peerId];
-    if (!peer) return;
-    try { peer.pc.close(); } catch(e){}
-    const audioEl = document.getElementById(`audio_${peerId}`);
-    if (audioEl) { audioEl.pause(); audioEl.srcObject = null; audioEl.remove(); }
-    if (audioAnalyzers[peerId]) {
-        try { audioAnalyzers[peerId].source.disconnect(); } catch(e){}
-        delete audioAnalyzers[peerId];
-    }
-    delete voicePeers[peerId];
-    renderVoiceUsers();
-}
-
-/* --- Configurar listeners de Firebase para señales y peers --- */
-function setupVoiceListeners() {
-    // Señales dirigidas a mí
-    const unsubSignals = onChildAdded(ref(db, `voiceRoom/signals/${myVoiceId}`), async snap => {
-        const signal = snap.val();
-        if (!signal) return;
-        remove(snap.ref).catch(()=>{}); // Borrar señal leída
-        if (signal.from === myVoiceId) return;
-        if (signal.createdAt && signal.createdAt < Date.now() - 30000) return; // Ignorar señales > 30s
-
-        if      (signal.type === 'offer')     await handleOffer(signal);
-        else if (signal.type === 'answer')    await handleAnswer(signal);
-        else if (signal.type === 'candidate') await handleCandidate(signal);
-    });
-    voiceUnsubs.push(unsubSignals);
-
-    // Nuevos peers que se unen
-    const unsubPeersAdded = onChildAdded(ref(db, 'voiceRoom/peers'), snap => {
-        const peerId = snap.key;
-        const data   = snap.val();
-        if (!data || peerId === myVoiceId || voicePeers[peerId]) return;
-        renderVoiceUsers();
-        sendBrowserNotif('Palma Chat', `${data.name} se unió al canal de voz`);
-        // Determinista: el ID menor crea la oferta, el mayor espera
-        if (myVoiceId < peerId) {
-            createPeerConnection(peerId, data.name);
-            createOffer(peerId);
-        }
-    });
-    voiceUnsubs.push(unsubPeersAdded);
-
-    // Peers que se van
-    const unsubPeersRemoved = onChildRemoved(ref(db, 'voiceRoom/peers'), snap => {
-        if (snap.key !== myVoiceId) { removeVoicePeer(snap.key); renderVoiceUsers(); }
-    });
-    voiceUnsubs.push(unsubPeersRemoved);
-}
-
-/* --- Mute / Unmute: NO destruir el stream, solo deshabilitar el track --- */
-function toggleMute() {
-    if (!localStream || !voiceActive) return;
-    isMuted = !isMuted;
-    localStream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
-    updateMuteUI();
-    showToast(isMuted ? 'Micrófono silenciado' : 'Micrófono activo', isMuted ? 'warning' : 'success');
-}
-
-function updateMuteUI() {
-    voiceMuteBtn.classList.toggle('muted-active', isMuted);
-    voiceMuteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-    voiceToggleBtn.classList.toggle('muted', isMuted);
-}
-
-function renderVoiceUsers() {
-    const peers = Object.entries(voicePeers);
-    if (!voiceActive && peers.length === 0) { voiceUsers.innerHTML = '<div class="voice-empty">Conectando...</div>'; return; }
-    let html = `<div class="voice-user-item me"><span class="voice-user-dot"></span>${username}${isMuted ? ' <i class="fas fa-microphone-slash" style="font-size:9px;opacity:.5"></i>' : ''} <span style="margin-left:auto;font-size:10px;opacity:.4">(tú)</span></div>`;
-    if (peers.length === 0) {
-        html += '<div class="voice-empty">Esperando a otros...</div>';
-    } else {
-        peers.forEach(([, p]) => {
-            const s = p.pc.connectionState;
-            const icon = s === 'connected' ? '' : s === 'connecting' || s === 'new' ? ' <i class="fas fa-spinner fa-spin" style="font-size:9px;margin-left:auto;opacity:.5"></i>' : ' <i class="fas fa-circle-xmark" style="font-size:9px;color:var(--error);margin-left:auto"></i>';
-            html += `<div class="voice-user-item"><span class="voice-user-dot" style="${s!=='connected'?'opacity:.3':''}"></span>${p.name || '?'}${icon}</div>`;
-        });
-    }
-    voiceUsers.innerHTML = html;
-}
-
-voiceToggleBtn.onclick = () => voiceActive ? leaveVoice() : joinVoice();
-voiceLeaveBtn.onclick  = leaveVoice;
-voiceMuteBtn.onclick   = toggleMute;
-
-// Actualizar estado de conexión periódicamente
-setInterval(() => { if (voiceActive) renderVoiceUsers(); }, 2000);
-
-</script><div id="speakingWave" style="display:none">
-    <div class="sw-ring"></div>
-    <div class="sw-ring"></div>
-    <div class="sw-ring"></div>
-    <div class="sw-ring"></div>
-    <div id="speakingLabel"></div>
-</div>
+</script>
 </body>
 </html>
