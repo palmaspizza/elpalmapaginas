@@ -846,7 +846,14 @@
         if(voicePeers[peerId])return; /* Ya existe */
 
         const pc=new RTCPeerConnection(ICE_CONFIG);
-        voicePeers[peerId]={pc,name:peerName||'Desconocido',pendingCandidates:[]};
+        // DENTRO de createPeerConnection, cambiar:
+voicePeers[peerId] = {
+    pc,
+    name: peerName || 'Desconocido',
+    pendingCandidates: [],
+    makingOffer: false,        // ← AGREGAR ESTO
+    connected: false
+};
 
         /* Aplicar candidatos ICE encolados que llegaron antes de crear el PC */
         if(iceCandidateQueue[peerId]){
@@ -862,17 +869,22 @@
            NO como propiedades propias. Firebase serializa solo propiedades propias,
            resultando en {} vacío si se pasa el objeto directamente.
            Sin candidatos ICE la conexión P2P NUNCA se establece. */
-        pc.onicecandidate=event=>{
-            if(!event.candidate)return;
-            sendSignal(peerId,{
-                type:'candidate',
-                candidate:{
-                    candidate:    event.candidate.candidate,
-                    sdpMid:       event.candidate.sdpMid,
-                    sdpMLineIndex:event.candidate.sdpMLineIndex
-                }
-            });
-        };
+        pc.onicecandidate = (event) => {
+    if (!event.candidate) return;
+    
+    // ← ESTO YA ESTÁ BIEN en tu código, pero verificar:
+    const candidateData = {
+        candidate: event.candidate.candidate,
+        sdpMid: event.candidate.sdpMid,
+        sdpMLineIndex: event.candidate.sdpMLineIndex,
+        usernameFragment: event.candidate.usernameFragment
+    };
+    
+    sendSignal(peerId, {
+        type: 'candidate',
+        candidate: candidateData
+    });
+};
 
         /* CRÍTICO: playsInline debe ser un atributo HTML en iOS Safari.
            La propiedad JS audio.playsInline = true NO es suficiente en iOS. */
@@ -919,14 +931,31 @@
     }
 
     /* --- Crear y enviar oferta --- */
-    async function createOffer(peerId){
-        const peer=voicePeers[peerId];if(!peer)return;
-        try{
-            const offer=await peer.pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:false});
-            await peer.pc.setLocalDescription(offer);
-            sendSignal(peerId,{type:'offer',sdp:offer.sdp});
-        }catch(e){console.error('Error creating offer for',peerId,e);}
+    async function createOffer(peerId) {
+    const peer = voicePeers[peerId];
+    if (!peer || peer.makingOffer) return;  // ← EVITA OFERTAS CONCURRENTES
+    peer.makingOffer = true;
+    
+    try {
+        const offer = await peer.pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: false
+        });
+        await peer.pc.setLocalDescription(offer);
+        
+        const signalRef = push(ref(db, `voiceRoom/signals/${peerId}`));
+        await set(signalRef, {
+            type: 'offer',
+            from: myVoiceId,
+            sdp: offer.sdp,
+            createdAt: Date.now()
+        });
+    } catch (err) {
+        console.error(`[VOZ] Error creando oferta para ${peerId}:`, err);
+    } finally {
+        peer.makingOffer = false;  // ← LIBERAR FLAG
     }
+}
 
     /* --- Recibir oferta --- */
     async function handleOffer(signal){
@@ -941,10 +970,15 @@
         try{
             await peer.pc.setRemoteDescription(new RTCSessionDescription({type:'offer',sdp:signal.sdp}));
             /* Procesar candidatos ICE encolados que llegaron antes de la oferta */
-            while(peer.pendingCandidates.length>0){
-                const cand=peer.pendingCandidates.shift();
-                try{await peer.pc.addIceCandidate(new RTCIceCandidate(cand));}catch(e){}
-            }
+            // En handleAnswer, mismo cambio:
+while (peer.pendingCandidates.length > 0) {
+    const cand = peer.pendingCandidates.shift();
+    try {
+        await peer.pc.addIceCandidate(cand);  // ← Objeto plano directo
+    } catch (e) {
+        console.warn('[VOZ] Error adding pending candidate:', e);
+    }
+}
             const answer=await peer.pc.createAnswer();
             await peer.pc.setLocalDescription(answer);
             sendSignal(fromId,{type:'answer',sdp:answer.sdp});
@@ -966,22 +1000,38 @@
     /* --- Recibir ICE candidate ---
        CRÍTICO: si el PC aún no existe, usar iceCandidateQueue (no crear entrada parcial).
        Si el PC existe pero no tiene remoteDescription, encolar en pendingCandidates. */
-    async function handleCandidate(signal){
-        const peer=voicePeers[signal.from];
-        if(!peer){
-            /* PC todavía no creado → queue global separado, NO crear entrada sin PC */
-            if(!iceCandidateQueue[signal.from])iceCandidateQueue[signal.from]=[];
-            iceCandidateQueue[signal.from].push(signal.candidate);
-            return;
-        }
-        if(peer.pc.remoteDescription&&peer.pc.remoteDescription.type){
-            try{await peer.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));}
-            catch(e){console.error('addIceCandidate error:',e);}
-        }else{
-            /* remoteDescription aún no establecida → encolar */
-            peer.pendingCandidates.push(signal.candidate);
-        }
+    async function handleCandidate(signal) {
+    const fromId = signal.from;
+    const rawCandidate = signal.candidate;
+    
+    // ← FIX: Reconstruir candidato con valores por defecto si vienen null
+    const candidateInit = {
+        candidate: rawCandidate.candidate,
+        sdpMid: rawCandidate.sdpMid !== null ? rawCandidate.sdpMid : '0',
+        sdpMLineIndex: rawCandidate.sdpMLineIndex !== null ? rawCandidate.sdpMLineIndex : 0,
+        usernameFragment: rawCandidate.usernameFragment || undefined
+    };
+    
+    const peer = voicePeers[fromId];
+    
+    // Si no hay PC, encolar en queue global
+    if (!peer) {
+        if (!iceCandidateQueue[fromId]) iceCandidateQueue[fromId] = [];
+        iceCandidateQueue[fromId].push(candidateInit);
+        return;
     }
+    
+    if (peer.pc.remoteDescription && peer.pc.remoteDescription.type) {
+        try {
+            // ← FIX: Pasar el objeto plano directamente, no new RTCIceCandidate
+            await peer.pc.addIceCandidate(candidateInit);
+        } catch (err) {
+            console.error(`[VOZ] addIceCandidate error for ${fromId}:`, err);
+        }
+    } else {
+        peer.pendingCandidates.push(candidateInit);
+    }
+}
 
     /* --- Enviar señal a Firebase --- */
     function sendSignal(toId,data){
