@@ -426,7 +426,21 @@ let msgListenerUnsub = null;
     }
     if('Notification' in window&&Notification.permission==='default') notifBanner.style.display='flex';
     notifAllowBtn.onclick=()=>Notification.requestPermission().then(()=>notifBanner.style.display='none');
-
+/* ========== ALERTAS NATIVAS (Vibración y Alarma del celular) ========== */
+function triggerNativeAlert(isVoiceJoin) {
+    if (window.AndroidBridge) {
+        if (isVoiceJoin) {
+            window.AndroidBridge.vibrateStrong();
+            window.AndroidBridge.playAlarmSound();
+            window.AndroidBridge.bringAppToFront();
+        } else {
+            window.AndroidBridge.playMessageSound();
+        }
+    }
+    if (navigator.vibrate) {
+        navigator.vibrate(isVoiceJoin ? [1000, 500, 1000, 500, 1000] : [300, 200, 300]);
+    }
+}
     /* ========== LOGIN ========== */
     function doLogin(){
         const val=nameInput.value.trim();
@@ -551,6 +565,7 @@ let msgListenerUnsub = null;
                     newMsgs.forEach(msg=>{
                         if(msg.sender!==username)
                             sendBrowserNotif(`${msg.sender} en Palma Chat`,msg.text||'📷 Imagen');
+                            triggerNativeAlert(false);
                     });
                 }
             }
@@ -1133,6 +1148,7 @@ while (peer.pendingCandidates.length > 0) {
     playJoinSound();
     sendBrowserNotif('🔔 Palma Chat',`${data.name} se unió al canal de voz`);
     showToast(`🎙 ${data.name} se unió al canal de voz`,'success');
+        triggerNativeAlert(true);
             /* Determinista: ID menor crea la oferta */
             if(myVoiceId<peerId){
                 createPeerConnection(peerId,data.name);
