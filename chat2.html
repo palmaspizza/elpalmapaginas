@@ -950,12 +950,9 @@ function hideSpeaking(){
         voiceGlow.classList.add('active');
         isMuted=false;updateMuteUI();renderVoiceUsers();
         speakingInterval=setInterval(checkSpeaking,120);
-                voiceJoining=false;
+                        voiceJoining=false;
         addSystemMessage(`${username} se unió al canal de voz`);
         showToast('Canal de voz activo','success');
-        
-        /* 🔊 Reproducir audio de conexión exitosa */
-        playCallConnectedSound();
     }
 window.joinVoice = joinVoice;
     /* --- Salir del canal — limpieza COMPLETA --- */
@@ -1085,13 +1082,18 @@ voicePeers[peerId] = {
             }
         };
 
+                let hasPlayedConnectedSound = false;
+
         pc.onconnectionstatechange=()=>{
             renderVoiceUsers();
             const s=pc.connectionState;
+            
+            /* 🔊 Cuando alguien se conecta REALMENTE (P2P establecido) */
+            if(s==='connected'){
+                playCallConnectedSound();
+            }
+            
             if(s==='disconnected'||s==='failed'||s==='closed')removeVoicePeer(peerId);
-        };
-        pc.oniceconnectionstatechange=()=>{
-            if(pc.iceConnectionState==='failed')try{pc.restartIce();}catch(e){}
         };
     }
 
@@ -1235,17 +1237,21 @@ while (peer.pendingCandidates.length > 0) {
         });
         voiceUnsubs.push(unsubSig);
 
-        /* Nuevos peers que se unen después de mí */
+                /* Nuevos peers que se unen después de mí */
         const unsubAdd=onChildAdded(ref(db,'voiceRoom/peers'),snap=>{
     const peerId=snap.key,data=snap.val();
     if(!data||peerId===myVoiceId||voicePeers[peerId])return;
+    
+    // Guardar el nombre para usarlo después
+    const peerName = data.name && data.name.trim() !== '' ? data.name : 'Alguien';
+    
     renderVoiceUsers();
     // Notificación con sonido
     playJoinSound();
-    sendBrowserNotif('🔔 Palma Chat',`${data.name} se unió al canal de voz`);
-    showToast(`🎙 ${data.name} se unió al canal de voz`,'success');
+    sendBrowserNotif('🔔 Palma Chat',`${peerName} se unió al canal de voz`);
+    showToast(`🎙 ${peerName} se unió al canal de voz`,'success');
         triggerNativeAlert(true);
-        showNativeIncomingCall(data.name);
+        showNativeIncomingCall(peerName);
             /* Determinista: ID menor crea la oferta */
             if(myVoiceId<peerId){
                 createPeerConnection(peerId,data.name);
@@ -1302,18 +1308,21 @@ while (peer.pendingCandidates.length > 0) {
     }
 
     /* --- Renderizar lista de usuarios en el panel de voz --- */
-    function renderVoiceUsers(){
+        function renderVoiceUsers(){
         if(!voiceActive){voiceUsers.innerHTML='<div class="voice-empty">Conectando...</div>';return;}
+        
         let html=`<div class="voice-user-item me"><span class="voice-user-dot"></span>${escapeHTML(username)}${isMuted?' <i class="fas fa-microphone-slash" style="font-size:9px;opacity:.5"></i>':''}<span style="margin-left:auto;font-size:10px;opacity:.4">(tú)</span></div>`;
+        
         const peers=Object.entries(voicePeers);
         if(!peers.length){html+='<div class="voice-empty">Esperando a otros...</div>';}
         else{
             peers.forEach(([,p])=>{
+                const displayName = p.name && p.name.trim() !== '' ? p.name : 'Desconocido';
                 const s=p.pc.connectionState;
                 const icon=s==='connected'?'':s==='connecting'||s==='new'
                     ?' <i class="fas fa-spinner" style="font-size:9px;opacity:.5;margin-left:auto;animation:spin 1s linear infinite"></i>'
                     :' <i class="fas fa-circle-xmark" style="font-size:9px;color:var(--error);margin-left:auto"></i>';
-                html+=`<div class="voice-user-item"><span class="voice-user-dot" style="${s!=='connected'?'opacity:.3':''}"></span>${escapeHTML(p.name||'?')}${icon}</div>`;
+                html+=`<div class="voice-user-item"><span class="voice-user-dot" style="${s!=='connected'?'opacity:.3':''}"></span>${escapeHTML(displayName)}${icon}</div>`;
             });
         }
         voiceUsers.innerHTML=html;
