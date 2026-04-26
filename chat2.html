@@ -529,17 +529,17 @@ function triggerNativeAlert(isVoiceJoin) {
 /* ========== SONIDOS DE VOZ PARA ADULTOS MAYORES ========== */
 function playCallConnectedSound(){
     try{
-        const audio = new Audio('Testan escuchando.mp3');
-        audio.volume = 1.0;
-        audio.play().catch(e => console.log('Audio blocked:', e));
+        const audio1 = new Audio('Testan escuchando.mp3');
+        audio1.volume = 1.0;
+        audio1.play().catch(e => console.log('Audio blocked:', e));
     }catch(e){ console.error('Error playing connected sound:', e); }
 }
 
 function playCallEndedSound(){
     try{
-        const audio = new Audio('Cortaste la llamada.mp3');
-        audio.volume = 1.0;
-        audio.play().catch(e => console.log('Audio blocked:', e));
+        const audio2 = new Audio('Cortaste la llamada.mp3');
+        audio2.volume = 1.0;
+        audio2.play().catch(e => console.log('Audio blocked:', e));
     }catch(e){ console.error('Error playing ended sound:', e); }
 }
     function enterChat(){
@@ -1004,8 +1004,8 @@ window.joinVoice = joinVoice;
         addSystemMessage(`${username} salió del canal de voz`);
         showToast('Canal de voz desactivado','info');
     }
-const audio = new Audio('Testan escuchando.mp3');
-const audio = new Audio('Cortaste la llamada.mp3');
+const audio1 = new Audio('Testan escuchando.mp3');
+const audio2 = new Audio('Cortaste la llamada.mp3');
     /* --- Crear RTCPeerConnection --- */
     function createPeerConnection(peerId,peerName){
         if(voicePeers[peerId])return; /* Ya existe */
