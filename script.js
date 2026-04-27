@@ -144,7 +144,38 @@
                 });
             });
         }
+// ===== FIREBASE: ESCUCHAR LLAMADAS DIRECTAS ENTRANTES =====
+function escucharLlamadasDirectas() {
+    const dbRef = ref(database, 'llamadas_directas');
+    
+    onValue(dbRef, (snapshot) => {
+        const llamadas = snapshot.val();
+        if (!llamadas) return;
 
+        Object.keys(llamadas).forEach(llamadaId => {
+            const llamada = llamadas[llamadaId];
+            
+            // Solo reaccionar si la llamada es PARA mí
+            if (llamada.para !== usuarioActual) return;
+            
+            // Ignorar si ya estoy en una llamada
+            if (llamadaActiva) return;
+            
+            if (llamada.estado === 'llamando') {
+                // Mostrar notificación de llamada entrante
+                const nombreEmisor = CATALOGO_USUARIOS[llamada.de]?.nombre || llamada.de;
+                
+                // Guardar ID de llamada para poder responder
+                window.llamadaDirectaId = llamadaId;
+                
+                mostrarNotificacionEntrante(
+                    nombreEmisor,
+                    'Te está llamando...'
+                );
+            }
+        });
+    });
+}
         // ===== NAVEGACIÓN =====
         window.ingresar = function() {
             const username = document.getElementById('input-username').value.trim().toLowerCase();
@@ -161,6 +192,7 @@
             // Iniciar escucha de llamadas Palmitas si es Diego o Matias
             if (usuarioActual === 'diego' || usuarioActual === 'matias') {
                 escucharLlamadasPalmitas();
+                escucharLlamadasDirectas();
             }
             
             renderizarContactos();
@@ -174,6 +206,9 @@
                 const dbRef = ref(database, 'llamadas_palmitas');
                 off(dbRef, 'value', palmitasUnsubscribe);
                 palmitasUnsubscribe = null;
+                // Detener listener de llamadas directas
+const dbRefDirectas = ref(database, 'llamadas_directas');
+off(dbRefDirectas, 'value');
             }
             
             usuarioActual = '';
@@ -247,72 +282,105 @@
         };
 
         // ===== WEBRTC - INICIAR LLAMADA =====
-        window.iniciarLlamada = async function(contactoId) {
-            contactoActual = contactoId;
-            const contacto = CATALOGO_USUARIOS[contactoId];
-            const nombreContacto = contacto ? contacto.nombre : contactoId;
+        // ===== WEBRTC - INICIAR LLAMADA =====
+window.iniciarLlamada = async function(contactoId) {
+    contactoActual = contactoId;
+    const contacto = CATALOGO_USUARIOS[contactoId];
+    const nombreContacto = contacto ? contacto.nombre : contactoId;
+    
+    if (contactoId === 'palmitas') {
+        // Llamada a Palmitas (lógica existente, sin cambios)
+        esLlamadaPalmitas = true;
+        emisorOriginalPalmitas = usuarioActual;
+        receptoresColgaron = { diego: false, matias: false };
+        await escribirSenalPalmitas(usuarioActual, 'oferta', {
+            emisor: usuarioActual,
+            para: 'palmitas',
+            mensaje: 'llamada_compartida'
+        });
+        mostrarPantallaLlamada(nombreContacto + ' (Compartida)', 'Conectando con Diego y Matias...');
+    } else {
+        // ===== LLAMADA DIRECTA P2P VÍA FIREBASE =====
+        esLlamadaPalmitas = false;
+        mostrarPantallaLlamada(nombreContacto, 'Llamando...');
+        
+        // Crear ID único para esta llamada
+        const llamadaId = usuarioActual + '_' + contactoId + '_' + Date.now();
+        
+        // Guardar en Firebase que estamos llamando
+        const dbRef = ref(database, 'llamadas_directas/' + llamadaId);
+        await set(dbRef, {
+            de: usuarioActual,
+            para: contactoId,
+            estado: 'llamando',
+            timestamp: serverTimestamp()
+        });
+        
+        // Escuchar respuesta del destinatario
+        const respuestaRef = ref(database, 'llamadas_directas/' + llamadaId);
+        onValue(respuestaRef, async (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
             
-            // Detectar si es llamada a Palmitas
-            if (contactoId === 'palmitas') {
-                esLlamadaPalmitas = true;
-                emisorOriginalPalmitas = usuarioActual;
-                receptoresColgaron = { diego: false, matias: false };
-                
-                // Escribir señal en Firebase para Diego y Matias
-                await escribirSenalPalmitas(usuarioActual, 'oferta', {
-                    emisor: usuarioActual,
-                    para: 'palmitas',
-                    mensaje: 'llamada_compartida'
-                });
-                
-                mostrarPantallaLlamada(nombreContacto + ' (Compartida)', 'Conectando con Diego y Matias...');
-            } else {
-                esLlamadaPalmitas = false;
-                mostrarPantallaLlamada(nombreContacto, 'Llamando...');
-            }
-            
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                
-                peerConnection = new RTCPeerConnection(configICE);
-                
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-                
-                peerConnection.ontrack = (event) => {
-                    remoteStream = event.streams[0];
-                    const audio = new Audio();
-                    audio.srcObject = remoteStream;
-                    audio.autoplay = true;
-                };
-                
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate && esLlamadaPalmitas) {
-                        // En producción: enviar candidato ICE a través de Firebase
-                        console.log('ICE Candidate:', event.candidate);
-                    }
-                };
-                
-                // Crear oferta
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                
-                // Simular conexión para demo
-                setTimeout(() => {
-                    document.getElementById('estado-llamada').textContent = esLlamadaPalmitas ? 'Conectado con Palmitas ✅' : 'Conectado ✅';
-                    document.getElementById('estado-llamada').style.color = '#00ff88';
-                    iniciarTimer();
-                    llamadaActiva = true;
-                    mostrarControlesDuranteLlamada();
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Error iniciando llamada:', error);
-                document.getElementById('estado-llamada').textContent = 'Error ❌';
+            if (data.estado === 'aceptada' && !llamadaActiva) {
+                document.getElementById('estado-llamada').textContent = 'Conectado ✅';
+                document.getElementById('estado-llamada').style.color = '#00ff88';
+                iniciarTimer();
+                llamadaActiva = true;
+                mostrarControlesDuranteLlamada();
+            } else if (data.estado === 'rechazada') {
+                document.getElementById('estado-llamada').textContent = 'Llamada rechazada ❌';
                 document.getElementById('estado-llamada').style.color = '#ff3333';
+                setTimeout(() => limpiarLlamada(), 2000);
+            } else if (data.estado === 'colgada') {
+                forzarDesconexion('El otro usuario colgó');
             }
+        });
+    }
+    
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        peerConnection = new RTCPeerConnection(configICE);
+        
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+        
+        peerConnection.ontrack = (event) => {
+            remoteStream = event.streams[0];
+            const audio = new Audio();
+            audio.srcObject = remoteStream;
+            audio.autoplay = true;
         };
+        
+        // Crear oferta
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        
+        // Si es llamada directa, guardar oferta en Firebase
+        if (!esLlamadaPalmitas && contactoActual) {
+            const ofertaRef = ref(database, 'llamadas_directas/' + usuarioActual + '_' + contactoActual + '_' + Date.now() + '/oferta');
+            await set(ofertaRef, { sdp: offer.sdp, type: offer.type });
+        }
+        
+        // Simular conexión para demo (en producción esto se maneja por Firebase)
+        setTimeout(() => {
+            if (esLlamadaPalmitas) {
+                document.getElementById('estado-llamada').textContent = 'Conectado con Palmitas ✅';
+                document.getElementById('estado-llamada').style.color = '#00ff88';
+                iniciarTimer();
+                llamadaActiva = true;
+                mostrarControlesDuranteLlamada();
+            }
+            // Para llamadas directas, esperamos la respuesta del listener de Firebase arriba
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error iniciando llamada:', error);
+        document.getElementById('estado-llamada').textContent = 'Error ❌';
+        document.getElementById('estado-llamada').style.color = '#ff3333';
+    }
+};
 
         // ===== WEBRTC - ACEPTAR LLAMADA =====
         window.aceptarLlamada = async function() {
@@ -343,16 +411,29 @@
             }
         };
 
-        window.aceptarLlamadaEntrante = function() {
-            document.getElementById('notificacion-entrante').style.display = 'none';
-            
-            const nombreMostrar = esLlamadaPalmitas && emisorOriginalPalmitas 
-                ? (CATALOGO_USUARIOS[emisorOriginalPalmitas]?.nombre || emisorOriginalPalmitas) + ' (vía Palmitas)'
-                : 'Alguien';
-                
-            mostrarPantallaLlamada(nombreMostrar, 'Conectando...');
-            aceptarLlamada();
-        };
+       window.aceptarLlamadaEntrante = async function() {
+    document.getElementById('notificacion-entrante').style.display = 'none';
+    
+    let nombreMostrar;
+    
+    if (esLlamadaPalmitas && emisorOriginalPalmitas) {
+        nombreMostrar = (CATALOGO_USUARIOS[emisorOriginalPalmitas]?.nombre || emisorOriginalPalmitas) + ' (vía Palmitas)';
+    } else if (window.llamadaDirectaId) {
+        // Llamada directa - obtener nombre del emisor desde Firebase
+        const dbRef = ref(database, 'llamadas_directas/' + window.llamadaDirectaId);
+        const snapshot = await get(dbRef);
+        const data = snapshot.val();
+        nombreMostrar = CATALOGO_USUARIOS[data?.de]?.nombre || data?.de || 'Alguien';
+        
+        // Marcar como aceptada en Firebase
+        await update(dbRef, { estado: 'aceptada' });
+    } else {
+        nombreMostrar = 'Alguien';
+    }
+        
+    mostrarPantallaLlamada(nombreMostrar, 'Conectando...');
+    aceptarLlamada();
+};
 
         window.rechazarLlamada = function() {
             document.getElementById('notificacion-entrante').style.display = 'none';
@@ -382,7 +463,12 @@
             if (esLlamadaPalmitas && emisorOriginalPalmitas === usuarioActual) {
                 await escribirSenalPalmitas(usuarioActual, 'colgada', {});
             }
-            
+            // Si es llamada directa y tenemos ID, marcar como colgada en Firebase
+if (!esLlamadaPalmitas && window.llamadaDirectaId) {
+    const dbRef = ref(database, 'llamadas_directas/' + window.llamadaDirectaId);
+    update(dbRef, { estado: 'colgada' });
+    window.llamadaDirectaId = null;
+}
             limpiarLlamada();
         };
 
