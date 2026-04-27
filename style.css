@@ -1,0 +1,402 @@
+ * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            -webkit-text-size-adjust: 100%;
+            touch-action: manipulation;
+        }
+
+        /* ===== ESTADO: INGRESO ===== */
+        #pantalla-ingreso {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 20px;
+            gap: 30px;
+        }
+
+        .logo-grande {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+
+        .icono-telefono {
+            font-size: 120px;
+            margin-bottom: 10px;
+        }
+
+        .etiqueta-campo {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .campo-texto {
+            width: 90%;
+            max-width: 500px;
+            height: 80px;
+            font-size: 32px;
+            padding: 0 25px;
+            border: 4px solid #ffd700;
+            border-radius: 20px;
+            background-color: #ffffff;
+            color: #000000;
+            text-align: center;
+            outline: none;
+        }
+
+        .campo-texto:focus {
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        .boton-principal {
+            width: 90%;
+            max-width: 500px;
+            height: 80px;
+            font-size: 36px;
+            font-weight: bold;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+
+        .boton-principal:active {
+            transform: scale(0.95);
+        }
+
+        .boton-amarillo {
+            background-color: #ffd700;
+            color: #000000;
+            box-shadow: 0 6px 0 #cc9900;
+        }
+
+        .boton-amarillo:hover {
+            background-color: #ffec8b;
+        }
+
+        /* ===== ESTADO: DIRECTORIO ===== */
+        #pantalla-directorio {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .barra-superior {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #ffd700;
+        }
+
+        .titulo-seccion {
+            font-size: 42px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .boton-cerrar-sesion {
+            width: 120px;
+            height: 60px;
+            font-size: 20px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .lista-contactos {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 20px;
+        }
+
+        .tarjeta-contacto {
+            display: flex;
+            align-items: center;
+            background-color: #16213e;
+            border: 3px solid #0f3460;
+            border-radius: 20px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            gap: 25px;
+        }
+
+        .tarjeta-contacto:hover {
+            background-color: #1a3a5c;
+            border-color: #ffd700;
+            transform: translateX(10px);
+        }
+
+        .avatar-contacto {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background-color: #e94560;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: bold;
+            flex-shrink: 0;
+            color: white;
+        }
+
+        .info-contacto {
+            flex: 1;
+        }
+
+        .nombre-contacto {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .estado-contacto {
+            font-size: 24px;
+            color: #00ff88;
+        }
+
+        .estado-contacto.offline {
+            color: #888888;
+        }
+
+        .boton-llamar-directo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #00ff88;
+            border: none;
+            font-size: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 6px 0 #00aa55;
+            transition: transform 0.2s;
+        }
+
+        .boton-llamar-directo:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 0 #00aa55;
+        }
+
+        /* ===== ESTADO: LLAMADA ===== */
+        #pantalla-llamada {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100vh;
+            background-color: #0f0f23;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .contenedor-llamada {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            width: 100%;
+            padding: 30px;
+        }
+
+        .avatar-llamada {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background-color: #e94560;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            font-weight: bold;
+            border: 5px solid #ffd700;
+        }
+
+        .nombre-llamada {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .estado-llamada {
+            font-size: 32px;
+            color: #ffd700;
+            text-align: center;
+        }
+
+        .timer-llamada {
+            font-size: 56px;
+            font-weight: bold;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+        }
+
+        .controles-llamada {
+            display: flex;
+            gap: 60px;
+            margin-top: 40px;
+        }
+
+        .boton-control {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            border: none;
+            font-size: 70px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.3);
+        }
+
+        .boton-control:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+        }
+
+        .boton-aceptar {
+            background-color: #00ff88;
+            color: #000;
+        }
+
+        .boton-cortar {
+            background-color: #ff3333;
+            color: #fff;
+        }
+
+        .boton-silencio {
+            background-color: #666;
+            color: #fff;
+            font-size: 50px;
+        }
+
+        .boton-altavoz {
+            background-color: #666;
+            color: #fff;
+            font-size: 50px;
+        }
+
+        /* ===== NOTIFICACIÓN ENTRANTE ===== */
+        #notificacion-entrante {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.95);
+            z-index: 3000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .icono-entrante {
+            font-size: 150px;
+            animation: vibrar 0.5s infinite;
+            margin-bottom: 30px;
+        }
+
+        @keyframes vibrar {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        .nombre-entrante {
+            font-size: 52px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .texto-entrante {
+            font-size: 32px;
+            color: #ffd700;
+            margin-bottom: 60px;
+        }
+
+        /* ===== INDICADOR PALMITAS ===== */
+        .badge-palmitas {
+            background-color: #ff6b6b;
+            color: white;
+            font-size: 18px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        /* ===== MENSAJE INFO PALMITAS ===== */
+        .info-palmitas {
+            background-color: #2d1b69;
+            border: 2px solid #ff6b6b;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24px;
+            color: #ffd700;
+        }
+
+        /* Scrollbar personalizada */
+        .lista-contactos::-webkit-scrollbar {
+            width: 15px;
+        }
+
+        .lista-contactos::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        .lista-contactos::-webkit-scrollbar-thumb {
+            background: #ffd700;
+            border-radius: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .nombre-contacto { font-size: 28px; }
+            .avatar-contacto { width: 70px; height: 70px; font-size: 30px; }
+            .boton-llamar-directo { width: 80px; height: 80px; font-size: 40px; }
+            .boton-control { width: 130px; height: 130px; font-size: 55px; }
+            .nombre-llamada { font-size: 36px; }
+        }
