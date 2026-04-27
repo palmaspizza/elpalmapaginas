@@ -146,13 +146,38 @@ function escucharLlamadasDirectas() {
         Object.keys(llamadas).forEach(id => {
             const llamada = llamadas[id];
 
-            // Solo si va para mí, no la inicié yo y está en estado "llamando"
+            // Solo si va para mí
             if (llamada.para !== usuarioActual) return;
+            // No la inicié yo
             if (llamada.de === usuarioActual) return;
+            // Estado es "llamando"
             if (llamada.estado !== 'llamando') return;
+            // No estoy ya en otra llamada
             if (llamadaActiva) return;
-            // Evitar mostrar de nuevo si ya la tenemos abierta
+            // No mostrar la misma notificación dos veces
             if (llamadaEntranteId === id) return;
+
+            // ===== FILTRO CRÍTICO: Solo llamadas de los últimos 30 segundos =====
+            const ahora = Date.now();
+            const timestampLlamada = llamada.timestamp;
+            
+            // Si el timestamp es un objeto de Firebase (serverTimestamp), 
+            // puede tardar en sincronizarse. Usamos Date.now() como fallback.
+            let tiempoLlamada;
+            if (typeof timestampLlamada === 'number') {
+                tiempoLlamada = timestampLlamada;
+            } else if (timestampLlamada && timestampLlamada.timestamp) {
+                tiempoLlamada = timestampLlamada.timestamp;
+            } else {
+                // Si no hay timestamp válido, asumimos que es vieja y la ignoramos
+                // a menos que sea una llamada creada en esta sesión
+                tiempoLlamada = 0;
+            }
+            
+            // Si la llamada tiene más de 30 segundos, ignorarla (datos residuales)
+            if (ahora - tiempoLlamada > 30000) {
+                return;
+            }
 
             llamadaEntranteId = id;
             esLlamadaPalmitas = false;
@@ -471,7 +496,11 @@ window.rechazarLlamada = async function () {
     document.getElementById('notificacion-entrante').style.display = 'none';
 
     if (llamadaEntranteId) {
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'rechazada');
+        await set(ref(database, 'llamadas_directas/' + llamadaEntranteId + '/estado'), 'rechazada');
+        // Borrar después de 5 segundos para que el emisor se entere
+        setTimeout(() => {
+            remove(ref(database, 'llamadas_directas/' + llamadaEntranteId)).catch(console.error);
+        }, 5000);
         llamadaEntranteId = null;
     }
 };
@@ -529,6 +558,14 @@ function limpiarLlamada() {
     // Limpiar listeners activos
     activeListeners.forEach(({ dbRef, handler }) => off(dbRef, 'value', handler));
     activeListeners.length = 0;
+
+    // ===== BORRAR LLAMADA DE FIREBASE AL COLGAR =====
+    if (miLlamadaId) {
+        remove(ref(database, 'llamadas_directas/' + miLlamadaId)).catch(console.error);
+    }
+    if (llamadaEntranteId) {
+        remove(ref(database, 'llamadas_directas/' + llamaEntranteId)).catch(console.error);
+    }
 
     resetearEstadoLlamada();
 
