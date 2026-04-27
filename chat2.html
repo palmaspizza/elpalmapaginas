@@ -240,9 +240,82 @@
 </script>
 <base target="_blank">
 </head>
-<body>
 
+<body>
+<!-- ===== PANTALLA DE CONTACTOS (AGENDA VISUAL) ===== -->
+<div id="contactsScreen" style="display:none;flex-direction:column;height:100dvh;background:var(--bg);padding:20px;gap:20px;overflow-y:auto;position:relative;">
+    <div style="text-align:center;padding:20px 0;">
+        <div class="login-icon" style="width:70px;height:70px;font-size:28px;margin-bottom:12px;">
+            <i class="fas fa-address-book"></i>
+        </div>
+        <h1 style="font-size:28px;font-weight:800;">📞 Llamar a...</h1>
+        <p style="color:var(--muted);font-size:16px;">Toca una foto para llamar</p>
+    </div>
+    <div id="contactsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding-bottom:120px;max-width:500px;margin:0 auto;width:100%;"></div>
+    <button id="goToChatBtn" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:16px 32px;background:var(--card);border:2px solid var(--border);border-radius:18px;color:var(--fg);font-size:18px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:100;">
+        <i class="fas fa-comments"></i> Ir al Chat
+    </button>
+</div>
+
+<!-- ===== MODAL DE LLAMADA SALIENTE ===== -->
+<div id="outgoingCallModal" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.92);align-items:center;justify-content:center;flex-direction:column;gap:30px;">
+    <div style="width:140px;height:140px;border-radius:50%;background:linear-gradient(135deg,#34c759,#2da845);display:flex;align-items:center;justify-content:center;font-size:60px;color:#fff;animation:callPulse 1.5s ease-in-out infinite;">
+        <i class="fas fa-phone-volume"></i>
+    </div>
+    <div style="font-size:28px;font-weight:800;color:var(--fg2);">Llamando a...</div>
+    <div id="outgoingCallName" style="font-size:42px;font-weight:800;color:#fff;text-align:center;"></div>
+    <button id="cancelOutgoingCall" style="padding:20px 48px;border-radius:20px;font-size:24px;font-weight:800;font-family:inherit;cursor:pointer;border:none;background:linear-gradient(135deg,#ff453a,#d63030);color:#fff;box-shadow:0 4px 20px rgba(255,69,58,.4);">
+        <i class="fas fa-phone-slash"></i> CANCELAR
+    </button>
+</div>
+
+<!-- ===== MODAL DE LLAMADA ENTRANTE ===== -->
+<div id="incomingCallModal" style="display:none;position:fixed;inset:0;z-index:6000;background:rgba(0,0,0,.95);align-items:center;justify-content:center;flex-direction:column;gap:30px;">
+    <div style="font-size:28px;color:var(--accent);font-weight:700;animation:blink 1s infinite;">📞 TE ESTÁN LLAMANDO</div>
+    <div id="incomingCallerPhoto" style="width:160px;height:160px;border-radius:50%;border:4px solid var(--accent);overflow:hidden;background:var(--card2);">
+        <img src="" alt="" style="width:100%;height:100%;object-fit:cover;">
+    </div>
+    <div id="incomingCallerName" style="font-size:48px;font-weight:800;color:#fff;text-align:center;"></div>
+    <div style="display:flex;gap:24px;margin-top:20px;">
+        <button id="acceptCallBtn" style="padding:24px 48px;border-radius:24px;font-size:26px;font-weight:800;border:none;background:linear-gradient(135deg,#34c759,#2da845);color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(52,199,89,.4);">
+            <i class="fas fa-phone"></i> CONTESTAR
+        </button>
+        <button id="rejectCallBtn" style="padding:24px 48px;border-radius:24px;font-size:26px;font-weight:800;border:none;background:linear-gradient(135deg,#ff453a,#d63030);color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(255,69,58,.4);">
+            <i class="fas fa-phone-slash"></i> CORTAR
+        </button>
+    </div>
+</div>
+<style>
+@keyframes callPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(52,199,89,.4)}50%{transform:scale(1.08);box-shadow:0 0 0 40px rgba(52,199,89,0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
 <!-- Login — SIN value hardcodeado en el input -->
+
+    <!-- Botón para ir al Chat de texto -->
+    <button id="goToChatBtn" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:16px 32px;background:var(--card);border:2px solid var(--border);border-radius:18px;color:var(--fg);font-size:18px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:100;">
+        <i class="fas fa-comments"></i> Ir al Chat
+    </button>
+</div>
+
+<!-- ===== MODAL DE LLAMADA SALIENTE ===== -->
+<div id="outgoingCallModal" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.92);align-items:center;justify-content:center;flex-direction:column;gap:30px;">
+    <div style="width:140px;height:140px;border-radius:50%;background:linear-gradient(135deg,#34c759,#2da845);display:flex;align-items:center;justify-content:center;font-size:60px;color:#fff;animation:callPulse 1.5s ease-in-out infinite;">
+        <i class="fas fa-phone-volume"></i>
+    </div>
+    <div style="font-size:28px;font-weight:800;color:var(--fg2);">Llamando a...</div>
+    <div id="outgoingCallName" style="font-size:42px;font-weight:800;color:#fff;text-align:center;"></div>
+    <button id="cancelOutgoingCall" style="padding:20px 48px;border-radius:20px;font-size:24px;font-weight:800;font-family:inherit;cursor:pointer;border:none;background:linear-gradient(135deg,#ff453a,#d63030);color:#fff;box-shadow:0 4px 20px rgba(255,69,58,.4);">
+        <i class="fas fa-phone-slash"></i> CANCELAR
+    </button>
+</div>
+
+
+<style>
+@keyframes callPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(52,199,89,.4)}50%{transform:scale(1.08);box-shadow:0 0 0 40px rgba(52,199,89,0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+
+<!-- Login original (se mantiene pero oculto inicialmente) -->
 <div id="loginScreen">
     <div class="login-bg">
         <div class="blob blob-1"></div>
@@ -264,16 +337,7 @@
     </div>
 </div>
 
-<!-- Chat -->
-<div id="chatScreen"><!-- BOTÓN DE LLAMADA ULTRA CLARO PARA ADULTOS MAYORES -->
-<div id="callButtonContainer" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;">
-    <button id="voiceBigBtn" title="Canal de voz" style="pointer-events:auto;">
-        <i class="fas fa-phone" id="callIcon"></i>
-    </button>
-    <div id="callLabel" style="background:rgba(0,0,0,.75);backdrop-filter:blur(10px);padding:10px 24px;border-radius:16px;font-size:22px;font-weight:800;color:#fff;text-align:center;white-space:nowrap;pointer-events:auto;border:2px solid rgba(255,255,255,.2);box-shadow:0 4px 20px rgba(0,0,0,.4);letter-spacing:.5px;">
-        📞 PINCHA PARA LLAMAR
-    </div>
-</div>
+
     <header class="chat-header">
         <div class="header-left">
             <div class="header-logo"><i class="fas fa-comments"></i></div>
@@ -375,9 +439,8 @@
     const drawingsRef = ref(db, 'drawings');
 
     /* ========== DOM ========== */
-    const $ = id => document.getElementById(id);
-    const loginScreen=$('loginScreen'), chatScreen=$('chatScreen'),
-          nameInput=$('nameInput'), loginBtn=$('loginBtn'), loginError=$('loginError'),
+        const $ = id => document.getElementById(id);
+    const loginScreen=$('loginScreen'), chatScreen=$('chatScreen'), contactsScreen=$('contactsScreen'),        nameInput=$('nameInput'), loginBtn=$('loginBtn'), loginError=$('loginError'),
           headerName=$('headerName'), logoutBtn=$('logoutBtn'),
           messagesArea=$('messagesArea'), emptyState=$('emptyState'),
           msgInput=$('msgInput'), sendBtn=$('sendBtn'),
@@ -393,11 +456,16 @@
           voiceMuteBtn=$('voiceMuteBtn'), voiceLeaveBtn=$('voiceLeaveBtn'),
           voiceUsers=$('voiceUsers'), voiceGlow=$('voiceGlow'),
           audioContainer=$('audioContainer'),
-          speakingWave=$('speakingWave'), speakingLabel=$('speakingLabel');
+          speakingWave=$('speakingWave'), speakingLabel=$('speakingLabel'),
+          contactsGrid=$('contactsGrid'), outgoingCallModal=$('outgoingCallModal'),
+          outgoingCallName=$('outgoingCallName'), cancelOutgoingCall=$('cancelOutgoingCall'),
+          incomingCallModal=$('incomingCallModal'), incomingCallerPhoto=document.querySelector('#incomingCallerPhoto img'),
+          incomingCallerName=$('incomingCallerName'), acceptCallBtn=$('acceptCallBtn'),
+          rejectCallBtn=$('rejectCallBtn');
 
     /* ========== ESTADO GENERAL ========== */
     /* ========== ESTADO GENERAL ========== */
-let username = localStorage.getItem('chat_username') || '';
+let username = '';
 let lastSentTime = 0, cooldownInterval = null, pendingImage = null;
 const renderedIds = new Set();
 const COOLDOWN_MS = 3000, DRAW_TIMEOUT_MS = 10000;
@@ -415,7 +483,17 @@ let notifIcon = null;
 /* Chat listeners */
 let listeningStarted = false;        // ← MOVER AQUÍ, antes de startListening
 let msgListenerUnsub = null;
+/* ========== USUARIOS REGISTRADOS CON FOTOS ========== */
+const REGISTERED_USERS = {
+    'pedro':   { name: 'Pedro',    photo: 'https://i.ibb.co/yFPG4sjP/pedrofoto.png',   canCall: ['maria', 'diego', 'matias', 'palmitas'] },
+    'maria':   { name: 'María',    photo: 'https://i.ibb.co/3yzQ2WBb/mariafoto.png',   canCall: ['pedro', 'diego', 'matias', 'palmitas'] },
+    'palmitas':{ name: 'Palmitas', photo: 'https://ui-avatars.com/api/?name=Palmitas&background=ff5e3a&color=fff&size=200', canCall: ['pedro', 'maria', 'diego', 'matias'] },
+    'diego':   { name: 'Diego',    photo: 'https://ui-avatars.com/api/?name=Diego&background=007aff&color=fff&size=200',   canCall: ['maria', 'pedro'] },
+    'matias':  { name: 'Matías',   photo: 'https://ui-avatars.com/api/?name=Matias&background=af52de&color=fff&size=200',  canCall: ['maria', 'pedro'] }
+};
 
+/* Sonido de llamada entrante */
+let incomingRingtone = null;
     /* ========== UTILIDADES ========== */
     function showToast(msg, type='info'){
         const t=document.createElement('div');
@@ -534,6 +612,67 @@ function playCallConnectedSound(){
         audio1.play().catch(e => console.log('Audio blocked:', e));
     }catch(e){ console.error('Error playing connected sound:', e); }
 }
+function renderContactsForUser(){
+    const grid = document.getElementById('contactsGrid');
+    if(!grid) return; // ← Seguridad
+    
+    grid.innerHTML = '';
+    const currentUserKey = username.toLowerCase().trim();
+    const currentUser = REGISTERED_USERS[currentUserKey];
+    
+    if(!currentUser){
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:20px;padding:40px;">No tienes contactos registrados</div>';
+        return;
+    }
+    
+    let targets = [];
+    if(currentUser.isGroup){
+        // Palmitas ve grupo "Diego y Matías"
+        targets = [{
+            id: 'diego_matias',
+            name: 'Diego y Matías',
+            photo: 'https://ui-avatars.com/api/?name=D+M&background=007aff&color=fff&size=400',
+            isGroup: true,
+            targets: ['diego', 'matias']
+        }];
+    } else {
+        // Otros ven sus contactos disponibles
+        targets = currentUser.canCall.map(key => {
+            const user = REGISTERED_USERS[key];
+            return { id: key, name: user.name, photo: user.photo, isGroup: false };
+        });
+    }
+    
+    targets.forEach(target => {
+        const card = document.createElement('div');
+        card.className = 'contact-card';
+        
+        card.innerHTML = `
+            <img src="${target.photo}" 
+                 alt="${target.name}" 
+                 class="contact-photo" 
+                 onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(target.name)}&background=6a6a82&color=fff&size=400'">
+            <div class="contact-name">${target.name}</div>
+            <button class="contact-call-btn ${target.isGroup ? 'group-call' : ''}">
+                <i class="fas fa-phone"></i> LLAMAR
+            </button>
+        `;
+        
+        // Click en tarjeta = llamar
+        card.onclick = (e) => { 
+            if(!e.target.closest('.contact-call-btn')) startCallTo(target); 
+        };
+        
+        // Click en botón = llamar
+        card.querySelector('.contact-call-btn').onclick = (e) => { 
+            e.stopPropagation(); 
+            startCallTo(target); 
+        };
+        
+        grid.appendChild(card);
+    });
+}
+
 
 function playCallEndedSound(){
     try{
@@ -543,16 +682,39 @@ function playCallEndedSound(){
     }catch(e){ console.error('Error playing ended sound:', e); }
 }
     function enterChat(){
-    loginScreen.style.display='none';chatScreen.style.display='flex';
+    loginScreen.style.display='none';
+    chatScreen.style.display='none';
+    contactsScreen.style.display='flex'; // ← MOSTRAR CONTACTOS PRIMERO
     headerName.textContent=username;
-    startListening();initDraw();startDrawSync();startStrokeCleanup();
-    setTimeout(()=>msgInput.focus(),100);
-    // AGREGAR ESTO:
-    setTimeout(()=>{ messagesArea.scrollTop=messagesArea.scrollHeight; },300);
+    
+    // Iniciar listeners en background
+    startListening();
+    initDraw();
+    startDrawSync();
+    startStrokeCleanup();
+    setupIncomingCallsListener();
+    
+    // Renderizar contactos según usuario actual
+    renderContactsForUser();
+    
+    // Botón para ir al chat
+    document.getElementById('goToChatBtn').onclick = () => {
+        contactsScreen.style.display='none';
+        chatScreen.style.display='flex';
+        setTimeout(()=>msgInput.focus(),100);
+        setTimeout(()=>{ messagesArea.scrollTop=messagesArea.scrollHeight; },300);
+    };
 }
     loginBtn.onclick=doLogin;
     nameInput.onkeydown=e=>{if(e.key==='Enter')doLogin();loginError.textContent='';};
-    logoutBtn.onclick=doLogout;
+
+
+logoutBtn.onclick=()=>{
+    // Limpiar TODO y volver a login
+    localStorage.removeItem('chat_username');
+    localStorage.removeItem('chat_voice_id');
+    location.reload(); // Recargar página para limpiar estado
+};
     if(username)enterChat();else setTimeout(()=>nameInput.focus(),100);
 
     /* ========== MENSAJES ========== */
@@ -1354,7 +1516,107 @@ while (peer.pendingCandidates.length > 0) {
     voiceLeaveBtn.onclick=leaveVoice;
     voiceMuteBtn.onclick=toggleMute;
     setInterval(()=>{if(voiceActive)renderVoiceUsers();},2000);
+/* ========== LLAMADAS: SALIENTE ========== */
+function startCallTo(target) {
+    const targets = target.isGroup ? target.targets : [target.id];
+    const myKey = username.toLowerCase().trim();
 
+    // Mostrar modal de llamada saliente
+    outgoingCallName.textContent = target.name;
+    outgoingCallModal.style.display = 'flex';
+
+    // Escribir la llamada en Firebase para cada destinatario
+    targets.forEach(targetKey => {
+        set(ref(db, `calls/${targetKey}`), {
+            callerName: username,
+            callerKey: myKey,
+            photo: (REGISTERED_USERS[myKey] || {}).photo || '',
+            timestamp: Date.now()
+        });
+    });
+
+    // Unirse al canal de voz automáticamente
+    joinVoice();
+
+    // Botón cancelar
+    cancelOutgoingCall.onclick = () => {
+        outgoingCallModal.style.display = 'none';
+        targets.forEach(targetKey => remove(ref(db, `calls/${targetKey}`)));
+        if (voiceActive) leaveVoice();
+    };
+
+    // Ocultar modal después de 3 segundos (ya estás en el canal)
+    setTimeout(() => {
+        outgoingCallModal.style.display = 'none';
+    }, 3000);
+}
+
+/* ========== LLAMADAS: ENTRANTE ========== */
+function setupIncomingCallsListener() {
+    const myKey = username.toLowerCase().trim();
+    if (!myKey) return;
+
+    onValue(ref(db, `calls/${myKey}`), snap => {
+        const data = snap.val();
+        if (!data) {
+            // Llamada cancelada o rechazada
+            incomingCallModal.style.display = 'none';
+            if (incomingRingtone) { incomingRingtone.pause(); incomingRingtone = null; }
+            return;
+        }
+
+        // Evitar mostrar si ya estamos en llamada
+        if (voiceActive) {
+            remove(ref(db, `calls/${myKey}`));
+            return;
+        }
+
+        // Mostrar modal de llamada entrante
+        incomingCallerName.textContent = data.callerName || 'Alguien';
+        const callerUser = REGISTERED_USERS[data.callerKey] || {};
+        if (incomingCallerPhoto) {
+            incomingCallerPhoto.src = callerUser.photo ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(data.callerName || 'A')}&background=6a6a82&color=fff&size=200`;
+        }
+        incomingCallModal.style.display = 'flex';
+
+        // Vibrar fuerte + notificación
+        triggerNativeAlert(true);
+        sendBrowserNotif('📞 Llamada entrante', `${data.callerName} te está llamando`);
+
+        // Sonido de llamada entrante en bucle
+        try {
+            incomingRingtone = new Audio('Testan escuchando.mp3');
+            incomingRingtone.loop = true;
+            incomingRingtone.volume = 1.0;
+            incomingRingtone.play().catch(() => {});
+        } catch(e) {}
+
+        // CONTESTAR
+        acceptCallBtn.onclick = () => {
+            incomingCallModal.style.display = 'none';
+            if (incomingRingtone) { incomingRingtone.pause(); incomingRingtone = null; }
+            remove(ref(db, `calls/${myKey}`));
+            joinVoice();
+        };
+
+        // COLGAR
+        rejectCallBtn.onclick = () => {
+            incomingCallModal.style.display = 'none';
+            if (incomingRingtone) { incomingRingtone.pause(); incomingRingtone = null; }
+            remove(ref(db, `calls/${myKey}`));
+        };
+
+        // Auto-rechazar después de 30 segundos
+        setTimeout(() => {
+            if (incomingCallModal.style.display === 'flex') {
+                incomingCallModal.style.display = 'none';
+                if (incomingRingtone) { incomingRingtone.pause(); incomingRingtone = null; }
+                remove(ref(db, `calls/${myKey}`));
+            }
+        }, 30000);
+    });
+}
 </script><style>/* ===== BOTÓN DE LLAMADA ULTRA CLARO PARA ADULTOS MAYORES ===== */
 #voiceBigBtn{
     position:fixed;
@@ -1514,7 +1776,196 @@ while (peer.pendingCandidates.length > 0) {
 .msg-input{font-size:18px!important;padding:14px!important}
 .send-btn{width:56px!important;height:56px!important;font-size:22px!important}
 .login-input{font-size:22px!important;padding:18px!important}
-.login-btn{font-size:20px!important;padding:18px!important}</style>
+.login-btn{font-size:20px!important;padding:18px!important}
+
+/* ===== TARJETAS DE CONTACTO GRANDES ===== */
+.contact-card{
+    background:var(--card);
+    border:3px solid var(--border);
+    border-radius:24px;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+    cursor:pointer;
+    transition:all .3s ease;
+    -webkit-tap-highlight-color:transparent;
+}
+.contact-card:hover{
+    transform:translateY(-6px);
+    border-color:var(--accent);
+    box-shadow:0 12px 40px var(--accent-glow);
+}
+.contact-card:active{transform:scale(.92)}
+
+.contact-photo{
+    width:130px;
+    height:130px;
+    border-radius:50%;
+    object-fit:cover;
+    border:4px solid var(--border);
+    background:var(--card2);
+}
+.contact-card:hover .contact-photo{border-color:var(--accent);transform:scale(1.05)}
+
+.contact-name{
+    font-size:26px;
+    font-weight:800;
+    color:var(--fg);
+    text-align:center;
+}
+
+.contact-call-btn{
+    width:100%;
+    padding:16px;
+    border-radius:16px;
+    border:none;
+    background:linear-gradient(135deg,#34c759,#2da845);
+    color:#fff;
+    font-size:20px;
+    font-weight:800;
+    font-family:inherit;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    transition:all .2s;
+}
+.contact-call-btn:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(52,199,89,.4)}
+.contact-call-btn.group-call{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.contact-call-btn.group-call:hover{box-shadow:0 6px 20px var(--accent-glow)}
+/* ===== TARJETAS DE CONTACTO GRANDES ===== */
+.contact-card{
+    background:var(--card);
+    border:3px solid var(--border);
+    border-radius:24px;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+    cursor:pointer;
+    transition:all .3s ease;
+    -webkit-tap-highlight-color:transparent;
+}
+.contact-card:hover{
+    transform:translateY(-6px);
+    border-color:var(--accent);
+    box-shadow:0 12px 40px var(--accent-glow);
+}
+.contact-card:active{transform:scale(.92)}
+.contact-photo{
+    width:130px;
+    height:130px;
+    border-radius:50%;
+    object-fit:cover;
+    border:4px solid var(--border);
+    background:var(--card2);
+}
+.contact-card:hover .contact-photo{border-color:var(--accent);transform:scale(1.05)}
+.contact-name{
+    font-size:26px;
+    font-weight:800;
+    color:var(--fg);
+    text-align:center;
+}
+.contact-call-btn{
+    width:100%;
+    padding:16px;
+    border-radius:16px;
+    border:none;
+    background:linear-gradient(135deg,#34c759,#2da845);
+    color:#fff;
+    font-size:20px;
+    font-weight:800;
+    font-family:inherit;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    transition:all .2s;
+}
+.contact-call-btn:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(52,199,89,.4)}
+.contact-call-btn.group-call{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.contact-call-btn.group-call:hover{box-shadow:0 6px 20px var(--accent-glow)}
+/* ===== TARJETAS DE CONTACTO GRANDES ===== */
+.contact-card{
+    background:var(--card);
+    border:3px solid var(--border);
+    border-radius:24px;
+    padding:24px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+    cursor:pointer;
+    transition:all .3s ease;
+    -webkit-tap-highlight-color:transparent;
+}
+.contact-card:hover{
+    transform:translateY(-6px);
+    border-color:var(--accent);
+    box-shadow:0 12px 40px var(--accent-glow);
+}
+.contact-card:active{transform:scale(.92)}
+.contact-photo{
+    width:150px;
+    height:150px;
+    border-radius:50%;
+    object-fit:cover;
+    border:4px solid var(--border);
+    background:var(--card2);
+}
+.contact-card:hover .contact-photo{
+    border-color:var(--accent);
+    transform:scale(1.05);
+}
+.contact-name{
+    font-size:28px;
+    font-weight:800;
+    color:var(--fg);
+    text-align:center;
+}
+.contact-call-btn{
+    width:100%;
+    padding:18px;
+    border-radius:16px;
+    border:none;
+    background:linear-gradient(135deg,#34c759,#2da845);
+    color:#fff;
+    font-size:22px;
+    font-weight:800;
+    font-family:inherit;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    transition:all .2s;
+}
+.contact-call-btn:hover{
+    transform:scale(1.05);
+    box-shadow:0 6px 20px rgba(52,199,89,.4);
+}
+.contact-call-btn.group-call{
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+/* Verifica que exista ESTO: */
+#contactsScreen{
+    display:none; /* ← CAMBIAR A flex cuando está activo */
+    flex-direction:column;
+    height:100dvh;
+    background:var(--bg);
+    padding:20px;
+    gap:20px;
+    overflow-y:auto;
+    position:relative;
+    z-index:1500; /* ← AGREGAR para que esté encima */
+}
+</style>
 
 <!-- Modal de confirmación para colgar llamada -->
 <div id="hangupModal">
@@ -1523,6 +1974,15 @@ while (peer.pendingCandidates.length > 0) {
     <div class="hangup-btn-row">
         <button class="hangup-btn hangup-btn-yes" id="confirmHangup">SÍ, CORTAR</button>
         <button class="hangup-btn hangup-btn-no" id="cancelHangup">NO, SEGUIR</button>
+    </div>
+</div><!-- Chat -->
+<div id="chatScreen"><!-- BOTÓN DE LLAMADA ULTRA CLARO PARA ADULTOS MAYORES -->
+<div id="callButtonContainer" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;">
+    <button id="voiceBigBtn" title="Canal de voz" style="pointer-events:auto;">
+        <i class="fas fa-phone" id="callIcon"></i>
+    </button>
+    <div id="callLabel" style="background:rgba(0,0,0,.75);backdrop-filter:blur(10px);padding:10px 24px;border-radius:16px;font-size:22px;font-weight:800;color:#fff;text-align:center;white-space:nowrap;pointer-events:auto;border:2px solid rgba(255,255,255,.2);box-shadow:0 4px 20px rgba(0,0,0,.4);letter-spacing:.5px;">
+        📞 PINCHA PARA LLAMAR
     </div>
 </div>
 </body>
