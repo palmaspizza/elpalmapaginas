@@ -1,15 +1,15 @@
  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
         import { 
-            getDatabase, 
-            ref, 
-            set, 
-            onValue, 
-            off,
-            update,
-            get,
-            serverTimestamp 
-        } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
-
+    getDatabase, 
+    ref, 
+    set, 
+    onValue, 
+    off,
+    update,
+    get,
+    serverTimestamp,
+    push  // <-- AGREGAR ESTO
+} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
         // ===== CONFIGURACIÓN FIREBASE =====
         const firebaseConfig = {
             apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
@@ -149,32 +149,26 @@ function escucharLlamadasDirectas() {
     const dbRef = ref(database, 'llamadas_directas');
     
     onValue(dbRef, (snapshot) => {
-        const llamadas = snapshot.val();
-        if (!llamadas) return;
+    const llamadas = snapshot.val();
+    if (!llamadas) return;
 
-        Object.keys(llamadas).forEach(llamadaId => {
-            const llamada = llamadas[llamadaId];
-            
-            // Solo reaccionar si la llamada es PARA mí
-            if (llamada.para !== usuarioActual) return;
-            
-            // Ignorar si ya estoy en una llamada
-            if (llamadaActiva) return;
-            
-            if (llamada.estado === 'llamando') {
-                // Mostrar notificación de llamada entrante
-                const nombreEmisor = CATALOGO_USUARIOS[llamada.de]?.nombre || llamada.de;
-                
-                // Guardar ID de llamada para poder responder
-                window.llamadaDirectaId = llamadaId;
-                
-                mostrarNotificacionEntrante(
-                    nombreEmisor,
-                    'Te está llamando...'
-                );
-            }
-        });
+    Object.keys(llamadas).forEach(llamadaId => {
+        const llamada = llamadas[llamadaId];
+        
+        // Solo reaccionar si la llamada es PARA mí
+        if (llamada.para !== usuarioActual) return;
+        if (llamadaActiva) return;
+        if (llamada.estado !== 'llamando') return;
+
+        // Guardar ID de llamada
+        window.llamadaDirectaId = llamadaId;
+        window.datosLlamadaDirecta = llamada;
+
+        // Mostrar notificación de llamada entrante
+        const nombreEmisor = CATALOGO_USUARIOS[llamada.de]?.nombre || llamada.de;
+        mostrarNotificacionEntrante(nombreEmisor, 'Te está llamando...');
     });
+});
 }
         // ===== NAVEGACIÓN =====
         window.ingresar = function() {
@@ -356,7 +350,29 @@ window.iniciarLlamada = async function(contactoId) {
         // Crear oferta
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        
+        // Guardar oferta en Firebase para que el destinatario la lea
+const ofertaRef = ref(database, 'llamadas_directas/' + llamadaId + '/oferta');
+await set(ofertaRef, {
+    type: offer.type,
+    sdp: offer.sdp
+    
+});// Escuchar respuesta del destinatario
+const respuestaRef = ref(database, 'llamadas_directas/' + llamadaId + '/respuesta');
+onValue(respuestaRef, async (snapshot) => {
+    const respuesta = snapshot.val();
+    if (!respuesta || !respuesta.sdp) return;
+    
+    // Solo procesar una vez
+    if (peerConnection.remoteDescription) return;
+    
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(respuesta));
+    
+    document.getElementById('estado-llamada').textContent = 'Conectado ✅';
+    document.getElementById('estado-llamada').style.color = '#00ff88';
+    iniciarTimer();
+    llamadaActiva = true;
+    mostrarControlesDuranteLlamada();
+});
         // Si es llamada directa, guardar oferta en Firebase
         if (!esLlamadaPalmitas && contactoActual) {
             const ofertaRef = ref(database, 'llamadas_directas/' + usuarioActual + '_' + contactoActual + '_' + Date.now() + '/oferta');
@@ -384,32 +400,67 @@ window.iniciarLlamada = async function(contactoId) {
 
         // ===== WEBRTC - ACEPTAR LLAMADA =====
         window.aceptarLlamada = async function() {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                
-                peerConnection = new RTCPeerConnection(configICE);
-                
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-                
-                peerConnection.ontrack = (event) => {
-                    remoteStream = event.streams[0];
-                    const audio = new Audio();
-                    audio.srcObject = remoteStream;
-                    audio.autoplay = true;
-                };
-                
-                document.getElementById('estado-llamada').textContent = 'Conectado ✅';
-                document.getElementById('estado-llamada').style.color = '#00ff88';
-                iniciarTimer();
-                llamadaActiva = true;
-                mostrarControlesDuranteLlamada();
-                
-            } catch (error) {
-                console.error('Error aceptando llamada:', error);
-            }
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        peerConnection = new RTCPeerConnection(configICE);
+        
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+        
+        peerConnection.ontrack = (event) => {
+            remoteStream = event.streams[0];
+            const audio = new Audio();
+            audio.srcObject = remoteStream;
+            audio.autoplay = true;
+            audio.play().catch(e => console.log('Audio play error:', e));
         };
+        
+        // Si es llamada directa, procesar la oferta recibida
+        if (!esLlamadaPalmitas && window.llamadaDirectaId && window.datosLlamadaDirecta?.oferta) {
+            const oferta = new RTCSessionDescription(window.datosLlamadaDirecta.oferta);
+            await peerConnection.setRemoteDescription(oferta);
+            
+            // Crear respuesta
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            
+            // Enviar respuesta por Firebase
+            const respuestaRef = ref(database, 'llamadas_directas/' + window.llamadaDirectaId + '/respuesta');
+            await set(respuestaRef, {
+                type: answer.type,
+                sdp: answer.sdp
+            });
+            
+            // Marcar como aceptada
+            const estadoRef = ref(database, 'llamadas_directas/' + window.llamadaDirectaId + '/estado');
+            await set(estadoRef, 'aceptada');
+        }
+        
+        // Escuchar candidatos ICE entrantes
+        if (!esLlamadaPalmitas && window.llamadaDirectaId) {
+            const iceRef = ref(database, 'llamadas_directas/' + window.llamadaDirectaId + '/ice_candidates/' + window.datosLlamadaDirecta.de);
+            onValue(iceRef, (snap) => {
+                const candidates = snap.val();
+                if (!candidates) return;
+                Object.values(candidates).forEach(cand => {
+                    if (cand && cand.candidate) {
+                        peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(console.error);
+                    }
+                });
+            });
+        }
+        
+        document.getElementById('estado-llamada').textContent = 'Conectado ✅';
+        document.getElementById('estado-llamada').style.color = '#00ff88';
+        iniciarTimer();
+        llamadaActiva = true;
+        mostrarControlesDuranteLlamada();
+        
+    } catch (error) {
+        console.error('Error aceptando llamada:', error);
+    }
+};
 
        window.aceptarLlamadaEntrante = async function() {
     document.getElementById('notificacion-entrante').style.display = 'none';
@@ -575,3 +626,16 @@ if (!esLlamadaPalmitas && window.llamadaDirectaId) {
             event.target.style.backgroundColor = altavozActivo ? '#ffd700' : '#666';
             event.target.style.color = altavozActivo ? '#000' : '#fff';
         };
+
+        // Enviar candidatos ICE por Firebase
+peerConnection.onicecandidate = async (event) => {
+    if (!event.candidate) return;
+    
+    const iceRef = ref(database, 'llamadas_directas/' + llamadaId + '/ice_candidates/' + usuarioActual);
+    const nuevoIceRef = push(iceRef); // Necesitas importar 'push'
+    await set(nuevoIceRef, {
+        candidate: event.candidate.candidate,
+        sdpMid: event.candidate.sdpMid,
+        sdpMLineIndex: event.candidate.sdpMLineIndex
+    });
+};
