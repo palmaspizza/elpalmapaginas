@@ -3,86 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Llamadas Fáciles</title>
+    <title>Llamadas Fáciles - Para Adultos Mayores</title>
     <link rel="stylesheet" href="style.css">
+<base target="_blank">
 </head>
 <body>
 
     <!-- ===== PANTALLA DE INGRESO ===== -->
-    <div id="pantalla-ingreso" class="pantalla">
+    <div id="pantalla-ingreso">
         <div class="logo-grande">
             <div class="icono-telefono">📞</div>
             <div>Llamadas Fáciles</div>
         </div>
 
-        <div class="campo-grupo">
+        <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
             <label class="etiqueta-campo">¿Cómo te llamas?</label>
-            <input
-                type="text"
-                id="input-username"
-                class="campo-texto"
-                placeholder="Escribe tu nombre"
-                maxlength="20"
-                autocomplete="off"
-                onkeydown="if(event.key==='Enter') ingresar()"
-            >
+            <input type="text" id="input-username" class="campo-texto" placeholder="Escribe tu nombre" maxlength="20">
         </div>
 
-        <button id="btn-ingresar" class="boton-principal boton-amarillo" onclick="ingresar()">
+        <button class="boton-principal boton-amarillo" onclick="ingresar()">
             ENTRAR 🚪
         </button>
-
-        <div id="error-ingreso" class="mensaje-error" style="display:none"></div>
     </div>
 
     <!-- ===== PANTALLA DE DIRECTORIO ===== -->
-    <div id="pantalla-directorio" class="pantalla" style="display:none">
+    <div id="pantalla-directorio">
         <div class="barra-superior">
-            <div>
-                <div class="titulo-seccion" id="saludo-usuario">📒 Directorio</div>
-                <div class="mi-id-badge" id="mi-id-display">Conectando...</div>
-            </div>
+            <div class="titulo-seccion">📒 Directorio</div>
             <button class="boton-cerrar-sesion" onclick="cerrarSesion()">Salir</button>
         </div>
 
-        <!-- Llamar por ID manualmente -->
-        <div class="seccion-llamar-id">
-            <input
-                type="text"
-                id="input-llamar-id"
-                class="campo-texto campo-pequeño"
-                placeholder="Escribe un ID para llamar"
-                autocomplete="off"
-                onkeydown="if(event.key==='Enter') llamarPorId()"
-            >
-            <button class="boton-llamar-id" onclick="llamarPorId()">📞 Llamar</button>
-        </div>
+        <div id="info-palmitas-container"></div>
 
-        <div class="lista-contactos" id="lista-contactos">
-            <div class="sin-contactos">
-                <div style="font-size:70px">⏳</div>
-                <div>Buscando usuarios...</div>
-            </div>
-        </div>
+        <div class="lista-contactos" id="lista-contactos"></div>
     </div>
 
-    <!-- ===== PANTALLA DE LLAMADA ACTIVA ===== -->
-    <div id="pantalla-llamada" class="pantalla" style="display:none">
+    <!-- ===== PANTALLA DE LLAMADA ===== -->
+    <div id="pantalla-llamada">
         <div class="contenedor-llamada">
             <div class="avatar-llamada" id="avatar-llamada">?</div>
             <div class="nombre-llamada" id="nombre-llamada">Nombre</div>
             <div class="estado-llamada" id="estado-llamada">Conectando...</div>
-            <div class="timer-llamada" id="timer-llamada" style="visibility:hidden">00:00</div>
+            <div class="timer-llamada" id="timer-llamada">00:00</div>
 
             <div class="controles-llamada" id="controles-llamada">
-                <!-- Se rellena dinámicamente por JS -->
-                <button class="boton-control boton-cortar" onclick="colgarLlamada()">📵</button>
+                <button class="boton-control boton-aceptar" onclick="aceptarLlamada()" title="Aceptar llamada">📞</button>
+                <button class="boton-control boton-cortar" onclick="colgarLlamada()" title="Cortar llamada">📵</button>
             </div>
         </div>
     </div>
 
-    <!-- ===== LLAMADA ENTRANTE (overlay) ===== -->
-    <div id="notificacion-entrante" style="display:none">
+    <!-- ===== NOTIFICACIÓN LLAMADA ENTRANTE ===== -->
+    <div id="notificacion-entrante">
         <div class="icono-entrante">📞</div>
         <div class="nombre-entrante" id="nombre-entrante">Alguien</div>
         <div class="texto-entrante">Te está llamando...</div>
@@ -92,11 +64,6 @@
         </div>
     </div>
 
-    <!-- CDN: PeerJS (WebRTC) -->
-    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-    <!-- CDN: Gun.js (presencia P2P) -->
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-    <!-- Lógica de la app -->
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
