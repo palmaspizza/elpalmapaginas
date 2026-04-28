@@ -724,7 +724,48 @@ body {
     transition: transform 0.15s, box-shadow 0.15s;
     gap: 4px;
     line-height: 1.1;
+    animation: pulso 2s infinite ease-in-out;
+    position: relative;
+    overflow: hidden;
 }
+
+.boton-llamar-directo::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(0,255,150,0.3) 0%, transparent 70%);
+    animation: brillo 3s infinite linear;
+    border-radius: 50%;
+}
+
+.boton-llamar-directo:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #008040;
+}
+
+@keyframes pulso {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 6px 0 #008040, 0 0 10px rgba(0, 204, 110, 0.6);
+    }
+    50% {
+        transform: scale(1.08);
+        box-shadow: 0 8px 0 #008040, 0 0 20px rgba(0, 204, 110, 0.9);
+    }
+}
+
+@keyframes brillo {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 
 .boton-llamar-directo:active {
     transform: scale(0.88);
@@ -1186,4 +1227,103 @@ body {
     height: 1px;
     opacity: 0;
     pointer-events: none;
+}.boton-control.boton-cortar {
+  width: 8em;   /* tamaño mucho más grande */
+  height: 8em;  /* tamaño mucho más grande */
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: white;
+  font-size: 1em;
+  overflow: hidden;
+}
+
+/* Ícono de teléfono con máscara SVG */
+.boton-control.boton-cortar::before {
+  content: "";
+  display: block;
+  width: 80%;   /* ícono ocupa casi todo el círculo */
+  height: 80%;
+  mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.53.74 3.91.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.61 22 2 13.39 2 3.5a1 1 0 011-1H6.5a1 1 0 011 1c0 1.38.26 2.71.74 3.91a1 1 0 01-.21 1.11l-2.41 2.27z"/></svg>') no-repeat center;
+  -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.53.74 3.91.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.61 22 2 13.39 2 3.5a1 1 0 011-1H6.5a1 1 0 011 1c0 1.38.26 2.71.74 3.91a1 1 0 01-.21 1.11l-2.41 2.27z"/></svg>') no-repeat center;
+  background-color: white;
+}
+.icono-llamar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  border-radius: 50%;
+  font-size: 1em;
+  color: white;
+  position: relative;
+  animation: pulso 2s infinite ease-in-out;
+  overflow: hidden;
+}
+
+.icono-llamar::before {
+  content: "";
+  display: block;
+  width: 60%;
+  height: 60%;
+  mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.53.74 3.91.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.61 22 2 13.39 2 3.5a1 1 0 011-1H6.5a1 1 0 011 1c0 1.38.26 2.71.74 3.91a1 1 0 01-.21 1.11l-2.41 2.27z"/></svg>') no-repeat center;
+  -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.53.74 3.91.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.61 22 2 13.39 2 3.5a1 1 0 011-1H6.5a1 1 0 011 1c0 1.38.26 2.71.74 3.91a1 1 0 01-.21 1.11l-2.41 2.27z"/></svg>') no-repeat center;
+  background-color: white;
+}
+
+.telefono-verde {
+  background-color: #00cc6e;
+}
+
+.telefono-rojo {
+  background-color: #e63946;
+}
+
+@keyframes pulso {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(0, 204, 110, 0.6);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 20px rgba(0, 204, 110, 0.9);
+  }
+}
+
+.telefono-rojo {
+  background-color: #e63946;
+  animation: parpadeo 1.5s infinite ease-in-out;
+}
+
+@keyframes parpadeo {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(230, 57, 70, 0.6);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 20px rgba(230, 57, 70, 0.9);
+  }
+}
+
+/* Fondo rojo + animación */
+.telefono-rojo {
+  background-color: #e63946;
+  animation: parpadeo 1.5s infinite ease-in-out;
+}
+
+@keyframes parpadeo {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 25px rgba(230, 57, 70, 0.7);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 40px rgba(230, 57, 70, 1);
+  }
 }
