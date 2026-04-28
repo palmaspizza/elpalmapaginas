@@ -264,6 +264,7 @@ window.ingresar = function () {
     if (usuarioActual === 'diego' || usuarioActual === 'matias') escucharLlamadasPalmitas();
     escucharLlamadasDirectas();
     renderizarContactos();
+    if (window.Android) window.Android.setUsuario(usuarioActual);
 };
 
 // ========================================================
