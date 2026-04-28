@@ -258,6 +258,7 @@ function escucharLlamadasDirectas() {
 window.ingresar = function () {
     const username = document.getElementById('input-username').value.trim().toLowerCase();
     if (!username) { alert('Por favor, escribe tu nombre'); return; }
+    localStorage.setItem('usuario', username);
     usuarioActual = username;
     document.getElementById('pantalla-ingreso').style.display    = 'none';
     document.getElementById('pantalla-directorio').style.display = 'flex';
