@@ -468,7 +468,8 @@ window.renderizarContactos = function () {
     
     const FOTOS_USUARIOS = {
         'pedro': 'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
-        'maria': 'https://i.ibb.co/3yzQ2WBb/mariafoto.png'
+        'maria': 'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
+        'palmitas': 'https://i.ibb.co/jZvWMMgX/diegomatiasfoto.png'
     };
     
     visibles.forEach(contacto => {
@@ -684,7 +685,7 @@ window.iniciarLlamada = async function (contactoId) {
 
 // ========================================================
 // ACEPTAR LLAMADA ENTRANTE — RECEPTOR
-// ========================================================
+// REEMPLAZAR COMPLETO desde la línea 688:
 window.aceptarLlamadaEntrante = async function () {
     document.getElementById('notificacion-entrante').style.display = 'none';
 
@@ -702,31 +703,41 @@ window.aceptarLlamadaEntrante = async function () {
     if (!llamadaEntranteId) return;
     icePendientes = [];
 
-    const snap  = await get(ref(database, `llamadas_directas/${llamadaEntranteId}`));
-    const datos = snap.val();
-    if (!datos?.oferta?.sdp) { alert('No se pudo obtener la oferta.'); return; }
-
-    const emisorId = datos.de;
-    const nombre   = CATALOGO_USUARIOS[emisorId]?.nombre || emisorId;
-    mostrarPantallaLlamada(nombre, 'Conectando...');
+    // ✅ Mostrar pantalla INMEDIATAMENTE (antes del await Firebase)
+    // Extraer emisor del ID de llamada: formato "emisor_receptor_timestamp"
+    const partes    = llamadaEntranteId.split('_');
+    const emisorTmp = partes[0] || '';
+    const nombreTmp = CATALOGO_USUARIOS[emisorTmp]?.nombre || emisorTmp;
+    mostrarPantallaLlamada(nombreTmp, 'Conectando...');
 
     try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        const snap  = await get(ref(database, `llamadas_directas/${llamadaEntranteId}`));
+        const datos = snap.val();
+        if (!datos?.oferta?.sdp) {
+            document.getElementById('estado-llamada').textContent = 'Error al conectar ❌';
+            document.getElementById('estado-llamada').style.color = '#ff3333';
+            return;
+        }
+
+        const emisorId = datos.de;
+        const nombre   = CATALOGO_USUARIOS[emisorId]?.nombre || emisorId;
+
+        // Actualizar nombre y avatar correctos
+        document.getElementById('nombre-llamada').textContent = nombre;
+        document.getElementById('avatar-llamada').textContent = nombre.charAt(0).toUpperCase();
+
+        localStream    = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         peerConnection = new RTCPeerConnection(configICE);
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
 
         peerConnection.ontrack = (e) => {
             console.log('RECEPTOR: ontrack recibido, streams:', e.streams.length);
-            if (e.streams && e.streams[0]) {
-                reproducirAudioRemoto(e.streams[0]);
-            }
+            if (e.streams && e.streams[0]) reproducirAudioRemoto(e.streams[0]);
         };
 
         peerConnection.oniceconnectionstatechange = () => {
             console.log('RECEPTOR ICE state:', peerConnection.iceConnectionState);
-            if (peerConnection.iceConnectionState === 'failed') {
-                peerConnection.restartIce();
-            }
+            if (peerConnection.iceConnectionState === 'failed') peerConnection.restartIce();
         };
 
         peerConnection.onconnectionstatechange = () => {
@@ -762,9 +773,7 @@ window.aceptarLlamadaEntrante = async function () {
         _escuchar(`llamadas_directas/${llamadaEntranteId}/ice/${emisorId}`, (snap) => {
             const cands = snap.val();
             if (!cands) return;
-            Object.values(cands).forEach(c => {
-                if (c?.candidate) aplicarIceCandidate(c);
-            });
+            Object.values(cands).forEach(c => { if (c?.candidate) aplicarIceCandidate(c); });
         });
 
         _escuchar(`llamadas_directas/${llamadaEntranteId}/estado`, (snap) => {
@@ -798,28 +807,47 @@ window.rechazarLlamada = async function () {
 // ========================================================
 // COLGAR LLAMADA
 // ========================================================
+// REEMPLAZAR la sección "Palmitas: receptor cuelga" dentro de colgarLlamada:
+
 window.colgarLlamada = async function () {
     // Palmitas: receptor cuelga
     if (esLlamadaPalmitas && soyReceptorPalmitas && emisorOriginalPalmitas) {
         await marcarReceptorColgo(emisorOriginalPalmitas, usuarioActual);
-        const snap       = await get(ref(database, `llamadas_palmitas/${emisorOriginalPalmitas}/receptores`));
-        const receptores = snap.val() || {};
-        if (receptores.diego?.colgo && receptores.matias?.colgo) {
+
+        // ✅ FIX: terminar la llamada si los demás receptores nunca se conectaron
+        const snap      = await get(ref(database, `llamadas_palmitas/${emisorOriginalPalmitas}`));
+        const data      = snap.val() || {};
+        const receptores = data.receptores || {};
+        const respuestas = data.respuestas || {};
+
+        // Solo se consideran "participantes" los que enviaron una respuesta WebRTC
+        const participantes = ['diego', 'matias'].filter(r => respuestas[r]?.sdp);
+
+        // Si todos los que realmente participaron ya colgaron → terminar para el emisor
+        const todosColgaron = participantes.every(
+            r => r === usuarioActual || receptores[r]?.colgo === true
+        );
+
+        if (todosColgaron) {
             await desactivarLlamadaPalmitas(emisorOriginalPalmitas);
         }
     }
+
     // Palmitas: emisor cuelga
     if (esLlamadaPalmitas && soyEmisorPalmitas && emisorOriginalPalmitas === usuarioActual) {
         await escribirSenalPalmitas(usuarioActual, 'colgada');
     }
+
     // Directa: emisor cuelga
     if (!esLlamadaPalmitas && miLlamadaId) {
         await set(ref(database, `llamadas_directas/${miLlamadaId}/estado`), 'colgada');
     }
+
     // Directa: receptor cuelga
     if (!esLlamadaPalmitas && llamadaEntranteId && !miLlamadaId) {
         await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'colgada');
     }
+
     recargarPagina();
 };
 
@@ -918,3 +946,22 @@ function resetEstado() {
     icePendientes          = [];
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 }
+
+// ========================================================
+// BRIDGE ANDROID → WEB  (llamadas desde notificación nativa)
+// ========================================================
+window.onLlamadaAceptada = function (de, nombre) {
+    // El usuario tocó ACEPTAR en la notificación de pantalla de bloqueo
+    const notif = document.getElementById('notificacion-entrante');
+    if (notif && notif.style.display !== 'none') {
+        window.aceptarLlamadaEntrante();
+    }
+};
+
+window.onLlamadaRechazada = function (de) {
+    // El usuario tocó RECHAZAR en la notificación de pantalla de bloqueo
+    const notif = document.getElementById('notificacion-entrante');
+    if (notif && notif.style.display !== 'none') {
+        window.rechazarLlamada();
+    }
+};
