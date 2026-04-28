@@ -40,9 +40,9 @@ let soyReceptorPalmitas    = false;
 let emisorOriginalPalmitas = null;
 
 // Llamadas directas
-let miLlamadaId       = null;   // ID de la llamada que YO inicié (emisor)
-let llamadaEntranteId = null;   // ID de la llamada que recibí   (receptor)
-let yaNotifique       = false;  // cerrojo anti-doble-notificación
+let miLlamadaId       = null;
+let llamadaEntranteId = null;
+let yaNotifique       = false;
 
 // Cola de candidatos ICE pendientes (llegan antes del remoteDescription)
 let icePendientes = [];
@@ -92,10 +92,12 @@ const REGLAS_VISIBILIDAD = {
 window.addEventListener('load', () => {
     // Crear elemento de audio persistente en el DOM desde el inicio
     if (!document.getElementById('audio-remoto')) {
-        const a    = document.createElement('audio');
-        a.id       = 'audio-remoto';
-        a.autoplay = true;
-        a.setAttribute('playsinline', '');   // necesario en iOS
+        const a        = document.createElement('audio');
+        a.id           = 'audio-remoto';
+        a.autoplay     = true;
+        a.muted        = false;
+        a.volume       = 1;
+        a.setAttribute('playsinline', '');  // necesario en iOS
         document.body.appendChild(a);
     }
     document.getElementById('input-username').focus();
@@ -121,22 +123,35 @@ function _limpiarListeners() {
 // ========================================================
 function reproducirAudioRemoto(stream) {
     const audio = document.getElementById('audio-remoto');
-    if (!audio) return;
-    audio.srcObject = stream;
-    // Intentar play con manejo de política de autoplay
+    if (!audio) { console.error('Elemento audio-remoto no encontrado'); return; }
+
+    audio.muted   = false;
+    audio.volume  = 1;
+
+    // Asignar el stream solo si cambió (evita reinicio innecesario)
+    if (audio.srcObject !== stream) {
+        audio.srcObject = stream;
+    }
+
     const playPromise = audio.play();
     if (playPromise !== undefined) {
-        playPromise.catch(err => {
-            console.warn('Autoplay bloqueado, esperando interacción:', err);
-            // Segundo intento tras cualquier toque del usuario
-            const reanudar = () => {
-                audio.play().catch(console.error);
-                document.removeEventListener('click',      reanudar);
-                document.removeEventListener('touchstart', reanudar);
-            };
-            document.addEventListener('click',      reanudar, { once: true });
-            document.addEventListener('touchstart', reanudar, { once: true });
-        });
+        playPromise
+            .then(() => console.log('Audio remoto reproduciéndose'))
+            .catch(err => {
+                console.warn('Autoplay bloqueado, esperando interacción del usuario:', err);
+                // Segundo intento ante cualquier interacción del usuario
+                const reanudar = () => {
+                    audio.play()
+                        .then(() => console.log('Audio reanudado tras interacción'))
+                        .catch(console.error);
+                    document.removeEventListener('click',      reanudar);
+                    document.removeEventListener('touchstart', reanudar);
+                    document.removeEventListener('keydown',    reanudar);
+                };
+                document.addEventListener('click',      reanudar, { once: true });
+                document.addEventListener('touchstart', reanudar, { once: true });
+                document.addEventListener('keydown',    reanudar, { once: true });
+            });
     }
 }
 
@@ -147,7 +162,6 @@ async function aplicarIceCandidate(cand) {
     if (!peerConnection) return;
     try {
         if (!peerConnection.remoteDescription || !peerConnection.remoteDescription.type) {
-            // Guardar en cola; se vaciará después de setRemoteDescription
             icePendientes.push(cand);
         } else {
             await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
@@ -338,26 +352,31 @@ window.iniciarLlamada = async function (contactoId) {
 
         // 4. Cuando llegue audio remoto, reproducirlo
         peerConnection.ontrack = (e) => {
-            console.log('EMISOR: ontrack recibido');
-            reproducirAudioRemoto(e.streams[0]);
+            console.log('EMISOR: ontrack recibido, streams:', e.streams.length);
+            if (e.streams && e.streams[0]) {
+                reproducirAudioRemoto(e.streams[0]);
+            }
         };
 
-        // 5. Crear oferta SDP PRIMERO (antes de publicar nada en Firebase)
+        // 5. Monitorear estado de conexión ICE
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('EMISOR ICE state:', peerConnection.iceConnectionState);
+            if (peerConnection.iceConnectionState === 'failed') {
+                console.warn('ICE falló, intentando reiniciar...');
+                peerConnection.restartIce();
+            }
+        };
+
+        peerConnection.onconnectionstatechange = () => {
+            console.log('EMISOR connection state:', peerConnection.connectionState);
+        };
+
+        // 6. Crear oferta SDP
         const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
 
-        // 6. Publicar en Firebase TODO de una vez: estado + oferta
-        //    El receptor NO verá la notificación hasta que oferta.sdp exista
-        await set(ref(database, `llamadas_directas/${llamadaId}`), {
-            de:        usuarioActual,
-            para:      contactoId,
-            estado:    'llamando',
-            timestamp: serverTimestamp(),
-            oferta:    { type: offer.type, sdp: offer.sdp }
-        });
-
-        // 7. Registrar handler ICE DESPUÉS de publicar en Firebase
-        //    (así los candidatos ya tienen el nodo donde escribir)
+        // *** CRÍTICO: registrar onicecandidate ANTES de setLocalDescription ***
+        // setLocalDescription dispara inmediatamente la recolección de ICE.
+        // Si el handler se registra después, se pierden candidatos ya generados.
         peerConnection.onicecandidate = async (e) => {
             if (!e.candidate) return;
             console.log('EMISOR: enviando ICE candidate');
@@ -369,7 +388,19 @@ window.iniciarLlamada = async function (contactoId) {
             });
         };
 
-        // 8. Escuchar candidatos ICE del receptor y aplicarlos con cola
+        // 7. Aplicar descripción local (la recolección ICE comienza aquí)
+        await peerConnection.setLocalDescription(offer);
+
+        // 8. Publicar en Firebase: estado + oferta juntos
+        await set(ref(database, `llamadas_directas/${llamadaId}`), {
+            de:        usuarioActual,
+            para:      contactoId,
+            estado:    'llamando',
+            timestamp: serverTimestamp(),
+            oferta:    { type: offer.type, sdp: offer.sdp }
+        });
+
+        // 9. Escuchar candidatos ICE del receptor y aplicarlos
         _escuchar(`llamadas_directas/${llamadaId}/ice/${contactoId}`, (snap) => {
             const cands = snap.val();
             if (!cands) return;
@@ -378,7 +409,7 @@ window.iniciarLlamada = async function (contactoId) {
             });
         });
 
-        // 9. Escuchar el answer del receptor
+        // 10. Escuchar el answer del receptor
         _escuchar(`llamadas_directas/${llamadaId}/respuesta`, async (snap) => {
             const respuesta = snap.val();
             if (!respuesta?.sdp) return;
@@ -387,7 +418,7 @@ window.iniciarLlamada = async function (contactoId) {
 
             console.log('EMISOR: recibiendo answer, aplicando remoteDescription');
             await peerConnection.setRemoteDescription(new RTCSessionDescription(respuesta));
-            // Vaciar cola de ICE candidates que llegaron antes del answer
+            // Vaciar cola ICE que llegó antes del answer
             await vaciarColaICE();
 
             if (!llamadaActiva) {
@@ -398,7 +429,7 @@ window.iniciarLlamada = async function (contactoId) {
             }
         });
 
-        // 10. Escuchar estado: si el receptor rechaza o cuelga → recargar
+        // 11. Escuchar estado: rechazo o cuelgue del receptor
         _escuchar(`llamadas_directas/${llamadaId}/estado`, (snap) => {
             const estado = snap.val();
             if (estado === 'rechazada') recargarPagina();
@@ -407,7 +438,7 @@ window.iniciarLlamada = async function (contactoId) {
 
     } catch (err) {
         console.error('Error iniciando llamada:', err);
-        document.getElementById('estado-llamada').textContent = 'Error al acceder al microfono ❌';
+        document.getElementById('estado-llamada').textContent = 'Error al acceder al micrófono ❌';
         document.getElementById('estado-llamada').style.color = '#ff3333';
     }
 };
@@ -432,7 +463,6 @@ window.aceptarLlamadaEntrante = async function () {
     if (!llamadaEntranteId) return;
     icePendientes = [];
 
-    // Leer datos frescos de Firebase (la oferta ya existe, la esperamos antes de notificar)
     const snap  = await get(ref(database, `llamadas_directas/${llamadaEntranteId}`));
     const datos = snap.val();
     if (!datos?.oferta?.sdp) { alert('No se pudo obtener la oferta.'); return; }
@@ -451,28 +481,38 @@ window.aceptarLlamadaEntrante = async function () {
         // 3. Tracks locales
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
 
-        // 4. Audio remoto
+        // 4. Audio remoto al llegar tracks
         peerConnection.ontrack = (e) => {
-            console.log('RECEPTOR: ontrack recibido');
-            reproducirAudioRemoto(e.streams[0]);
+            console.log('RECEPTOR: ontrack recibido, streams:', e.streams.length);
+            if (e.streams && e.streams[0]) {
+                reproducirAudioRemoto(e.streams[0]);
+            }
         };
 
-        // 5. Aplicar oferta del emisor (setRemoteDescription)
+        // 5. Monitorear estado de conexión ICE
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('RECEPTOR ICE state:', peerConnection.iceConnectionState);
+            if (peerConnection.iceConnectionState === 'failed') {
+                console.warn('ICE falló, intentando reiniciar...');
+                peerConnection.restartIce();
+            }
+        };
+
+        peerConnection.onconnectionstatechange = () => {
+            console.log('RECEPTOR connection state:', peerConnection.connectionState);
+        };
+
+        // 6. Aplicar oferta del emisor
         console.log('RECEPTOR: aplicando offer');
         await peerConnection.setRemoteDescription(new RTCSessionDescription(datos.oferta));
 
-        // 6. Crear y enviar answer
+        // Vaciar candidatos ICE que pudieron llegar antes de la remoteDescription
+        await vaciarColaICE();
+
+        // 7. Crear answer
         const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        console.log('RECEPTOR: enviando answer');
 
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/respuesta`), {
-            type: answer.type,
-            sdp:  answer.sdp
-        });
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'aceptada');
-
-        // 7. Registrar handler ICE DESPUÉS de setLocalDescription
+        // *** CRÍTICO: registrar onicecandidate ANTES de setLocalDescription ***
         peerConnection.onicecandidate = async (e) => {
             if (!e.candidate) return;
             console.log('RECEPTOR: enviando ICE candidate');
@@ -484,7 +524,17 @@ window.aceptarLlamadaEntrante = async function () {
             });
         };
 
-        // 8. Escuchar candidatos ICE del emisor (con cola, aunque remoteDescription ya está lista)
+        // 8. Aplicar descripción local (la recolección ICE comienza aquí)
+        await peerConnection.setLocalDescription(answer);
+
+        console.log('RECEPTOR: enviando answer');
+        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/respuesta`), {
+            type: answer.type,
+            sdp:  answer.sdp
+        });
+        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'aceptada');
+
+        // 9. Escuchar candidatos ICE del emisor
         _escuchar(`llamadas_directas/${llamadaEntranteId}/ice/${emisorId}`, (snap) => {
             const cands = snap.val();
             if (!cands) return;
@@ -492,10 +542,8 @@ window.aceptarLlamadaEntrante = async function () {
                 if (c?.candidate) aplicarIceCandidate(c);
             });
         });
-        // Vaciar cola por si algún candidato llegó justo antes del listener
-        await vaciarColaICE();
 
-        // 9. Escuchar si el emisor cuelga → recargar
+        // 10. Escuchar si el emisor cuelga
         _escuchar(`llamadas_directas/${llamadaEntranteId}/estado`, (snap) => {
             const estado = snap.val();
             if (estado === 'colgada') recargarPagina();
@@ -574,7 +622,6 @@ function mostrarPantallaLlamada(nombre, estado) {
     document.getElementById('avatar-llamada').textContent        = nombre.charAt(0).toUpperCase();
     document.getElementById('estado-llamada').textContent        = estado;
     document.getElementById('timer-llamada').textContent         = '00:00';
-    // Solo botón de cancelar mientras espera
     document.getElementById('controles-llamada').innerHTML = `
         <button class="boton-control boton-cortar" onclick="colgarLlamada()" title="Cancelar">📵</button>
     `;
