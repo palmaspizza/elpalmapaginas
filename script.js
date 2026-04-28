@@ -51,7 +51,8 @@ let yaNotifique       = false;
 
 // Cola de candidatos ICE pendientes
 let icePendientes = [];
-
+// Después de: let icePendientes = [];
+let audiollamandoa = null;
 // Listeners activos para limpiar al colgar
 const _listeners = [];
 
@@ -459,7 +460,7 @@ window.renderizarContactos = function () {
     const infoContainer = document.getElementById('info-palmitas-container');
     const vePalmitas    = visibles.some(c => c.id === 'palmitas');
     if (vePalmitas && usuarioActual !== 'palmitas') {
-        infoContainer.innerHTML = `<div class="info-palmitas">📢 Llamar a <strong>Palmitas</strong> conecta con Diego y Matias</div>`;
+        infoContainer.innerHTML = `<br>`;
     } else if (usuarioActual === 'diego' || usuarioActual === 'matias') {
         infoContainer.innerHTML = `<div class="info-palmitas">📡 Escuchando llamadas a Palmitas...</div>`;
     } else {
@@ -490,14 +491,22 @@ window.renderizarContactos = function () {
             <div class="avatar-contacto" style="${esPalmitas ? 'background-color:#ff6b6b;' : ''}">
                 ${avatarHTML}
             </div>
-            <div class="info-contacto">
-                <div class="nombre-contacto">${contacto.nombre}${esPalmitas ? ' <span class="badge-palmitas">COMPARTIDO</span>' : ''}</div>
-                <div class="estado-contacto">🟢 En linea</div>
-            </div>
-            <button class="boton-llamar-directo" onclick="event.stopPropagation(); iniciarLlamada('${contacto.id}')" title="Llamar a ${contacto.nombre}">
-                <span class="icono-llamar">📞</span>
-                <span class="texto-llamar">LLAMAR</span>
-            </button>
+           <div class="info-contacto">
+    <div class="nombre-contacto">
+        ${contacto.nombre}${esPalmitas ? ' <br><span class="badge-palmitas">DIEGO Y MATIAS</span>' : ''}
+    </div>
+</div>
+
+<!-- Teléfono verde -->
+<span class="icono-llamar telefono-verde" style="font-size: 250%;"></span>
+
+<!-- Teléfono rojo (alternativa) -->
+<!-- <span class="icono-llamar telefono-rojo" style="font-size: 250%;"></span> -->
+
+<button class="boton-llamar-directo" onclick="event.stopPropagation(); iniciarLlamada('${contacto.id}')" title="Llamar a ${contacto.nombre}">
+    <span class="texto-llamar">LLAMAR</span>
+</button>
+
         `;
         contenedor.appendChild(div);
     });
@@ -524,7 +533,7 @@ window.iniciarLlamada = async function (contactoId) {
         const nombreContacto = CATALOGO_USUARIOS[contactoId]?.nombre || contactoId;
 
         mostrarPantallaLlamada(nombreContacto + ' (Compartida)', 'Conectando con Diego y Matias...');
-
+iniciarAudioLlamando();
         try {
             localStreamPalmitas = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 
@@ -597,7 +606,7 @@ window.iniciarLlamada = async function (contactoId) {
     miLlamadaId     = llamadaId;
 
     mostrarPantallaLlamada(nombre, 'Llamando...');
-
+iniciarAudioLlamando();
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         peerConnection = new RTCPeerConnection(configICE);
@@ -692,7 +701,7 @@ window.aceptarLlamadaEntrante = async function () {
     // --- PALMITAS ---
     if (esLlamadaPalmitas) {
         const nombre = (CATALOGO_USUARIOS[emisorOriginalPalmitas]?.nombre || emisorOriginalPalmitas) + ' (via Palmitas)';
-        mostrarPantallaLlamada(nombre, 'Conectando...');
+        mostrarPantallaLlamada(nombre, 'ESPERA UN POCO...');
         llamadaActiva = true;
         iniciarTimer();
         mostrarControlesDuranteLlamada();
@@ -855,6 +864,8 @@ window.colgarLlamada = async function () {
 // RECARGA DE PÁGINA AL COLGAR/SER COLGADO
 // ========================================================
 function recargarPagina() {
+     detenerAudioLlamando();
+         if (window.Android) window.Android.setAudioNormal(); // ← agregar
     if (peerConnection) { peerConnection.close(); peerConnection = null; }
     Object.values(conexionesPalmitas).forEach(pc => { if (pc) pc.close(); });
     conexionesPalmitas = {};
@@ -877,7 +888,9 @@ function mostrarPantallaLlamada(nombre, estado) {
     document.getElementById('estado-llamada').textContent        = estado;
     document.getElementById('timer-llamada').textContent         = '00:00';
     document.getElementById('controles-llamada').innerHTML = `
-        <button class="boton-control boton-cortar" onclick="colgarLlamada()" title="Cancelar">📵</button>
+      <button class="boton-control boton-cortar telefono-rojo" onclick="colgarLlamada()" title="Cancelar"></button>
+
+
     `;
 }
 
@@ -888,6 +901,8 @@ function mostrarNotificacionEntrante(nombre, texto) {
 }
 
 function mostrarEstadoConectado() {
+    detenerAudioLlamando();
+    if (window.Android) window.Android.setAudioParaLlamada(); // ← agregar
     const el = document.getElementById('estado-llamada');
     if (el) { el.textContent = '✅ Conectado'; el.style.color = '#00ff88'; }
 }
@@ -895,7 +910,7 @@ function mostrarEstadoConectado() {
 function mostrarControlesDuranteLlamada() {
     document.getElementById('controles-llamada').innerHTML = `
         <button class="boton-control boton-silencio" id="btn-silencio" onclick="toggleSilencio(this)" title="Silencio">🎤</button>
-        <button class="boton-control boton-cortar"                      onclick="colgarLlamada()"      title="Colgar">📵</button>
+        <button class="boton-control boton-cortar"                      onclick="colgarLlamada()"      title="Colgar">📞</button>
     `;
 }
 
@@ -965,3 +980,26 @@ window.onLlamadaRechazada = function (de) {
         window.rechazarLlamada();
     }
 };
+// ========================================================
+// AUDIO LLAMANDO (tono de llamada saliente)
+// ========================================================
+function iniciarAudioLlamando() {
+    if (audiollamandoa) return;
+
+    function sonarUnaVez() {
+        if (!audiollamandoa) return; // fue detenido mientras esperaba
+        const tono = new Audio('tono_llamando.mp3'); // ← tu ruta/URL
+        tono.volume = 1;
+        tono.play().catch(e => console.warn('Audio bloqueado:', e));
+    }
+
+    audiollamandoa = true; // marca que está activo
+    sonarUnaVez();
+    audiollamandoa = setInterval(sonarUnaVez, 2500);
+}
+
+function detenerAudioLlamando() {
+    if (!audiollamandoa) return;
+    clearInterval(audiollamandoa);
+    audiollamandoa = null;
+}
