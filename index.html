@@ -52,15 +52,20 @@
             </div>
         </div>
     </div>
-
     <!-- ===== NOTIFICACIÓN LLAMADA ENTRANTE ===== -->
     <div id="notificacion-entrante">
         <div class="icono-entrante">📞</div>
         <div class="nombre-entrante" id="nombre-entrante">Alguien</div>
         <div class="texto-entrante">Te está llamando...</div>
         <div class="controles-llamada">
-            <button class="boton-control boton-aceptar" onclick="aceptarLlamadaEntrante()">📞</button>
-            <button class="boton-control boton-cortar" onclick="rechazarLlamada()">📵</button>
+            <button class="boton-aceptar-entrante" onclick="aceptarLlamadaEntrante()">
+                <span class="icono-boton">📞</span>
+                <span class="texto-boton">ACEPTAR</span>
+            </button>
+            <button class="boton-cortar-entrante" onclick="rechazarLlamada()">
+                <span class="icono-boton">📵</span>
+                <span class="texto-boton">COLGAR</span>
+            </button>
         </div>
     </div>
 
