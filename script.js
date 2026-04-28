@@ -28,23 +28,28 @@ console.log("Firebase conectado");
 
 // ===== VARIABLES GLOBALES =====
 let usuarioActual    = '';
-let peerConnection   = null;
-let localStream      = null;
 let llamadaActiva    = false;
 let timerInterval    = null;
 let segundosLlamada  = 0;
 
-// Palmitas
+// Palmitas - Mesh P2P
 let esLlamadaPalmitas      = false;
 let soyReceptorPalmitas    = false;
 let emisorOriginalPalmitas = null;
+let soyEmisorPalmitas      = false;
+let receptoresConectados   = new Set();
+let conexionesPalmitas     = {};
+let streamsPalmitas        = {};
+let localStreamPalmitas    = null;
 
 // Llamadas directas
+let peerConnection   = null;
+let localStream      = null;
 let miLlamadaId       = null;
 let llamadaEntranteId = null;
 let yaNotifique       = false;
 
-// Cola de candidatos ICE pendientes (llegan antes del remoteDescription)
+// Cola de candidatos ICE pendientes
 let icePendientes = [];
 
 // Listeners activos para limpiar al colgar
@@ -90,17 +95,28 @@ const REGLAS_VISIBILIDAD = {
 
 // ===== INIT =====
 window.addEventListener('load', () => {
-    // Crear elemento de audio persistente en el DOM desde el inicio
     if (!document.getElementById('audio-remoto')) {
         const a        = document.createElement('audio');
         a.id           = 'audio-remoto';
         a.autoplay     = true;
         a.muted        = false;
         a.volume       = 1;
-        a.setAttribute('playsinline', '');  // necesario en iOS
+        a.setAttribute('playsinline', '');
         document.body.appendChild(a);
     }
-    document.getElementById('input-username').focus();
+
+    const usuarioGuardado = localStorage.getItem('usuario');
+    if (usuarioGuardado && usuarioGuardado.trim() !== '') {
+        usuarioActual = usuarioGuardado;
+        document.getElementById('pantalla-ingreso').style.display    = 'none';
+        document.getElementById('pantalla-directorio').style.display = 'flex';
+        if (usuarioActual === 'diego' || usuarioActual === 'matias') escucharLlamadasPalmitas();
+        escucharLlamadasDirectas();
+        renderizarContactos();
+        if (window.Android) window.Android.setUsuario(usuarioActual);
+    } else {
+        document.getElementById('input-username').focus();
+    }
 });
 
 // ========================================================
@@ -119,7 +135,7 @@ function _limpiarListeners() {
 }
 
 // ========================================================
-// AUDIO REMOTO — reproducir stream entrante
+// AUDIO REMOTO
 // ========================================================
 function reproducirAudioRemoto(stream) {
     const audio = document.getElementById('audio-remoto');
@@ -128,7 +144,6 @@ function reproducirAudioRemoto(stream) {
     audio.muted   = false;
     audio.volume  = 1;
 
-    // Asignar el stream solo si cambió (evita reinicio innecesario)
     if (audio.srcObject !== stream) {
         audio.srcObject = stream;
     }
@@ -139,7 +154,6 @@ function reproducirAudioRemoto(stream) {
             .then(() => console.log('Audio remoto reproduciéndose'))
             .catch(err => {
                 console.warn('Autoplay bloqueado, esperando interacción del usuario:', err);
-                // Segundo intento ante cualquier interacción del usuario
                 const reanudar = () => {
                     audio.play()
                         .then(() => console.log('Audio reanudado tras interacción'))
@@ -156,7 +170,7 @@ function reproducirAudioRemoto(stream) {
 }
 
 // ========================================================
-// APLICAR CANDIDATO ICE — con cola si aún no hay remoteDescription
+// APLICAR CANDIDATO ICE — directas
 // ========================================================
 async function aplicarIceCandidate(cand) {
     if (!peerConnection) return;
@@ -180,15 +194,17 @@ async function vaciarColaICE() {
 }
 
 // ========================================================
-// PALMITAS — helpers Firebase
+// PALMITAS — helpers Firebase (Mesh P2P)
 // ========================================================
-async function escribirSenalPalmitas(emisorId, tipo) {
-    await set(ref(database, 'llamadas_palmitas/' + emisorId), {
-        emisor: emisorId, tipo,
+async function escribirSenalPalmitas(emisorId, tipo, extra = {}) {
+    const base = {
+        emisor: emisorId,
+        tipo,
         timestamp: serverTimestamp(),
         activa: tipo !== 'colgada',
-        receptores: { diego: { colgo: false }, matias: { colgo: false } }
-    });
+        ...extra
+    };
+    await set(ref(database, 'llamadas_palmitas/' + emisorId), base);
 }
 
 async function marcarReceptorColgo(emisorId, receptorId) {
@@ -199,16 +215,44 @@ async function desactivarLlamadaPalmitas(emisorId) {
     await update(ref(database, 'llamadas_palmitas/' + emisorId), { activa: false });
 }
 
+async function enviarOfertaPalmitas(emisorId, receptorId, oferta) {
+    await set(ref(database, `llamadas_palmitas/${emisorId}/ofertas/${receptorId}`), {
+        type: oferta.type,
+        sdp: oferta.sdp,
+        timestamp: serverTimestamp()
+    });
+}
+
+async function enviarRespuestaPalmitas(emisorId, receptorId, respuesta) {
+    await set(ref(database, `llamadas_palmitas/${emisorId}/respuestas/${receptorId}`), {
+        type: respuesta.type,
+        sdp: respuesta.sdp,
+        timestamp: serverTimestamp()
+    });
+}
+
+async function enviarIcePalmitas(emisorId, receptorId, candidato, quienEnvia) {
+    const r = push(ref(database, `llamadas_palmitas/${emisorId}/ice/${receptorId}/${quienEnvia}`));
+    await set(r, {
+        candidate:     candidato.candidate,
+        sdpMid:        candidato.sdpMid,
+        sdpMLineIndex: candidato.sdpMLineIndex
+    });
+}
+
 // ========================================================
-// ESCUCHAR LLAMADAS PALMITAS (solo diego/matias)
+// ESCUCHAR LLAMADAS PALMITAS (diego y matias)
 // ========================================================
 function escucharLlamadasPalmitas() {
-    _escuchar('llamadas_palmitas', (snapshot) => {
+    _escuchar('llamadas_palmitas', async (snapshot) => {
         const llamadas = snapshot.val();
         if (!llamadas) return;
+
         Object.keys(llamadas).forEach(emisorId => {
             const llamada = llamadas[emisorId];
             if (emisorId === usuarioActual) return;
+
+            // 1. NOTIFICACIÓN ENTRANTE
             if (llamada.activa && !llamadaActiva && !yaNotifique) {
                 yaNotifique            = true;
                 emisorOriginalPalmitas = emisorId;
@@ -217,11 +261,133 @@ function escucharLlamadasPalmitas() {
                 const nombre = CATALOGO_USUARIOS[emisorId]?.nombre || emisorId;
                 mostrarNotificacionEntrante(`${nombre} (via Palmitas)`, 'Llamada compartida...');
             }
+
+            // 2. SI FUERON COLGADAS DESDE EL EMISOR
             if (!llamada.activa && llamadaActiva && esLlamadaPalmitas && emisorOriginalPalmitas === emisorId) {
                 recargarPagina();
             }
+
+            // 3. RECEPTOR: escuchar ofertas del emisor para crear answer
+            if (soyReceptorPalmitas && llamada.ofertas && llamada.ofertas[usuarioActual]) {
+                const ofertaData = llamada.ofertas[usuarioActual];
+                if (ofertaData?.sdp && !conexionesPalmitas[emisorId]) {
+                    procesarOfertaPalmitas(emisorId, ofertaData);
+                }
+            }
+
+            // 4. RECEPTOR: escuchar candidatos ICE del emisor
+            if (soyReceptorPalmitas && llamada.ice && llamada.ice[usuarioActual] && llamada.ice[usuarioActual][emisorId]) {
+                const cands = llamada.ice[usuarioActual][emisorId];
+                if (cands && conexionesPalmitas[emisorId]) {
+                    Object.values(cands).forEach(c => {
+                        if (c?.candidate) aplicarIceCandidatePalmitas(emisorId, c);
+                    });
+                }
+            }
+
+            // 5. EMISOR: escuchar respuestas de receptores
+            if (soyEmisorPalmitas && llamada.respuestas) {
+                Object.keys(llamada.respuestas).forEach(receptorId => {
+                    const respData = llamada.respuestas[receptorId];
+                    if (respData?.sdp && conexionesPalmitas[receptorId]) {
+                        procesarRespuestaPalmitas(receptorId, respData);
+                    }
+                });
+            }
+
+            // 6. EMISOR: escuchar candidatos ICE de receptores
+            if (soyEmisorPalmitas && llamada.ice) {
+                Object.keys(llamada.ice).forEach(receptorId => {
+                    if (!llamada.ice[receptorId][usuarioActual]) return;
+                    const cands = llamada.ice[receptorId][usuarioActual];
+                    if (cands && conexionesPalmitas[receptorId]) {
+                        Object.values(cands).forEach(c => {
+                            if (c?.candidate) aplicarIceCandidatePalmitas(receptorId, c);
+                        });
+                    }
+                });
+            }
         });
     });
+}
+
+// ========================================================
+// PALMITAS — PROCESAR OFERTA (receptor crea answer)
+// ========================================================
+async function procesarOfertaPalmitas(emisorId, ofertaData) {
+    if (!localStreamPalmitas) {
+        try {
+            localStreamPalmitas = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch (err) {
+            console.error('Error micrófono Palmitas receptor:', err);
+            return;
+        }
+    }
+
+    const pc = new RTCPeerConnection(configICE);
+    conexionesPalmitas[emisorId] = pc;
+
+    localStreamPalmitas.getTracks().forEach(t => pc.addTrack(t, localStreamPalmitas));
+
+    pc.ontrack = (e) => {
+        console.log('PALMITAS RECEPTOR: ontrack de', emisorId);
+        if (e.streams && e.streams[0]) {
+            streamsPalmitas[emisorId] = e.streams[0];
+            reproducirAudioRemoto(e.streams[0]);
+        }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+        console.log('PALMITAS RECEPTOR ICE', emisorId, ':', pc.iceConnectionState);
+        if (pc.iceConnectionState === 'failed') pc.restartIce();
+    };
+
+    pc.onicecandidate = async (e) => {
+        if (!e.candidate) return;
+        await enviarIcePalmitas(emisorId, usuarioActual, e.candidate, usuarioActual);
+    };
+
+    await pc.setRemoteDescription(new RTCSessionDescription(ofertaData));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    await enviarRespuestaPalmitas(emisorId, usuarioActual, answer);
+}
+
+// ========================================================
+// PALMITAS — PROCESAR RESPUESTA (emisor recibe answer)
+// ========================================================
+async function procesarRespuestaPalmitas(receptorId, respData) {
+    const pc = conexionesPalmitas[receptorId];
+    if (!pc) return;
+    if (pc.remoteDescription?.type) return;
+
+    await pc.setRemoteDescription(new RTCSessionDescription(respData));
+
+    if (!llamadaActiva) {
+        llamadaActiva = true;
+        iniciarTimer();
+        mostrarEstadoConectado();
+        mostrarControlesDuranteLlamada();
+    }
+}
+
+// ========================================================
+// PALMITAS — APLICAR ICE CANDIDATE
+// ========================================================
+async function aplicarIceCandidatePalmitas(peerId, cand) {
+    const pc = conexionesPalmitas[peerId];
+    if (!pc) return;
+    try {
+        if (!pc.remoteDescription || !pc.remoteDescription.type) {
+            if (!pc._icePendientes) pc._icePendientes = [];
+            pc._icePendientes.push(cand);
+        } else {
+            await pc.addIceCandidate(new RTCIceCandidate(cand));
+        }
+    } catch (e) {
+        console.error('addIceCandidate Palmitas error:', e);
+    }
 }
 
 // ========================================================
@@ -239,7 +405,6 @@ function escucharLlamadasDirectas() {
             if (llamadaActiva)  return;
             if (yaNotifique)    return;
             if (llamadaEntranteId === id) return;
-            // Solo notificar cuando la oferta ya existe en Firebase
             if (!llamada.oferta?.sdp) return;
 
             yaNotifique       = true;
@@ -275,6 +440,7 @@ window.cerrarSesion = function () {
     if (llamadaActiva) colgarLlamada();
     _limpiarListeners();
     resetEstado();
+    localStorage.removeItem('usuario');
     usuarioActual = '';
     document.getElementById('pantalla-directorio').style.display = 'none';
     document.getElementById('pantalla-ingreso').style.display    = 'flex';
@@ -299,19 +465,38 @@ window.renderizarContactos = function () {
     } else {
         infoContainer.innerHTML = '';
     }
+    
+    const FOTOS_USUARIOS = {
+        'pedro': 'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
+        'maria': 'https://i.ibb.co/3yzQ2WBb/mariafoto.png'
+    };
+    
     visibles.forEach(contacto => {
         const esPalmitas = contacto.id === 'palmitas';
         const div        = document.createElement('div');
         div.className    = 'tarjeta-contacto';
+        
+        div.onclick = function() {
+            iniciarLlamada(contacto.id);
+        };
+        
+        const tieneFoto = FOTOS_USUARIOS[contacto.id];
+        const avatarHTML = tieneFoto 
+            ? `<img src="${tieneFoto}" alt="${contacto.nombre}" onerror="this.style.display='none'; this.parentElement.textContent='${contacto.nombre.charAt(0)}';">`
+            : contacto.nombre.charAt(0);
+        
         div.innerHTML    = `
             <div class="avatar-contacto" style="${esPalmitas ? 'background-color:#ff6b6b;' : ''}">
-                ${contacto.nombre.charAt(0)}
+                ${avatarHTML}
             </div>
             <div class="info-contacto">
                 <div class="nombre-contacto">${contacto.nombre}${esPalmitas ? ' <span class="badge-palmitas">COMPARTIDO</span>' : ''}</div>
                 <div class="estado-contacto">🟢 En linea</div>
             </div>
-            <button class="boton-llamar-directo" onclick="iniciarLlamada('${contacto.id}')" title="Llamar a ${contacto.nombre}">📞</button>
+            <button class="boton-llamar-directo" onclick="event.stopPropagation(); iniciarLlamada('${contacto.id}')" title="Llamar a ${contacto.nombre}">
+                <span class="icono-llamar">📞</span>
+                <span class="texto-llamar">LLAMAR</span>
+            </button>
         `;
         contenedor.appendChild(div);
     });
@@ -324,12 +509,82 @@ window.iniciarLlamada = async function (contactoId) {
     if (llamadaActiva) return;
     const nombre = CATALOGO_USUARIOS[contactoId]?.nombre || contactoId;
 
-    // --- PALMITAS (sin WebRTC real) ---
+    // --- PALMITAS (Mesh P2P real) ---
     if (contactoId === 'palmitas') {
         esLlamadaPalmitas      = true;
+        soyEmisorPalmitas      = true;
         emisorOriginalPalmitas = usuarioActual;
-        await escribirSenalPalmitas(usuarioActual, 'oferta');
-        mostrarPantallaLlamada(nombre + ' (Compartida)', 'Conectando con Diego y Matias...');
+        receptoresConectados.clear();
+        conexionesPalmitas     = {};
+        streamsPalmitas        = {};
+        icePendientes          = [];
+
+        const receptores = ['diego', 'matias'];
+        const nombreContacto = CATALOGO_USUARIOS[contactoId]?.nombre || contactoId;
+
+        mostrarPantallaLlamada(nombreContacto + ' (Compartida)', 'Conectando con Diego y Matias...');
+
+        try {
+            localStreamPalmitas = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+
+            for (const receptorId of receptores) {
+                const pc = new RTCPeerConnection(configICE);
+                conexionesPalmitas[receptorId] = pc;
+
+                localStreamPalmitas.getTracks().forEach(t => pc.addTrack(t, localStreamPalmitas));
+
+                pc.ontrack = (e) => {
+                    console.log('PALMITAS EMISOR: ontrack de', receptorId);
+                    if (e.streams && e.streams[0]) {
+                        streamsPalmitas[receptorId] = e.streams[0];
+                        reproducirAudioRemoto(e.streams[0]);
+                    }
+                };
+
+                pc.oniceconnectionstatechange = () => {
+                    console.log('PALMITAS EMISOR ICE', receptorId, ':', pc.iceConnectionState);
+                    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                        receptoresConectados.add(receptorId);
+                        const conectados = Array.from(receptoresConectados).map(id => CATALOGO_USUARIOS[id]?.nombre || id).join(', ');
+                        document.getElementById('estado-llamada').textContent = `Conectado con: ${conectados}`;
+                    }
+                    if (pc.iceConnectionState === 'failed') pc.restartIce();
+                };
+
+                pc.onconnectionstatechange = () => {
+                    console.log('PALMITAS EMISOR connection', receptorId, ':', pc.connectionState);
+                };
+
+                pc.onicecandidate = async (e) => {
+                    if (!e.candidate) return;
+                    await enviarIcePalmitas(usuarioActual, receptorId, e.candidate, usuarioActual);
+                };
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                await enviarOfertaPalmitas(usuarioActual, receptorId, offer);
+            }
+
+            await escribirSenalPalmitas(usuarioActual, 'oferta', {
+                receptores: { diego: { colgo: false }, matias: { colgo: false } }
+            });
+
+            _escuchar(`llamadas_palmitas/${usuarioActual}/receptores`, (snap) => {
+                const receptores = snap.val();
+                if (!receptores) return;
+                const ambosColgaron = receptores.diego?.colgo && receptores.matias?.colgo;
+                if (ambosColgaron && llamadaActiva) {
+                    recargarPagina();
+                }
+            });
+
+        } catch (err) {
+            console.error('Error iniciando llamada Palmitas:', err);
+            document.getElementById('estado-llamada').textContent = 'Error al acceder al micrófono ❌';
+            document.getElementById('estado-llamada').style.color = '#ff3333';
+        }
+
         return;
     }
 
@@ -343,16 +598,10 @@ window.iniciarLlamada = async function (contactoId) {
     mostrarPantallaLlamada(nombre, 'Llamando...');
 
     try {
-        // 1. Obtener audio local
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-
-        // 2. Crear PeerConnection
         peerConnection = new RTCPeerConnection(configICE);
-
-        // 3. Agregar tracks locales
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
 
-        // 4. Cuando llegue audio remoto, reproducirlo
         peerConnection.ontrack = (e) => {
             console.log('EMISOR: ontrack recibido, streams:', e.streams.length);
             if (e.streams && e.streams[0]) {
@@ -360,11 +609,9 @@ window.iniciarLlamada = async function (contactoId) {
             }
         };
 
-        // 5. Monitorear estado de conexión ICE
         peerConnection.oniceconnectionstatechange = () => {
             console.log('EMISOR ICE state:', peerConnection.iceConnectionState);
             if (peerConnection.iceConnectionState === 'failed') {
-                console.warn('ICE falló, intentando reiniciar...');
                 peerConnection.restartIce();
             }
         };
@@ -373,12 +620,8 @@ window.iniciarLlamada = async function (contactoId) {
             console.log('EMISOR connection state:', peerConnection.connectionState);
         };
 
-        // 6. Crear oferta SDP
         const offer = await peerConnection.createOffer();
 
-        // *** CRÍTICO: registrar onicecandidate ANTES de setLocalDescription ***
-        // setLocalDescription dispara inmediatamente la recolección de ICE.
-        // Si el handler se registra después, se pierden candidatos ya generados.
         peerConnection.onicecandidate = async (e) => {
             if (!e.candidate) return;
             console.log('EMISOR: enviando ICE candidate');
@@ -390,10 +633,8 @@ window.iniciarLlamada = async function (contactoId) {
             });
         };
 
-        // 7. Aplicar descripción local (la recolección ICE comienza aquí)
         await peerConnection.setLocalDescription(offer);
 
-        // 8. Publicar en Firebase: estado + oferta juntos
         await set(ref(database, `llamadas_directas/${llamadaId}`), {
             de:        usuarioActual,
             para:      contactoId,
@@ -402,7 +643,6 @@ window.iniciarLlamada = async function (contactoId) {
             oferta:    { type: offer.type, sdp: offer.sdp }
         });
 
-        // 9. Escuchar candidatos ICE del receptor y aplicarlos
         _escuchar(`llamadas_directas/${llamadaId}/ice/${contactoId}`, (snap) => {
             const cands = snap.val();
             if (!cands) return;
@@ -411,16 +651,14 @@ window.iniciarLlamada = async function (contactoId) {
             });
         });
 
-        // 10. Escuchar el answer del receptor
         _escuchar(`llamadas_directas/${llamadaId}/respuesta`, async (snap) => {
             const respuesta = snap.val();
             if (!respuesta?.sdp) return;
             if (!peerConnection)  return;
-            if (peerConnection.remoteDescription?.type) return; // ya aplicado
+            if (peerConnection.remoteDescription?.type) return;
 
             console.log('EMISOR: recibiendo answer, aplicando remoteDescription');
             await peerConnection.setRemoteDescription(new RTCSessionDescription(respuesta));
-            // Vaciar cola ICE que llegó antes del answer
             await vaciarColaICE();
 
             if (!llamadaActiva) {
@@ -431,7 +669,6 @@ window.iniciarLlamada = async function (contactoId) {
             }
         });
 
-        // 11. Escuchar estado: rechazo o cuelgue del receptor
         _escuchar(`llamadas_directas/${llamadaId}/estado`, (snap) => {
             const estado = snap.val();
             if (estado === 'rechazada') recargarPagina();
@@ -454,7 +691,7 @@ window.aceptarLlamadaEntrante = async function () {
     // --- PALMITAS ---
     if (esLlamadaPalmitas) {
         const nombre = (CATALOGO_USUARIOS[emisorOriginalPalmitas]?.nombre || emisorOriginalPalmitas) + ' (via Palmitas)';
-        mostrarPantallaLlamada(nombre, 'Conectado ✅');
+        mostrarPantallaLlamada(nombre, 'Conectando...');
         llamadaActiva = true;
         iniciarTimer();
         mostrarControlesDuranteLlamada();
@@ -474,16 +711,10 @@ window.aceptarLlamadaEntrante = async function () {
     mostrarPantallaLlamada(nombre, 'Conectando...');
 
     try {
-        // 1. Audio local
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-
-        // 2. PeerConnection
         peerConnection = new RTCPeerConnection(configICE);
-
-        // 3. Tracks locales
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
 
-        // 4. Audio remoto al llegar tracks
         peerConnection.ontrack = (e) => {
             console.log('RECEPTOR: ontrack recibido, streams:', e.streams.length);
             if (e.streams && e.streams[0]) {
@@ -491,11 +722,9 @@ window.aceptarLlamadaEntrante = async function () {
             }
         };
 
-        // 5. Monitorear estado de conexión ICE
         peerConnection.oniceconnectionstatechange = () => {
             console.log('RECEPTOR ICE state:', peerConnection.iceConnectionState);
             if (peerConnection.iceConnectionState === 'failed') {
-                console.warn('ICE falló, intentando reiniciar...');
                 peerConnection.restartIce();
             }
         };
@@ -504,17 +733,12 @@ window.aceptarLlamadaEntrante = async function () {
             console.log('RECEPTOR connection state:', peerConnection.connectionState);
         };
 
-        // 6. Aplicar oferta del emisor
         console.log('RECEPTOR: aplicando offer');
         await peerConnection.setRemoteDescription(new RTCSessionDescription(datos.oferta));
-
-        // Vaciar candidatos ICE que pudieron llegar antes de la remoteDescription
         await vaciarColaICE();
 
-        // 7. Crear answer
         const answer = await peerConnection.createAnswer();
 
-        // *** CRÍTICO: registrar onicecandidate ANTES de setLocalDescription ***
         peerConnection.onicecandidate = async (e) => {
             if (!e.candidate) return;
             console.log('RECEPTOR: enviando ICE candidate');
@@ -526,7 +750,6 @@ window.aceptarLlamadaEntrante = async function () {
             });
         };
 
-        // 8. Aplicar descripción local (la recolección ICE comienza aquí)
         await peerConnection.setLocalDescription(answer);
 
         console.log('RECEPTOR: enviando answer');
@@ -536,7 +759,6 @@ window.aceptarLlamadaEntrante = async function () {
         });
         await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'aceptada');
 
-        // 9. Escuchar candidatos ICE del emisor
         _escuchar(`llamadas_directas/${llamadaEntranteId}/ice/${emisorId}`, (snap) => {
             const cands = snap.val();
             if (!cands) return;
@@ -545,7 +767,6 @@ window.aceptarLlamadaEntrante = async function () {
             });
         });
 
-        // 10. Escuchar si el emisor cuelga
         _escuchar(`llamadas_directas/${llamadaEntranteId}/estado`, (snap) => {
             const estado = snap.val();
             if (estado === 'colgada') recargarPagina();
@@ -571,7 +792,7 @@ window.rechazarLlamada = async function () {
     if (llamadaEntranteId) {
         await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'rechazada');
     }
-    resetEstado();
+    recargarPagina();
 };
 
 // ========================================================
@@ -588,7 +809,7 @@ window.colgarLlamada = async function () {
         }
     }
     // Palmitas: emisor cuelga
-    if (esLlamadaPalmitas && emisorOriginalPalmitas === usuarioActual) {
+    if (esLlamadaPalmitas && soyEmisorPalmitas && emisorOriginalPalmitas === usuarioActual) {
         await escribirSenalPalmitas(usuarioActual, 'colgada');
     }
     // Directa: emisor cuelga
@@ -607,7 +828,10 @@ window.colgarLlamada = async function () {
 // ========================================================
 function recargarPagina() {
     if (peerConnection) { peerConnection.close(); peerConnection = null; }
-    if (localStream)    { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    Object.values(conexionesPalmitas).forEach(pc => { if (pc) pc.close(); });
+    conexionesPalmitas = {};
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    if (localStreamPalmitas) { localStreamPalmitas.getTracks().forEach(t => t.stop()); localStreamPalmitas = null; }
     const audioEl = document.getElementById('audio-remoto');
     if (audioEl) { audioEl.srcObject = null; }
     _limpiarListeners();
@@ -665,8 +889,9 @@ function iniciarTimer() {
 // CONTROLES DE AUDIO
 // ========================================================
 window.toggleSilencio = function (btn) {
-    if (!localStream) return;
-    const track = localStream.getAudioTracks()[0];
+    if (!localStream && !localStreamPalmitas) return;
+    const stream = localStream || localStreamPalmitas;
+    const track = stream.getAudioTracks()[0];
     if (!track) return;
     track.enabled             = !track.enabled;
     btn.textContent           = track.enabled ? '🎤' : '🔇';
@@ -680,7 +905,12 @@ function resetEstado() {
     llamadaActiva          = false;
     esLlamadaPalmitas      = false;
     soyReceptorPalmitas    = false;
+    soyEmisorPalmitas      = false;
     emisorOriginalPalmitas = null;
+    receptoresConectados.clear();
+    conexionesPalmitas     = {};
+    streamsPalmitas        = {};
+    localStreamPalmitas    = null;
     miLlamadaId            = null;
     llamadaEntranteId      = null;
     yaNotifique            = false;
