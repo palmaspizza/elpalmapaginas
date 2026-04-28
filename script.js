@@ -552,34 +552,38 @@ window.colgarLlamada = async function() {
 function forzarDesconexion(mensaje) {
     alert(mensaje);
     limpiarLlamada();
-    // NO pongas reload aquí, ya lo hace limpiarLlamada()
 }
+
 function limpiarLlamada() {
     if (peerConnection) {
         peerConnection.close();
         peerConnection = null;
     }
+
     if (localStream) {
-        localStream.getTracks().forEach(t => t.stop());
+        localStream.getTracks().forEach(track => track.stop());
         localStream = null;
     }
 
-    const audioEl = document.getElementById('audio-remoto');
-    if (audioEl) audioEl.remove();
-
-    // Limpiar listeners activos
-    activeListeners.forEach(({ dbRef, handler }) => off(dbRef, 'value', handler));
-    activeListeners.length = 0;
-
-    resetearEstadoLlamada();
+    remoteStream = null;
+    llamadaActiva = false;
+    detenerTimer();
 
     document.getElementById('pantalla-llamada').style.display = 'none';
     document.getElementById('pantalla-directorio').style.display = 'flex';
-    
-    // Recargar la página para limpiar todo estado y volver al directorio fresco
-    setTimeout(() => {
-        location.reload();
-    }, 300);
+
+    esLlamadaPalmitas = false;
+    soyReceptorPalmitas = false;
+    emisorOriginalPalmitas = null;
+    receptoresColgaron = { diego: false, matias: false };
+    llamadaDirectaId = null;
+    datosLlamadaDirecta = null;
+    miLlamadaId = null;
+
+    document.getElementById('estado-llamada').textContent = 'Conectando...';
+    document.getElementById('estado-llamada').style.color = '#ffd700';
+    document.getElementById('timer-llamada').textContent = '00:00';
+    segundosLlamada = 0;
 }
 
 // ===== UI LLAMADA =====
