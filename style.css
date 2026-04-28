@@ -400,3 +400,790 @@ body {
     .boton-control { width: 130px; height: 130px; font-size: 55px; }
     .nombre-llamada { font-size: 36px; }
 }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Arial', 'Helvetica', sans-serif;
+    background-color: #1a1a2e;
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+}
+
+/* ========================================
+   PANTALLAS (show/hide base)
+======================================== */
+.pantalla {
+    width: 100%;
+}
+
+/* ========================================
+   PANTALLA: INGRESO
+======================================== */
+#pantalla-ingreso {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 25px;
+}
+
+.logo-grande {
+    font-size: 48px;
+    text-align: center;
+    color: #ffd700;
+    line-height: 1.2;
+}
+
+.icono-telefono {
+    font-size: 100px;
+    margin-bottom: 5px;
+    animation: balanceo 2s ease-in-out infinite;
+}
+
+@keyframes balanceo {
+    0%, 100% { transform: rotate(-8deg); }
+    50%       { transform: rotate(8deg); }
+}
+
+.campo-grupo {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.etiqueta-campo {
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.campo-texto {
+    width: 90%;
+    max-width: 500px;
+    height: 75px;
+    font-size: 30px;
+    padding: 0 22px;
+    border: 4px solid #ffd700;
+    border-radius: 20px;
+    background-color: #ffffff;
+    color: #000000;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.campo-texto:focus {
+    border-color: #00ff88;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+}
+
+.boton-principal {
+    width: 90%;
+    max-width: 500px;
+    height: 75px;
+    font-size: 34px;
+    font-weight: bold;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background-color 0.2s;
+}
+
+.boton-principal:active {
+    transform: scale(0.95);
+}
+
+.boton-principal:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.boton-amarillo {
+    background-color: #ffd700;
+    color: #000000;
+    box-shadow: 0 6px 0 #b89200;
+}
+
+.boton-amarillo:hover:not(:disabled) {
+    background-color: #ffe84d;
+}
+
+.mensaje-error {
+    background-color: #ff3333;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 15px;
+    font-size: 24px;
+    text-align: center;
+    width: 90%;
+    max-width: 500px;
+}
+
+/* ========================================
+   PANTALLA: DIRECTORIO
+======================================== */
+#pantalla-directorio {
+    flex-direction: column;
+    height: 100vh;
+    padding: 18px;
+    width: 100%;
+}
+
+.barra-superior {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #ffd700;
+    flex-shrink: 0;
+}
+
+.titulo-seccion {
+    font-size: 36px;
+    font-weight: bold;
+    color: #ffd700;
+    line-height: 1.1;
+}
+
+.mi-id-badge {
+    font-size: 18px;
+    color: #aaa;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+}
+
+.mi-id-badge span {
+    color: #00ff88;
+    font-weight: bold;
+}
+
+.boton-cerrar-sesion {
+    flex-shrink: 0;
+    padding: 0 20px;
+    height: 55px;
+    font-size: 20px;
+    background-color: #e94560;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.boton-cerrar-sesion:hover {
+    background-color: #ff5f77;
+}
+
+/* --- Info Palmitas --- */
+.info-palmitas {
+    background-color: #16213e;
+    border: 2px solid #ffd700;
+    border-radius: 15px;
+    padding: 18px;
+    margin-bottom: 15px;
+    font-size: 22px;
+    text-align: center;
+    color: #ffd700;
+    flex-shrink: 0;
+}
+
+.badge-palmitas {
+    background-color: #ff6b6b;
+    color: white;
+    font-size: 14px;
+    padding: 4px 10px;
+    border-radius: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* --- Lista de contactos --- */
+.lista-contactos {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-bottom: 15px;
+    min-height: 0;
+}
+
+.lista-contactos::-webkit-scrollbar { width: 12px; }
+.lista-contactos::-webkit-scrollbar-track { background: #1a1a2e; }
+.lista-contactos::-webkit-scrollbar-thumb { background: #ffd700; border-radius: 8px; }
+
+.tarjeta-contacto {
+    display: flex;
+    align-items: center;
+    background-color: #16213e;
+    border: 3px solid #0f3460;
+    border-radius: 24px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.25s;
+    gap: 18px;
+    width: 100%;
+    min-height: 130px;
+    /* Clickeable en toda la tarjeta */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tarjeta-contacto:hover,
+.tarjeta-contacto:active {
+    background-color: #1a3a5c;
+    border-color: #ffd700;
+    transform: translateX(6px);
+}
+
+/* Foto de contacto grande y circular */
+.avatar-contacto {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e94560, #c62a47);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: bold;
+    flex-shrink: 0;
+    color: white;
+    overflow: hidden;
+    border: 4px solid #ffd700;
+}
+
+.avatar-contacto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.info-contacto {
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.nombre-contacto {
+    font-size: 34px;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.id-contacto {
+    font-size: 16px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.estado-contacto {
+    font-size: 22px;
+    color: #00ff88;
+    margin-top: 4px;
+}
+
+/* Botón LLAMAR grande con icono y texto */
+.boton-llamar-directo {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background-color: #00cc6e;
+    border: none;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 6px 0 #008040;
+    transition: transform 0.15s, box-shadow 0.15s;
+    gap: 4px;
+    line-height: 1.1;
+}
+
+.boton-llamar-directo:active {
+    transform: scale(0.88);
+    box-shadow: 0 1px 0 #008040;
+}
+
+.boton-llamar-directo .icono-llamar {
+    font-size: 42px;
+}
+
+.boton-llamar-directo .texto-llamar {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.sin-contactos {
+    text-align: center;
+    padding: 50px 20px;
+    color: #666;
+    font-size: 26px;
+    line-height: 1.8;
+}
+
+/* ========================================
+   PANTALLA: LLAMADA ACTIVA
+======================================== */
+#pantalla-llamada {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: radial-gradient(ellipse at center, #0f1b35 0%, #0a0a1a 100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+}
+
+.contenedor-llamada {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    width: 100%;
+    padding: 30px;
+}
+
+.avatar-llamada {
+    width: 190px;
+    height: 190px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e94560, #c62a47);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 75px;
+    font-weight: bold;
+    border: 5px solid #ffd700;
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+    animation: pulso-avatar 2s ease-in-out infinite;
+    overflow: hidden;
+}
+
+.avatar-llamada img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+@keyframes pulso-avatar {
+    0%, 100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.2); }
+    50%       { box-shadow: 0 0 60px rgba(255, 215, 0, 0.5); }
+}
+
+.nombre-llamada {
+    font-size: 46px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.estado-llamada {
+    font-size: 28px;
+    color: #ffd700;
+    text-align: center;
+    min-height: 36px;
+}
+
+.timer-llamada {
+    font-size: 52px;
+    font-weight: bold;
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+}
+
+.controles-llamada {
+    display: flex;
+    gap: 50px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.boton-control {
+    width: 145px;
+    height: 145px;
+    border-radius: 50%;
+    border: none;
+    font-size: 60px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 7px 0 rgba(0,0,0,0.35);
+}
+
+.boton-control:active {
+    transform: scale(0.88);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.35);
+}
+
+.boton-aceptar  { background-color: #00cc6e; color: #000; }
+.boton-cortar   { background-color: #e94560; color: #fff; }
+.boton-silencio { background-color: #555;    color: #fff; font-size: 48px; }
+
+/* ========================================
+   LLAMADA ENTRANTE (overlay) - BOTONES GRANDES CON TEXTO
+======================================== */
+#notificacion-entrante {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100vh;
+    background: linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 100%);
+    z-index: 3000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    /* display se controla por JS */
+}
+
+.icono-entrante {
+    font-size: 130px;
+    animation: vibrar 0.45s ease-in-out infinite;
+    margin-bottom: 25px;
+}
+
+@keyframes vibrar {
+    0%   { transform: rotate(-7deg) scale(1); }
+    50%  { transform: rotate( 7deg) scale(1.05); }
+    100% { transform: rotate(-7deg) scale(1); }
+}
+
+.nombre-entrante {
+    font-size: 50px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    text-align: center;
+    color: #ffffff;
+}
+
+.texto-entrante {
+    font-size: 30px;
+    color: #ffd700;
+    margin-bottom: 55px;
+    text-align: center;
+}
+
+/* Controles de llamada entrante con botones grandes y texto */
+#notificacion-entrante .controles-llamada {
+    display: flex;
+    gap: 40px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Botón ACEPTAR grande con texto */
+.boton-aceptar-entrante {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: none;
+    background-color: #00cc6e;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 10px 0 #008040;
+    gap: 8px;
+    line-height: 1.1;
+}
+
+.boton-aceptar-entrante:active {
+    transform: scale(0.88);
+    box-shadow: 0 2px 0 #008040;
+}
+
+.boton-aceptar-entrante .icono-boton {
+    font-size: 70px;
+}
+
+.boton-aceptar-entrante .texto-boton {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+/* Botón COLGAR grande con texto */
+.boton-cortar-entrante {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: none;
+    background-color: #e94560;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 10px 0 #a03045;
+    gap: 8px;
+    line-height: 1.1;
+}
+
+.boton-cortar-entrante:active {
+    transform: scale(0.88);
+    box-shadow: 0 2px 0 #a03045;
+}
+
+.boton-cortar-entrante .icono-boton {
+    font-size: 70px;
+}
+
+.boton-cortar-entrante .texto-boton {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+@media (max-width: 600px) {
+    .logo-grande      { font-size: 38px; }
+    .icono-telefono   { font-size: 80px; }
+    .titulo-seccion   { font-size: 28px; }
+    .nombre-contacto  { font-size: 26px; }
+    .avatar-contacto  { width: 85px; height: 85px; font-size: 28px; }
+    .boton-llamar-directo { width: 100px; height: 100px; font-size: 16px; }
+    .boton-llamar-directo .icono-llamar { font-size: 32px; }
+    .boton-llamar-directo .texto-llamar { font-size: 14px; }
+    .boton-control    { width: 120px; height: 120px; font-size: 50px; }
+    .nombre-llamada   { font-size: 36px; }
+    .avatar-llamada   { width: 150px; height: 150px; font-size: 60px; }
+    .tarjeta-contacto { min-height: 110px; padding: 14px; gap: 12px; }
+    .estado-contacto  { font-size: 18px; }
+    
+    /* Responsive para botones entrantes */
+    .boton-aceptar-entrante,
+    .boton-cortar-entrante {
+        width: 160px;
+        height: 160px;
+    }
+    .boton-aceptar-entrante .icono-boton,
+    .boton-cortar-entrante .icono-boton {
+        font-size: 55px;
+    }
+    .boton-aceptar-entrante .texto-boton,
+    .boton-cortar-entrante .texto-boton {
+        font-size: 22px;
+    }
+    .icono-entrante { font-size: 100px; }
+    .nombre-entrante { font-size: 38px; }
+    .texto-entrante { font-size: 24px; }
+}
+
+@media (max-height: 700px) {
+    .icono-telefono { font-size: 60px; }
+    .contenedor-llamada { gap: 18px; }
+    .controles-llamada { gap: 35px; margin-top: 10px; }
+    .boton-control { width: 120px; height: 120px; }
+    
+    .boton-aceptar-entrante,
+    .boton-cortar-entrante {
+        width: 140px;
+        height: 140px;
+    }
+    .boton-aceptar-entrante .icono-boton,
+    .boton-cortar-entrante .icono-boton {
+        font-size: 48px;
+    }
+    .boton-aceptar-entrante .texto-boton,
+    .boton-cortar-entrante .texto-boton {
+        font-size: 20px;
+    }
+}
+/* ========================================
+   TARJETAS DE CONTACTO EN 2 COLUMNAS VERTICALES
+======================================== */
+
+/* Contenedor de contactos en grid de 2 columnas */
+.lista-contactos {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+/* Tarjeta de contacto en formato vertical */
+.tarjeta-contacto {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 15px;
+    gap: 15px;
+    min-height: auto;
+    border-radius: 24px;
+    /* La tarjeta completa es clickeable */
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Foto de contacto grande y centrada arriba */
+.avatar-contacto {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    border: 5px solid #ffd700;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-contacto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Info del contacto centrada */
+.info-contacto {
+    width: 100%;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.nombre-contacto {
+    font-size: 28px;
+    font-weight: bold;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.estado-contacto {
+    font-size: 20px;
+    color: #00ff88;
+}
+
+/* Botón LLAMAR cuadrado, grande, ocupa todo el ancho */
+.boton-llamar-directo {
+    width: 100%;
+    height: 70px;
+    border-radius: 16px;
+    background-color: #00cc6e;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 6px 0 #008040;
+    transition: transform 0.15s, box-shadow 0.15s, background-color 0.2s;
+    margin-top: 5px;
+}
+
+.boton-llamar-directo:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 0 #008040;
+}
+
+.boton-llamar-directo .icono-llamar {
+    font-size: 36px;
+}
+
+.boton-llamar-directo .texto-llamar {
+    font-size: 26px;
+    font-weight: bold;
+}
+
+/* ========================================
+   RESPONSIVE: 1 columna en pantallas muy pequeñas
+======================================== */
+@media (max-width: 400px) {
+    .lista-contactos {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .avatar-contacto {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .nombre-contacto {
+        font-size: 32px;
+    }
+    
+    .boton-llamar-directo {
+        height: 80px;
+    }
+    
+    .boton-llamar-directo .texto-llamar {
+        font-size: 30px;
+    }
+}
+
+@media (max-height: 700px) {
+    .avatar-contacto {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .nombre-contacto {
+        font-size: 24px;
+    }
+    
+    .boton-llamar-directo {
+        height: 60px;
+    }
+    
+    .boton-llamar-directo .texto-llamar {
+        font-size: 22px;
+    }
+}
+
+/* ========================================
+   AUDIO MÚLTIPLE PALMITAS
+======================================== */
+.audio-palmitas {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
