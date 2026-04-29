@@ -911,7 +911,8 @@ window.colgarLlamada = async function () {
 // ========================================================
 function recargarPagina() {
      detenerAudioLlamando();
-         if (window.Android) window.Android.setAudioNormal(); // ← agregar
+         if (window.Android && typeof window.Android.setAudioNormal === 'function')
+    window.Android.setAudioNormal(); // ← agregar
     if (peerConnection) { peerConnection.close(); peerConnection = null; }
     Object.values(conexionesPalmitas).forEach(pc => { if (pc) pc.close(); });
     conexionesPalmitas = {};
@@ -971,7 +972,8 @@ function mostrarNotificacionEntrante(nombre, texto) {
 
 function mostrarEstadoConectado() {
     detenerAudioLlamando();
-    if (window.Android) window.Android.setAudioParaLlamada(); // ← agregar
+    if (window.Android && typeof window.Android.setAudioParaLlamada === 'function')
+    window.Android.setAudioParaLlamada(); // ← agregar
     const el = document.getElementById('estado-llamada');
     if (el) { el.textContent = '✅ Conectado'; el.style.color = '#00ff88'; }
 }
