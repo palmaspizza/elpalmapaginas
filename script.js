@@ -31,7 +31,11 @@ let usuarioActual    = '';
 let llamadaActiva    = false;
 let timerInterval    = null;
 let segundosLlamada  = 0;
-
+    const FOTOS_USUARIOS = {
+        'pedro': 'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
+        'maria': 'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
+        'palmitas': 'https://i.ibb.co/jZvWMMgX/diegomatiasfoto.png'
+    };
 // Palmitas - Mesh P2P
 let esLlamadaPalmitas      = false;
 let soyReceptorPalmitas    = false;
@@ -496,11 +500,7 @@ window.renderizarContactos = function () {
         infoContainer.innerHTML = '';
     }
     
-    const FOTOS_USUARIOS = {
-        'pedro': 'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
-        'maria': 'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
-        'palmitas': 'https://i.ibb.co/jZvWMMgX/diegomatiasfoto.png'
-    };
+
     
     visibles.forEach(contacto => {
         const esPalmitas = contacto.id === 'palmitas';
@@ -923,7 +923,30 @@ function mostrarPantallaLlamada(nombre, estado) {
     `;
 }
 
+// REEMPLAZAR COMPLETO:
 function mostrarNotificacionEntrante(nombre, texto) {
+    // Extraer ID real del emisor
+    let emisorId = null;
+    if (esLlamadaPalmitas) {
+        emisorId = emisorOriginalPalmitas;
+    } else if (llamadaEntranteId) {
+        emisorId = llamadaEntranteId.split('_')[0];
+    }
+
+    const fotoUrl  = emisorId ? FOTOS_USUARIOS[emisorId] : null;
+    const iconoEl  = document.getElementById('icono-entrante-contenido');
+
+    if (iconoEl) {
+        if (fotoUrl) {
+            iconoEl.innerHTML = `<img src="${fotoUrl}"
+                style="width:160px;height:160px;border-radius:50%;
+                       border:5px solid #ffd700;object-fit:cover;"
+                onerror="this.parentElement.innerHTML='📞'">`;
+        } else {
+            iconoEl.innerHTML = '📞';
+        }
+    }
+
     document.getElementById('nombre-entrante').textContent = nombre;
     document.querySelector('#notificacion-entrante .texto-entrante').textContent = texto;
     document.getElementById('notificacion-entrante').style.display = 'flex';
@@ -969,7 +992,28 @@ window.toggleSilencio = function (btn) {
     btn.textContent           = track.enabled ? '🎤' : '🔇';
     btn.style.backgroundColor = track.enabled ? '#555' : '#e94560';
 };
+// AGREGAR al final del archivo:
 
+// ========================================================
+// LIBERAR MICRÓFONO (llamada telefónica normal entrante)
+// ========================================================
+window.liberarMicrofono = function () {
+    // Detener tracks de audio de llamadas directas
+    if (localStream) {
+        localStream.getAudioTracks().forEach(t => {
+            t.enabled = false;
+            t.stop();
+        });
+    }
+    // Detener tracks de audio de llamadas Palmitas
+    if (localStreamPalmitas) {
+        localStreamPalmitas.getAudioTracks().forEach(t => {
+            t.enabled = false;
+            t.stop();
+        });
+    }
+    console.log('Micrófono liberado por llamada telefónica');
+};
 // ========================================================
 // RESET ESTADO INTERNO
 // ========================================================
