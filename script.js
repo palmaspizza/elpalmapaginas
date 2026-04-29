@@ -48,6 +48,8 @@ let localStream      = null;
 let miLlamadaId       = null;
 let llamadaEntranteId = null;
 let yaNotifique       = false;
+let _pendingAutoAccept = false;
+let _pendingAutoReject = false;
 
 // Cola de candidatos ICE pendientes
 let icePendientes = [];
@@ -254,14 +256,28 @@ function escucharLlamadasPalmitas() {
             if (emisorId === usuarioActual) return;
 
             // 1. NOTIFICACIÓN ENTRANTE
-            if (llamada.activa && !llamadaActiva && !yaNotifique) {
-                yaNotifique            = true;
-                emisorOriginalPalmitas = emisorId;
-                soyReceptorPalmitas    = true;
-                esLlamadaPalmitas      = true;
-                const nombre = CATALOGO_USUARIOS[emisorId]?.nombre || emisorId;
-                mostrarNotificacionEntrante(`${nombre} (via Palmitas)`, 'Llamada compartida...');
-            }
+           // REEMPLAZAR el bloque de NOTIFICACIÓN ENTRANTE (sección 1):
+if (llamada.activa && !llamadaActiva && !yaNotifique) {
+    yaNotifique            = true;
+    emisorOriginalPalmitas = emisorId;
+    soyReceptorPalmitas    = true;
+    esLlamadaPalmitas      = true;
+
+    // ✅ FIX Bug 1 para Palmitas
+    if (_pendingAutoAccept) {
+        _pendingAutoAccept = false;
+        window.aceptarLlamadaEntrante();
+        return;
+    }
+    if (_pendingAutoReject) {
+        _pendingAutoReject = false;
+        window.rechazarLlamada();
+        return;
+    }
+
+    const nombre = CATALOGO_USUARIOS[emisorId]?.nombre || emisorId;
+    mostrarNotificacionEntrante(`${nombre} (via Palmitas)`, 'Llamada compartida...');
+}
 
             // 2. SI FUERON COLGADAS DESDE EL EMISOR
             if (!llamada.activa && llamadaActiva && esLlamadaPalmitas && emisorOriginalPalmitas === emisorId) {
@@ -298,16 +314,16 @@ function escucharLlamadasPalmitas() {
 
             // 6. EMISOR: escuchar candidatos ICE de receptores
             if (soyEmisorPalmitas && llamada.ice) {
-                Object.keys(llamada.ice).forEach(receptorId => {
-                    if (!llamada.ice[receptorId][usuarioActual]) return;
-                    const cands = llamada.ice[receptorId][usuarioActual];
-                    if (cands && conexionesPalmitas[receptorId]) {
-                        Object.values(cands).forEach(c => {
-                            if (c?.candidate) aplicarIceCandidatePalmitas(receptorId, c);
-                        });
-                    }
-                });
-            }
+    Object.keys(llamada.ice).forEach(receptorId => {
+        if (!llamada.ice[receptorId][receptorId]) return;      // ← receptorId, no usuarioActual
+        const cands = llamada.ice[receptorId][receptorId];     // ← receptorId, no usuarioActual
+        if (cands && conexionesPalmitas[receptorId]) {
+            Object.values(cands).forEach(c => {
+                if (c?.candidate) aplicarIceCandidatePalmitas(receptorId, c);
+            });
+        }
+    });
+}
         });
     });
 }
@@ -400,20 +416,33 @@ function escucharLlamadasDirectas() {
         if (!llamadas) return;
         Object.keys(llamadas).forEach(id => {
             const llamada = llamadas[id];
-            if (llamada.para !== usuarioActual) return;
-            if (llamada.de   === usuarioActual) return;
-            if (llamada.estado !== 'llamando')  return;
-            if (llamadaActiva)  return;
-            if (yaNotifique)    return;
-            if (llamadaEntranteId === id) return;
-            if (!llamada.oferta?.sdp) return;
+           // REEMPLAZAR dentro del forEach de escucharLlamadasDirectas:
+if (llamada.para !== usuarioActual) return;
+if (llamada.de   === usuarioActual) return;
+if (llamada.estado !== 'llamando')  return;
+if (llamadaActiva)  return;
+if (yaNotifique)    return;
+if (llamadaEntranteId === id) return;
+if (!llamada.oferta?.sdp) return;
 
-            yaNotifique       = true;
-            llamadaEntranteId = id;
-            esLlamadaPalmitas = false;
+yaNotifique       = true;
+llamadaEntranteId = id;
+esLlamadaPalmitas = false;
 
-            const nombre = CATALOGO_USUARIOS[llamada.de]?.nombre || llamada.de;
-            mostrarNotificacionEntrante(nombre, 'Te está llamando...');
+// ✅ FIX Bug 1: si Android ya pidió aceptar/rechazar antes de que JS cargara
+if (_pendingAutoAccept) {
+    _pendingAutoAccept = false;
+    window.aceptarLlamadaEntrante();
+    return;
+}
+if (_pendingAutoReject) {
+    _pendingAutoReject = false;
+    window.rechazarLlamada();
+    return;
+}
+
+const nombre = CATALOGO_USUARIOS[llamada.de]?.nombre || llamada.de;
+mostrarNotificacionEntrante(nombre, 'Te está llamando...');
         });
     });
 }
@@ -680,10 +709,10 @@ iniciarAudioLlamando();
         });
 
         _escuchar(`llamadas_directas/${llamadaId}/estado`, (snap) => {
-            const estado = snap.val();
-            if (estado === 'rechazada') recargarPagina();
-            if (estado === 'colgada' && llamadaActiva) recargarPagina();
-        });
+    const estado = snap.val();
+    if (estado === 'rechazada') recargarPagina();
+    if (estado === 'colgada')   recargarPagina(); // ← siempre recargar
+});
 
     } catch (err) {
         console.error('Error iniciando llamada:', err);
@@ -965,19 +994,23 @@ function resetEstado() {
 // ========================================================
 // BRIDGE ANDROID → WEB  (llamadas desde notificación nativa)
 // ========================================================
+// REEMPLAZAR COMPLETO (el que agregaste antes):
 window.onLlamadaAceptada = function (de, nombre) {
-    // El usuario tocó ACEPTAR en la notificación de pantalla de bloqueo
-    const notif = document.getElementById('notificacion-entrante');
-    if (notif && notif.style.display !== 'none') {
+    if (llamadaEntranteId || esLlamadaPalmitas) {
+        // JS ya tiene el ID de la llamada, aceptar inmediato
+        document.getElementById('notificacion-entrante').style.display = 'none';
         window.aceptarLlamadaEntrante();
+    } else {
+        // JS aún no detectó la llamada, marcar para auto-aceptar cuando llegue
+        _pendingAutoAccept = true;
     }
 };
 
 window.onLlamadaRechazada = function (de) {
-    // El usuario tocó RECHAZAR en la notificación de pantalla de bloqueo
-    const notif = document.getElementById('notificacion-entrante');
-    if (notif && notif.style.display !== 'none') {
+    if (llamadaEntranteId || esLlamadaPalmitas) {
         window.rechazarLlamada();
+    } else {
+        _pendingAutoReject = true;
     }
 };
 // ========================================================
