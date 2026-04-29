@@ -491,7 +491,7 @@ window.renderizarContactos = function () {
     if (vePalmitas && usuarioActual !== 'palmitas') {
         infoContainer.innerHTML = `<br>`;
     } else if (usuarioActual === 'diego' || usuarioActual === 'matias') {
-        infoContainer.innerHTML = `<div class="info-palmitas">📡 Escuchando llamadas a Palmitas...</div>`;
+        infoContainer.innerHTML = ``;
     } else {
         infoContainer.innerHTML = '';
     }
@@ -1035,4 +1035,26 @@ function detenerAudioLlamando() {
     if (!audiollamandoa) return;
     clearInterval(audiollamandoa);
     audiollamandoa = null;
+}
+// 1. Identificamos el botón
+const botonSalir = document.getElementById('btn-salir-app');
+
+if (botonSalir) {
+    botonSalir.addEventListener('click', () => {
+        // 2. Verificamos si la App de Android está escuchando (el puente)
+        if (window.Android && typeof window.Android.minimizarDesdeWeb === 'function') {
+            
+            // OPCIONAL: Si quieres que al salir se limpie el usuario 
+            // para que tenga que loguearse de nuevo, descomenta la siguiente línea:
+            // localStorage.removeItem('usuario'); 
+
+            // 3. Ejecutamos la orden de minimizar
+            window.Android.minimizarDesdeWeb();
+            
+        } else {
+            // Esto solo se verá si abres la web en un PC o Chrome normal
+            console.log("No estás en la App de Android. No se puede minimizar.");
+            alert("Saliendo de la sesión (Simulación)");
+        }
+    });
 }
