@@ -1327,3 +1327,32 @@ body {
     box-shadow: 0 0 40px rgba(230, 57, 70, 1);
   }
 }
+.boton-cerrar-sesion {
+  background-color: #e63946;
+  color: white;
+  font-weight: bold;
+  padding: 0.8em 1.5em;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+  animation: pulsoBrillo 2s infinite ease-in-out;
+}
+
+.boton-cerrar-sesion:hover {
+  transform: scale(1.05);
+}
+
+@keyframes pulsoBrillo {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(230, 57, 70, 0.6),
+                0 0 20px rgba(230, 57, 70, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(230, 57, 70, 0.9),
+                0 0 40px rgba(230, 57, 70, 0.6);
+    transform: scale(1.08);
+  }
+}
+
