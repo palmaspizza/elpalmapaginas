@@ -29,11 +29,108 @@
     <!-- ===== PANTALLA DE DIRECTORIO ===== -->
     <div id="pantalla-directorio">
         <div class="barra-superior">
-            <div class="titulo-seccion">📒 PINCHA A ALGUIEN PARA LLAMARLO</div>
-            <button class="boton-cerrar-sesion" onclick="cerrarSesion()">Salir</button>
-        </div>
+           <!-- Div que antes cerraba sesión -->
+<div class="titulo-seccion" 
+     onmousedown="iniciarHoldDiv()" 
+     onmouseup="cancelarHoldDiv()" 
+     onmouseleave="cancelarHoldDiv()" 
+     ontouchstart="iniciarHoldDiv()" 
+     ontouchend="cancelarHoldDiv()">
+  📒 PINCHA A ALGUIEN PARA LLAMARLO
+</div>
 
-        <div id="info-palmitas-container"></div>
+<!-- Modal -->
+<div onclick="cerrarModalVolver()" style="z-index: 10000000000000000000000000 !important;" id="modal-volver" class="modal">
+  <div class="modal-contenido">
+    <h2>¿Seguro que quieres salir?</h2>
+    <button class="boton-volver" onclick="cerrarModalVolver()"
+            onmousedown="iniciarHoldVolver()" 
+            onmouseup="cancelarHoldVolver()" 
+            onmouseleave="cancelarHoldVolver()" 
+            ontouchstart="iniciarHoldVolver()" 
+            ontouchend="cancelarHoldVolver()">
+      VOLVER
+    </button>
+  </div>
+</div>
+
+<style>
+.modal {
+  display: none; /* oculto por defecto */
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-contenido {
+  background: white;
+  padding: 2em;
+  border-radius: 10px;
+  text-align: center;
+  width: 80%;
+  max-width: 500px;
+}
+
+.boton-volver {
+  background-color: #e63946;
+  color: white;
+  font-size: 2.5em;
+  font-weight: bold;
+  padding: 1em 2em;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+}
+</style>
+
+<script>
+  let holdDivTimer;
+  let holdVolverTimer;
+
+  // Mantener apretado el DIV por 4s → abre modal
+  function iniciarHoldDiv() {
+    holdDivTimer = setTimeout(() => {
+      document.getElementById('modal-volver').style.display = 'flex';
+    }, 4000);
+  }
+  function cancelarHoldDiv() {
+    clearTimeout(holdDivTimer);
+  }
+
+  // Mantener apretado VOLVER por 3s → cerrar sesión
+  function iniciarHoldVolver() {
+    holdVolverTimer = setTimeout(() => {
+      cerrarSesion();
+    }, 3000);
+  }
+  function cancelarHoldVolver() {
+    clearTimeout(holdVolverTimer);
+  }
+
+  window.cerrarSesion = function () {
+    if (llamadaActiva) colgarLlamada();
+    _limpiarListeners();
+    resetEstado();
+    localStorage.removeItem('usuario');
+    usuarioActual = '';
+    document.getElementById('pantalla-directorio').style.display = 'none';
+    document.getElementById('pantalla-ingreso').style.display    = 'flex';
+    document.getElementById('input-username').value = '';
+    document.getElementById('modal-volver').style.display = 'none'; // cerrar modal
+  };
+  function cerrarModalVolver() {
+  document.getElementById('modal-volver').style.display = 'none';
+}
+
+</script>
+
+      <center> <br><br>  <button style="font-size: 170%;" class="boton-cerrar-sesion" id="btn-salir-app" onclick="">SALIR</button></center>
+        </div>
+    
+       <div id="info-palmitas-container"></div>
 
         <div class="lista-contactos" id="lista-contactos"></div>
     </div>
