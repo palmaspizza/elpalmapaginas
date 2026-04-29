@@ -67,17 +67,20 @@ const configICE = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
         {
             urls:       'turn:openrelay.metered.ca:80',
-            username:   'openrelayproject',
-            credential: 'openrelayproject'
+            username:   '032566480e449e4cee6763ad',
+            credential: 'Qtj4tbTR/oR7nFLD'
         },
         {
             urls:       'turn:openrelay.metered.ca:443',
-            username:   'openrelayproject',
-            credential: 'openrelayproject'
+            username:   '032566480e449e4cee6763ad',
+            credential: 'Qtj4tbTR/oR7nFLD'
+        },
+        {
+            urls:       'turns:openrelay.metered.ca:443',
+            username:   '032566480e449e4cee6763ad',
+            credential: 'Qtj4tbTR/oR7nFLD'
         }
     ]
 };
@@ -648,12 +651,23 @@ iniciarAudioLlamando();
             }
         };
 
-        peerConnection.oniceconnectionstatechange = () => {
-            console.log('EMISOR ICE state:', peerConnection.iceConnectionState);
-            if (peerConnection.iceConnectionState === 'failed') {
-                peerConnection.restartIce();
-            }
-        };
+        peerConnection.oniceconnectionstatechange = async () => {
+    console.log('EMISOR ICE state:', peerConnection.iceConnectionState);
+    if (peerConnection.iceConnectionState === 'failed') {
+        console.warn('ICE failed — reiniciando con nueva offer');
+        try {
+            const newOffer = await peerConnection.createOffer({ iceRestart: true });
+            await peerConnection.setLocalDescription(newOffer);
+            // Reenviar la nueva offer por Firebase
+            await set(ref(database, `llamadas_directas/${llamadaId}/oferta`), {
+                type: newOffer.type,
+                sdp:  newOffer.sdp
+            });
+        } catch(e) {
+            console.error('Error en ICE restart:', e);
+        }
+    }
+};
 
         peerConnection.onconnectionstatechange = () => {
             console.log('EMISOR connection state:', peerConnection.connectionState);
@@ -773,10 +787,13 @@ window.aceptarLlamadaEntrante = async function () {
             if (e.streams && e.streams[0]) reproducirAudioRemoto(e.streams[0]);
         };
 
-        peerConnection.oniceconnectionstatechange = () => {
-            console.log('RECEPTOR ICE state:', peerConnection.iceConnectionState);
-            if (peerConnection.iceConnectionState === 'failed') peerConnection.restartIce();
-        };
+        peerConnection.oniceconnectionstatechange = async () => {
+    console.log('RECEPTOR ICE state:', peerConnection.iceConnectionState);
+    if (peerConnection.iceConnectionState === 'failed') {
+        console.warn('ICE failed en receptor — esperando nueva offer del emisor');
+        // El receptor no inicia restart, solo espera la nueva offer del emisor
+    }
+};
 
         peerConnection.onconnectionstatechange = () => {
             console.log('RECEPTOR connection state:', peerConnection.connectionState);
