@@ -48,7 +48,7 @@ const FOTOS_USUARIOS = {
     'pedro':  'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
     'maria':  'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
     'diego':  'https://i.ibb.co/9mTjY0T4/diegoperfil.png',
-    'matias': 'https://i.ibb.co/jZvWMMgX/diegomatiasfoto.png'
+    'matias': 'https://i.ibb.co/F4xrbDMT/matiasperfil.png'
 };
 
 // ===== CONFIGURACIÓN WebRTC =====
