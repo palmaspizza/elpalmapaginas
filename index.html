@@ -144,7 +144,7 @@
             <div class="timer-llamada" id="timer-llamada">00:00</div>
 
       <div class="controles-llamada" id="controles-llamada">
-    <button class="boton-control boton-cortar" onclick="colgarLlamada()" title="Cancelar">📵</button>
+    <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
 </div>
         </div>
     </div>
@@ -153,16 +153,10 @@
         <div class="icono-entrante" id="icono-entrante-contenido">📞</div>
         <div class="nombre-entrante" id="nombre-entrante">Alguien</div>
         <div class="texto-entrante">Te está llamando...</div>
-        <div class="controles-llamada">
-            <button class="boton-aceptar-entrante" onclick="aceptarLlamadaEntrante()">
-                <span class="icono-boton">📞</span>
-                <span class="texto-boton">ACEPTAR</span>
-            </button>
-            <button class="boton-cortar-entrante" onclick="rechazarLlamada()">
-                <span class="icono-boton">📵</span>
-                <span class="texto-boton">COLGAR</span>
-            </button>
-        </div>
+       <div class="controles-entrante">
+    <button class="btn-aceptar" onclick="aceptarLlamadaEntrante()">📞 ACEPTAR</button>
+    <button class="btn-colgar"  onclick="rechazarLlamada()">📵 COLGAR</button>
+</div>
     </div>
 
     <script type="module" src="script.js"></script>
