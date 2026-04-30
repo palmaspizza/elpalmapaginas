@@ -136,17 +136,38 @@
     </div>
 
     <!-- ===== PANTALLA DE LLAMADA ===== -->
+    <!-- ===== PANTALLA DE LLAMADA (saliente) ===== -->
+    <!-- ===== PANTALLA DE LLAMADA (saliente) ===== -->
     <div id="pantalla-llamada">
         <div class="contenedor-llamada">
             <div class="avatar-llamada" id="avatar-llamada">?</div>
-            <div class="nombre-llamada" id="nombre-llamada">Nombre</div>
-            <div class="estado-llamada" id="estado-llamada">Conectando...</div>
-            <div class="timer-llamada" id="timer-llamada">00:00</div>
-
-      <div class="controles-llamada" id="controles-llamada">
-    <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
-</div>
+            <div class="nombre-llamada"  id="nombre-llamada">Nombre</div>
+            <div class="estado-llamada"  id="estado-llamada">Conectando...</div>
+            <div class="timer-llamada"   id="timer-llamada">00:00</div>
+            <div class="controles-llamada" id="controles-llamada">
+                <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
+            </div>
         </div>
+    </div>
+
+    <!-- ===== NOTIFICACIÓN LLAMADA ENTRANTE ===== -->
+    <div id="notificacion-entrante">
+
+        <!-- Foto con anillo pulsante -->
+        <div class="foto-entrante-wrapper">
+            <div class="anillo-pulso"></div>
+            <div class="foto-entrante" id="icono-entrante-contenido">📞</div>
+        </div>
+
+        <div class="nombre-entrante" id="nombre-entrante">Alguien</div>
+        <div class="texto-entrante">Te está llamando...</div>
+
+        <div class="controles-entrante">
+            <button class="btn-aceptar" onclick="aceptarLlamadaEntrante()">📞 ACEPTAR</button>
+            <button class="btn-colgar"  onclick="rechazarLlamada()">📵 COLGAR</button>
+        </div>
+
+    </div>
     </div>
     <!-- ===== NOTIFICACIÓN LLAMADA ENTRANTE ===== -->
     <div id="notificacion-entrante">
