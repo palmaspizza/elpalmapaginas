@@ -45,10 +45,10 @@ const _listeners = [];
 
 // ===== FOTOS DE USUARIOS =====
 const FOTOS_USUARIOS = {
-    'pedro':  'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
-    'maria':  'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
-    'diego':  'https://i.ibb.co/9mTjY0T4/diegoperfil.png',
-    'matias': 'https://i.ibb.co/F4xrbDMT/matiasperfil.png'
+    'PEDRO':  'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
+    'MARIA':  'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
+    'DIEGO':  'https://i.ibb.co/9mTjY0T4/diegoperfil.png',
+    'MATIAS': 'https://i.ibb.co/F4xrbDMT/matiasperfil.png'
 };
 
 // ===== CONFIGURACIÓN WebRTC =====
@@ -330,7 +330,7 @@ window.iniciarLlamada = async function (contactoId) {
     miLlamadaId   = llamadaId;
     icePendientes = [];
 
-    mostrarPantallaLlamada(nombre, 'Llamando...');
+    mostrarPantallaLlamada(nombre, 'Llamando...', contactoId);
     iniciarAudioLlamando();
 
     try {
@@ -429,7 +429,7 @@ window.aceptarLlamadaEntrante = async function () {
     const partes    = llamadaEntranteId.split('_');
     const emisorTmp = partes[0] || '';
     const nombreTmp = CATALOGO_USUARIOS[emisorTmp]?.nombre || emisorTmp;
-    mostrarPantallaLlamada(nombreTmp, 'Conectando...');
+    mostrarPantallaLlamada(nombreTmp, 'Conectando...', emisorTmp);
 
     try {
         const snap  = await get(ref(database, `llamadas_directas/${llamadaEntranteId}`));
@@ -562,18 +562,28 @@ function recargarPagina() {
 // ========================================================
 // UI
 // ========================================================
-function mostrarPantallaLlamada(nombre, estado) {
+function mostrarPantallaLlamada(nombre, estado, contactoId) {
     document.getElementById('pantalla-directorio').style.display = 'none';
     document.getElementById('pantalla-llamada').style.display    = 'flex';
     document.getElementById('nombre-llamada').textContent        = nombre;
-    document.getElementById('avatar-llamada').textContent        = nombre.charAt(0).toUpperCase();
     document.getElementById('estado-llamada').textContent        = estado;
     document.getElementById('timer-llamada').textContent         = '00:00';
-    document.getElementById('controles-llamada').innerHTML = `
-    <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
-`;
-}
 
+    // ── Mostrar foto si existe, si no la inicial ──────────────────────
+    const avatarEl = document.getElementById('avatar-llamada');
+    const fotoUrl  = contactoId ? FOTOS_USUARIOS[contactoId] : null;
+    if (fotoUrl) {
+        avatarEl.innerHTML = `<img src="${fotoUrl}"
+            style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+            onerror="this.parentElement.textContent='${nombre.charAt(0).toUpperCase()}'">`;
+    } else {
+        avatarEl.textContent = nombre.charAt(0).toUpperCase();
+    }
+
+    document.getElementById('controles-llamada').innerHTML = `
+        <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
+    `;
+}
 function mostrarNotificacionEntrante(nombre, texto) {
     let emisorId = null;
     if (llamadaEntranteId) emisorId = llamadaEntranteId.split('_')[0];
@@ -584,11 +594,9 @@ function mostrarNotificacionEntrante(nombre, texto) {
     if (iconoEl) {
         if (fotoUrl) {
             iconoEl.innerHTML = `<img src="${fotoUrl}"
-                style="width:160px;height:160px;border-radius:50%;
-                       border:5px solid #ffd700;object-fit:cover;"
-                onerror="this.parentElement.innerHTML='📞'">`;
+                onerror="this.parentElement.textContent='📞'">`;
         } else {
-            iconoEl.innerHTML = '📞';
+            iconoEl.textContent = '📞';
         }
     }
 
