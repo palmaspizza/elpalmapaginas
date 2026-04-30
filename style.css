@@ -6,26 +6,25 @@
 }
 
 body {
-    font-family: 'Arial', 'Helvetica', sans-serif;
-    background-color: #1a1a2e;
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    background-color: #0a0a1a;
     color: #ffffff;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     overflow: hidden;
     -webkit-text-size-adjust: 100%;
     touch-action: manipulation;
 }
 
-/* ===== ESTADO: INGRESO ===== */
+/* ========================================
+   PANTALLA INGRESO
+======================================== */
 #pantalla-ingreso {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
+    height: 100vh;
     padding: 20px;
     gap: 30px;
 }
@@ -33,8 +32,9 @@ body {
 .logo-grande {
     font-size: 48px;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     color: #ffd700;
+    font-weight: bold;
 }
 
 .icono-telefono {
@@ -47,6 +47,7 @@ body {
     font-weight: bold;
     margin-bottom: 15px;
     text-align: center;
+    color: #ffffff;
 }
 
 .campo-texto {
@@ -57,8 +58,8 @@ body {
     padding: 0 25px;
     border: 4px solid #ffd700;
     border-radius: 20px;
-    background-color: #ffffff;
-    color: #000000;
+    background-color: #1a1a2e;
+    color: #ffffff;
     text-align: center;
     outline: none;
 }
@@ -77,7 +78,7 @@ body {
     border: none;
     border-radius: 20px;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s;
     margin-top: 20px;
 }
 
@@ -91,128 +92,149 @@ body {
     box-shadow: 0 6px 0 #cc9900;
 }
 
-.boton-amarillo:hover {
-    background-color: #ffec8b;
-}
-
-/* ===== ESTADO: DIRECTORIO ===== */
+/* ========================================
+   DIRECTORIO - ESTILO IMAGEN (MODO OSCURO)
+======================================== */
 #pantalla-directorio {
     display: none;
     flex-direction: column;
     width: 100%;
     height: 100vh;
-    padding: 20px;
+    background-color: #0a0a1a;
 }
 
+/* Header azul oscuro tipo imagen */
 .barra-superior {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    padding: 15px 20px;
+    background-color: #1a237e;
     border-bottom: 3px solid #ffd700;
+    flex-shrink: 0;
 }
 
 .titulo-seccion {
-    font-size: 42px;
+    font-size: 28px;
     font-weight: bold;
     color: #ffd700;
+    line-height: 1.2;
 }
 
 .boton-cerrar-sesion {
-    width: 120px;
-    height: 60px;
+    padding: 12px 25px;
     font-size: 20px;
-    background-color: #ff4444;
+    background-color: #e63946;
     color: white;
     border: none;
-    border-radius: 15px;
+    border-radius: 12px;
     cursor: pointer;
     font-weight: bold;
 }
 
+/* Lista de contactos - tarjetas horizontales tipo imagen */
 .lista-contactos {
     flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding-bottom: 20px;
+    gap: 0;
+    padding: 0;
 }
 
+/* Tarjeta horizontal: foto izquierda | info derecha */
 .tarjeta-contacto {
     display: flex;
+    flex-direction: row;
     align-items: center;
     background-color: #16213e;
-    border: 3px solid #0f3460;
-    border-radius: 20px;
-    padding: 25px;
-    cursor: pointer;
-    transition: all 0.3s;
+    border-bottom: 2px solid #0f3460;
+    padding: 20px;
     gap: 25px;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-.tarjeta-contacto:hover {
+.tarjeta-contacto:active {
     background-color: #1a3a5c;
-    border-color: #ffd700;
-    transform: translateX(10px);
 }
 
+/* Foto circular grande con fondo de color pastel oscuro */
 .avatar-contacto {
-    width: 90px;
-    height: 90px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    background-color: #e94560;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 40px;
-    font-weight: bold;
+    font-size: 60px;
     flex-shrink: 0;
-    color: white;
+    overflow: hidden;
+    border: 4px solid rgba(255,255,255,0.3);
 }
 
+/* Colores pastel oscuros tipo imagen pero en modo oscuro */
+.tarjeta-contacto:nth-child(3n+1) .avatar-contacto { background-color: #2a4a7a; }
+.tarjeta-contacto:nth-child(3n+2) .avatar-contacto { background-color: #5a4a3a; }
+.tarjeta-contacto:nth-child(3n+3) .avatar-contacto { background-color: #4a3a6a; }
+
+.avatar-contacto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Info a la derecha */
 .info-contacto {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .nombre-contacto {
     font-size: 36px;
     font-weight: bold;
-    margin-bottom: 8px;
+    color: #ffffff;
 }
 
-.estado-contacto {
-    font-size: 24px;
-    color: #00ff88;
-}
-
-.estado-contacto.offline {
-    color: #888888;
-}
-
+/* Botón LLAMAR verde tipo imagen */
 .boton-llamar-directo {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background-color: #00ff88;
+    width: 140px;
+    height: 50px;
+    border-radius: 25px;
+    background-color: #00c853;
     border: none;
-    font-size: 50px;
+    color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    box-shadow: 0 6px 0 #00aa55;
-    transition: transform 0.2s;
+    gap: 8px;
+    box-shadow: 0 4px 0 #008c3a;
+    transition: transform 0.15s;
+    font-weight: bold;
+    font-size: 18px;
 }
 
 .boton-llamar-directo:active {
-    transform: scale(0.9);
-    box-shadow: 0 2px 0 #00aa55;
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #008c3a;
 }
 
-/* ===== ESTADO: LLAMADA ===== */
+.icono-llamar {
+    font-size: 20px;
+}
+
+.texto-llamar {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* ========================================
+   LLAMADA ACTIVA
+======================================== */
 #pantalla-llamada {
     display: none;
     flex-direction: column;
@@ -220,7 +242,7 @@ body {
     justify-content: center;
     width: 100%;
     height: 100vh;
-    background-color: #0f0f23;
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
     position: fixed;
     top: 0;
     left: 0;
@@ -231,22 +253,31 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 40px;
+    gap: 30px;
     width: 100%;
     padding: 30px;
 }
 
 .avatar-llamada {
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
-    background-color: #e94560;
+    background: linear-gradient(135deg, #e94560, #c62a47);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 80px;
     font-weight: bold;
     border: 5px solid #ffd700;
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+    overflow: hidden;
+}
+
+.avatar-llamada img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .nombre-llamada {
@@ -270,1224 +301,109 @@ body {
 
 .controles-llamada {
     display: flex;
-    gap: 60px;
-    margin-top: 40px;
-}
-
-.boton-control {
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    border: none;
-    font-size: 70px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s;
-    box-shadow: 0 8px 0 rgba(0,0,0,0.3);
-}
-
-.boton-control:active {
-    transform: scale(0.9);
-    box-shadow: 0 2px 0 rgba(0,0,0,0.3);
-}
-
-.boton-aceptar {
-    background-color: #00ff88;
-    color: #000;
-}
-
-.boton-cortar {
-    background-color: #ff3333;
-    color: #fff;
-}
-
-.boton-silencio {
-    background-color: #666;
-    color: #fff;
-    font-size: 50px;
-}
-
-.boton-altavoz {
-    background-color: #666;
-    color: #fff;
-    font-size: 50px;
-}
-
-/* ===== NOTIFICACIÓN ENTRANTE ===== */
-#notificacion-entrante {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background-color: rgba(0,0,0,0.95);
-    z-index: 3000;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 30px;
-}
-
-.icono-entrante {
-    font-size: 150px;
-    animation: vibrar 0.5s infinite;
-    margin-bottom: 30px;
-}
-
-@keyframes vibrar {
-    0%, 100% { transform: rotate(-5deg); }
-    50% { transform: rotate(5deg); }
-}
-
-.nombre-entrante {
-    font-size: 52px;
-    font-weight: bold;
-    margin-bottom: 15px;
-    text-align: center;
-}
-
-.texto-entrante {
-    font-size: 32px;
-    color: #ffd700;
-    margin-bottom: 60px;
-}
-
-/* ===== INDICADOR PALMITAS ===== */
-.badge-palmitas {
-    background-color: #ff6b6b;
-    color: white;
-    font-size: 18px;
-    padding: 5px 15px;
-    border-radius: 20px;
-    margin-left: 10px;
-    font-weight: bold;
-}
-
-/* ===== MENSAJE INFO PALMITAS ===== */
-.info-palmitas {
-    background-color: #2d1b69;
-    border: 2px solid #ff6b6b;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
-    text-align: center;
-    font-size: 24px;
-    color: #ffd700;
-}
-
-/* Scrollbar personalizada */
-.lista-contactos::-webkit-scrollbar {
-    width: 15px;
-}
-
-.lista-contactos::-webkit-scrollbar-track {
-    background: #1a1a2e;
-}
-
-.lista-contactos::-webkit-scrollbar-thumb {
-    background: #ffd700;
-    border-radius: 10px;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-    .nombre-contacto { font-size: 28px; }
-    .avatar-contacto { width: 70px; height: 70px; font-size: 30px; }
-    .boton-llamar-directo { width: 80px; height: 80px; font-size: 40px; }
-    .boton-control { width: 130px; height: 130px; font-size: 55px; }
-    .nombre-llamada { font-size: 36px; }
-}
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-}
-
-body {
-    font-family: 'Arial', 'Helvetica', sans-serif;
-    background-color: #1a1a2e;
-    color: #ffffff;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    -webkit-text-size-adjust: 100%;
-    touch-action: manipulation;
-}
-
-/* ========================================
-   PANTALLAS (show/hide base)
-======================================== */
-.pantalla {
-    width: 100%;
-}
-
-/* ========================================
-   PANTALLA: INGRESO
-======================================== */
-#pantalla-ingreso {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    gap: 25px;
-}
-
-.logo-grande {
-    font-size: 48px;
-    text-align: center;
-    color: #ffd700;
-    line-height: 1.2;
-}
-
-.icono-telefono {
-    font-size: 100px;
-    margin-bottom: 5px;
-    animation: balanceo 2s ease-in-out infinite;
-}
-
-@keyframes balanceo {
-    0%, 100% { transform: rotate(-8deg); }
-    50%       { transform: rotate(8deg); }
-}
-
-.campo-grupo {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.etiqueta-campo {
-    font-size: 32px;
-    font-weight: bold;
-    text-align: center;
-}
-
-.campo-texto {
-    width: 90%;
-    max-width: 500px;
-    height: 75px;
-    font-size: 30px;
-    padding: 0 22px;
-    border: 4px solid #ffd700;
-    border-radius: 20px;
-    background-color: #ffffff;
-    color: #000000;
-    text-align: center;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.campo-texto:focus {
-    border-color: #00ff88;
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-}
-
-.boton-principal {
-    width: 90%;
-    max-width: 500px;
-    height: 75px;
-    font-size: 34px;
-    font-weight: bold;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s, background-color 0.2s;
-}
-
-.boton-principal:active {
-    transform: scale(0.95);
-}
-
-.boton-principal:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.boton-amarillo {
-    background-color: #ffd700;
-    color: #000000;
-    box-shadow: 0 6px 0 #b89200;
-}
-
-.boton-amarillo:hover:not(:disabled) {
-    background-color: #ffe84d;
-}
-
-.mensaje-error {
-    background-color: #ff3333;
-    color: white;
-    padding: 15px 25px;
-    border-radius: 15px;
-    font-size: 24px;
-    text-align: center;
-    width: 90%;
-    max-width: 500px;
-}
-
-/* ========================================
-   PANTALLA: DIRECTORIO
-======================================== */
-#pantalla-directorio {
-    flex-direction: column;
-    height: 100vh;
-    padding: 18px;
-    width: 100%;
-}
-
-.barra-superior {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 3px solid #ffd700;
-    flex-shrink: 0;
-}
-
-.titulo-seccion {
-    font-size: 36px;
-    font-weight: bold;
-    color: #ffd700;
-    line-height: 1.1;
-}
-
-.mi-id-badge {
-    font-size: 18px;
-    color: #aaa;
-    margin-top: 4px;
-    letter-spacing: 0.5px;
-}
-
-.mi-id-badge span {
-    color: #00ff88;
-    font-weight: bold;
-}
-
-.boton-cerrar-sesion {
-    flex-shrink: 0;
-    padding: 0 20px;
-    height: 55px;
-    font-size: 20px;
-    background-color: #e94560;
-    color: white;
-    border: none;
-    border-radius: 14px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s;
-}
-
-.boton-cerrar-sesion:hover {
-    background-color: #ff5f77;
-}
-
-/* --- Info Palmitas --- */
-.info-palmitas {
-    background-color: #16213e;
-    border: 2px solid #ffd700;
-    border-radius: 15px;
-    padding: 18px;
-    margin-bottom: 15px;
-    font-size: 22px;
-    text-align: center;
-    color: #ffd700;
-    flex-shrink: 0;
-}
-
-.badge-palmitas {
-    background-color: #ff6b6b;
-    color: white;
-    font-size: 14px;
-    padding: 4px 10px;
-    border-radius: 10px;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-
-/* --- Lista de contactos --- */
-.lista-contactos {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    padding-bottom: 15px;
-    min-height: 0;
-}
-
-.lista-contactos::-webkit-scrollbar { width: 12px; }
-.lista-contactos::-webkit-scrollbar-track { background: #1a1a2e; }
-.lista-contactos::-webkit-scrollbar-thumb { background: #ffd700; border-radius: 8px; }
-
-.tarjeta-contacto {
-    display: flex;
-    align-items: center;
-    background-color: #16213e;
-    border: 3px solid #0f3460;
-    border-radius: 24px;
-    padding: 18px;
-    cursor: pointer;
-    transition: all 0.25s;
-    gap: 18px;
-    width: 100%;
-    min-height: 130px;
-    /* Clickeable en toda la tarjeta */
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.tarjeta-contacto:hover,
-.tarjeta-contacto:active {
-    background-color: #1a3a5c;
-    border-color: #ffd700;
-    transform: translateX(6px);
-}
-
-/* Foto de contacto grande y circular */
-.avatar-contacto {
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #e94560, #c62a47);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 36px;
-    font-weight: bold;
-    flex-shrink: 0;
-    color: white;
-    overflow: hidden;
-    border: 4px solid #ffd700;
-}
-
-.avatar-contacto img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.info-contacto {
-    flex: 1;
-    overflow: hidden;
-    min-width: 0;
-}
-
-.nombre-contacto {
-    font-size: 34px;
-    font-weight: bold;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.id-contacto {
-    font-size: 16px;
-    color: #666;
-    margin-top: 2px;
-}
-
-.estado-contacto {
-    font-size: 22px;
-    color: #00ff88;
-    margin-top: 4px;
-}
-
-/* Botón LLAMAR grande con icono y texto */
-.boton-llamar-directo {
-    width: 130px;
-    height: 130px;
-    border-radius: 50%;
-    background-color: #00cc6e;
-    border: none;
-    font-size: 20px;
-    font-weight: bold;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    box-shadow: 0 6px 0 #008040;
-    transition: transform 0.15s, box-shadow 0.15s;
-    gap: 4px;
-    line-height: 1.1;
-    animation: pulso 2s infinite ease-in-out;
-    position: relative;
-    overflow: hidden;
-}
-
-.boton-llamar-directo::after {
-    content: "";
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(0,255,150,0.3) 0%, transparent 70%);
-    animation: brillo 3s infinite linear;
-    border-radius: 50%;
-}
-
-.boton-llamar-directo:active {
-    transform: translateY(4px);
-    box-shadow: 0 2px 0 #008040;
-}
-
-@keyframes pulso {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 6px 0 #008040, 0 0 10px rgba(0, 204, 110, 0.6);
-    }
-    50% {
-        transform: scale(1.08);
-        box-shadow: 0 8px 0 #008040, 0 0 20px rgba(0, 204, 110, 0.9);
-    }
-}
-
-@keyframes brillo {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-
-.boton-llamar-directo:active {
-    transform: scale(0.88);
-    box-shadow: 0 1px 0 #008040;
-}
-
-.boton-llamar-directo .icono-llamar {
-    font-size: 42px;
-}
-
-.boton-llamar-directo .texto-llamar {
-    font-size: 18px;
-    font-weight: bold;
-}
-
-.sin-contactos {
-    text-align: center;
-    padding: 50px 20px;
-    color: #666;
-    font-size: 26px;
-    line-height: 1.8;
-}
-
-/* ========================================
-   PANTALLA: LLAMADA ACTIVA
-======================================== */
-#pantalla-llamada {
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background: radial-gradient(ellipse at center, #0f1b35 0%, #0a0a1a 100%);
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-}
-
-.contenedor-llamada {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 30px;
-    width: 100%;
-    padding: 30px;
-}
-
-.avatar-llamada {
-    width: 190px;
-    height: 190px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #e94560, #c62a47);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 75px;
-    font-weight: bold;
-    border: 5px solid #ffd700;
-    box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
-    animation: pulso-avatar 2s ease-in-out infinite;
-    overflow: hidden;
-}
-
-.avatar-llamada img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-@keyframes pulso-avatar {
-    0%, 100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.2); }
-    50%       { box-shadow: 0 0 60px rgba(255, 215, 0, 0.5); }
-}
-
-.nombre-llamada {
-    font-size: 46px;
-    font-weight: bold;
-    text-align: center;
-}
-
-.estado-llamada {
-    font-size: 28px;
-    color: #ffd700;
-    text-align: center;
-    min-height: 36px;
-}
-
-.timer-llamada {
-    font-size: 52px;
-    font-weight: bold;
-    color: #00ff88;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 2px;
-}
-
-.controles-llamada {
-    display: flex;
-    gap: 50px;
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.boton-control {
-    width: 145px;
-    height: 145px;
-    border-radius: 50%;
-    border: none;
-    font-size: 60px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 7px 0 rgba(0,0,0,0.35);
-}
-
-.boton-control:active {
-    transform: scale(0.88);
-    box-shadow: 0 2px 0 rgba(0,0,0,0.35);
-}
-
-.boton-aceptar  { background-color: #00cc6e; color: #000; }
-.boton-cortar   { background-color: #e94560; color: #fff; }
-.boton-silencio { background-color: #555;    color: #fff; font-size: 48px; }
-
-/* ========================================
-   LLAMADA ENTRANTE (overlay) - BOTONES GRANDES CON TEXTO
-======================================== */
-#notificacion-entrante {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100vh;
-    background: linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 100%);
-    z-index: 3000;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 30px;
-    /* display se controla por JS */
-}
-
-.icono-entrante {
-    font-size: 130px;
-    animation: vibrar 0.45s ease-in-out infinite;
-    margin-bottom: 25px;
-}
-
-@keyframes vibrar {
-    0%   { transform: rotate(-7deg) scale(1); }
-    50%  { transform: rotate( 7deg) scale(1.05); }
-    100% { transform: rotate(-7deg) scale(1); }
-}
-
-.nombre-entrante {
-    font-size: 50px;
-    font-weight: bold;
-    margin-bottom: 12px;
-    text-align: center;
-    color: #ffffff;
-}
-
-.texto-entrante {
-    font-size: 30px;
-    color: #ffd700;
-    margin-bottom: 55px;
-    text-align: center;
-}
-
-/* Controles de llamada entrante con botones grandes y texto */
-#notificacion-entrante .controles-llamada {
-    display: flex;
     gap: 40px;
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
+    margin-top: 30px;
 }
 
-/* Botón ACEPTAR grande con texto */
-.boton-aceptar-entrante {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    border: none;
-    background-color: #00cc6e;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 10px 0 #008040;
-    gap: 8px;
-    line-height: 1.1;
-}
-
-.boton-aceptar-entrante:active {
-    transform: scale(0.88);
-    box-shadow: 0 2px 0 #008040;
-}
-
-.boton-aceptar-entrante .icono-boton {
-    font-size: 70px;
-}
-
-.boton-aceptar-entrante .texto-boton {
-    font-size: 28px;
-    font-weight: bold;
-}
-
-/* Botón COLGAR grande con texto */
-.boton-cortar-entrante {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    border: none;
-    background-color: #e94560;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 10px 0 #a03045;
-    gap: 8px;
-    line-height: 1.1;
-}
-
-.boton-cortar-entrante:active {
-    transform: scale(0.88);
-    box-shadow: 0 2px 0 #a03045;
-}
-
-.boton-cortar-entrante .icono-boton {
-    font-size: 70px;
-}
-
-.boton-cortar-entrante .texto-boton {
-    font-size: 28px;
-    font-weight: bold;
-}
-
-/* ========================================
-   RESPONSIVE
-======================================== */
-@media (max-width: 600px) {
-    .logo-grande      { font-size: 38px; }
-    .icono-telefono   { font-size: 80px; }
-    .titulo-seccion   { font-size: 28px; }
-    .nombre-contacto  { font-size: 26px; }
-    .avatar-contacto  { width: 85px; height: 85px; font-size: 28px; }
-    .boton-llamar-directo { width: 100px; height: 100px; font-size: 16px; }
-    .boton-llamar-directo .icono-llamar { font-size: 32px; }
-    .boton-llamar-directo .texto-llamar { font-size: 14px; }
-    .boton-control    { width: 120px; height: 120px; font-size: 50px; }
-    .nombre-llamada   { font-size: 36px; }
-    .avatar-llamada   { width: 150px; height: 150px; font-size: 60px; }
-    .tarjeta-contacto { min-height: 110px; padding: 14px; gap: 12px; }
-    .estado-contacto  { font-size: 18px; }
-    
-    /* Responsive para botones entrantes */
-    .boton-aceptar-entrante,
-    .boton-cortar-entrante {
-        width: 160px;
-        height: 160px;
-    }
-    .boton-aceptar-entrante .icono-boton,
-    .boton-cortar-entrante .icono-boton {
-        font-size: 55px;
-    }
-    .boton-aceptar-entrante .texto-boton,
-    .boton-cortar-entrante .texto-boton {
-        font-size: 22px;
-    }
-    .icono-entrante { font-size: 100px; }
-    .nombre-entrante { font-size: 38px; }
-    .texto-entrante { font-size: 24px; }
-}
-
-@media (max-height: 700px) {
-    .icono-telefono { font-size: 60px; }
-    .contenedor-llamada { gap: 18px; }
-    .controles-llamada { gap: 35px; margin-top: 10px; }
-    .boton-control { width: 120px; height: 120px; }
-    
-    .boton-aceptar-entrante,
-    .boton-cortar-entrante {
-        width: 140px;
-        height: 140px;
-    }
-    .boton-aceptar-entrante .icono-boton,
-    .boton-cortar-entrante .icono-boton {
-        font-size: 48px;
-    }
-    .boton-aceptar-entrante .texto-boton,
-    .boton-cortar-entrante .texto-boton {
-        font-size: 20px;
-    }
-}
-/* ========================================
-   TARJETAS DE CONTACTO EN 2 COLUMNAS VERTICALES
-======================================== */
-
-/* Contenedor de contactos en grid de 2 columnas */
-.lista-contactos {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    padding: 10px;
-    overflow-y: auto;
-}
-
-/* Tarjeta de contacto en formato vertical */
-.tarjeta-contacto {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 20px 15px;
-    gap: 15px;
-    min-height: auto;
-    border-radius: 24px;
-    /* La tarjeta completa es clickeable */
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* Foto de contacto grande y centrada arriba */
-.avatar-contacto {
-    width: 130px;
-    height: 130px;
-    border-radius: 50%;
-    border: 5px solid #ffd700;
-    flex-shrink: 0;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.avatar-contacto img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-/* Info del contacto centrada */
-.info-contacto {
-    width: 100%;
-    flex: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-}
-
-.nombre-contacto {
-    font-size: 28px;
-    font-weight: bold;
-    white-space: normal;
-    text-align: center;
-    line-height: 1.2;
-}
-
-.estado-contacto {
-    font-size: 20px;
-    color: #00ff88;
-}
-
-/* Botón LLAMAR cuadrado, grande, ocupa todo el ancho */
-.boton-llamar-directo {
-    width: 100%;
-    height: 70px;
-    border-radius: 16px;
-    background-color: #00cc6e;
-    border: none;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    box-shadow: 0 6px 0 #008040;
-    transition: transform 0.15s, box-shadow 0.15s, background-color 0.2s;
-    margin-top: 5px;
-}
-
-.boton-llamar-directo:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 0 #008040;
-}
-
-.boton-llamar-directo .icono-llamar {
-    font-size: 36px;
-}
-
-.boton-llamar-directo .texto-llamar {
-    font-size: 26px;
-    font-weight: bold;
-}
-
-/* ========================================
-   RESPONSIVE: 1 columna en pantallas muy pequeñas
-======================================== */
-@media (max-width: 400px) {
-    .lista-contactos {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
-    .avatar-contacto {
-        width: 150px;
-        height: 150px;
-    }
-    
-    .nombre-contacto {
-        font-size: 32px;
-    }
-    
-    .boton-llamar-directo {
-        height: 80px;
-    }
-    
-    .boton-llamar-directo .texto-llamar {
-        font-size: 30px;
-    }
-}
-
-@media (max-height: 700px) {
-    .avatar-contacto {
-        width: 100px;
-        height: 100px;
-    }
-    
-    .nombre-contacto {
-        font-size: 24px;
-    }
-    
-    .boton-llamar-directo {
-        height: 60px;
-    }
-    
-    .boton-llamar-directo .texto-llamar {
-        font-size: 22px;
-    }
-}
-
-/* ========================================
-   AUDIO MÚLTIPLE PALMITAS
-======================================== */
-.audio-palmitas {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-}.boton-control.boton-cortar {
-  width: 8em;   /* tamaño mucho más grande */
-  height: 8em;  /* tamaño mucho más grande */
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  color: white;
-  font-size: 1em;
-  overflow: hidden;
-}
-
-/* Ícono de teléfono con máscara SVG */
-.boton-control.boton-cortar::before {
-  content: "";
-  display: block;
-  width: 80%;   /* ícono ocupa casi todo el círculo */
-  height: 80%;
-  mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.53.74 3.91.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.61 22 2 13.39 2 3.5a1 1 0 011-1H6.5a1 1 0 011 1c0 1.38.26 2.71.74 3.91a1 1 0 01-.21 1.11l-2.41 2.27z"/></svg>') no-repeat center;
-  -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.53.74 3.91.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.61 22 2 13.39 2 3.5a1 1 0 011-1H6.5a1 1 0 011 1c0 1.38.26 2.71.74 3.91a1 1 0 01-.21 1.11l-2.41 2.27z"/></svg>') no-repeat center;
-  background-color: white;
-}
-.icono-llamar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.2em;
-  height: 1.2em;
-  border-radius: 50%;
-  font-size: 1em;
-  color: white;
-  position: relative;
-  animation: pulso 2s infinite ease-in-out;
-  overflow: hidden;
-}
-
-.icono-llamar::before {
-  content: "";
-  display: block;
-  width: 60%;
-  height: 60%;
-  mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.53.74 3.91.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.61 22 2 13.39 2 3.5a1 1 0 011-1H6.5a1 1 0 011 1c0 1.38.26 2.71.74 3.91a1 1 0 01-.21 1.11l-2.41 2.27z"/></svg>') no-repeat center;
-  -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.2.48 2.53.74 3.91.74a1 1 0 011 1v3.5a1 1 0 01-1 1C10.61 22 2 13.39 2 3.5a1 1 0 011-1H6.5a1 1 0 011 1c0 1.38.26 2.71.74 3.91a1 1 0 01-.21 1.11l-2.41 2.27z"/></svg>') no-repeat center;
-  background-color: white;
-}
-
-.telefono-verde {
-  background-color: #00cc6e;
-}
-
-.telefono-rojo {
-  background-color: #e63946;
-}
-
-@keyframes pulso {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 10px rgba(0, 204, 110, 0.6);
-  }
-  50% {
-    transform: scale(1.15);
-    box-shadow: 0 0 20px rgba(0, 204, 110, 0.9);
-  }
-}
-
-.telefono-rojo {
-  background-color: #e63946;
-  animation: parpadeo 1.5s infinite ease-in-out;
-}
-
-@keyframes parpadeo {
-  0%, 100% {
-    opacity: 1;
-    box-shadow: 0 0 10px rgba(230, 57, 70, 0.6);
-  }
-  50% {
-    opacity: 0.6;
-    box-shadow: 0 0 20px rgba(230, 57, 70, 0.9);
-  }
-}
-
-/* Fondo rojo + animación */
-.telefono-rojo {
-  background-color: #e63946;
-  animation: parpadeo 1.5s infinite ease-in-out;
-}
-
-@keyframes parpadeo {
-  0%, 100% {
-    opacity: 1;
-    box-shadow: 0 0 25px rgba(230, 57, 70, 0.7);
-  }
-  50% {
-    opacity: 0.6;
-    box-shadow: 0 0 40px rgba(230, 57, 70, 1);
-  }
-}
-.boton-cerrar-sesion {
-  background-color: #e63946;
-  color: white;
-  font-weight: bold;
-  padding: 0.8em 1.5em;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: transform 0.2s ease-in-out;
-  animation: pulsoBrillo 2s infinite ease-in-out;
-}
-
-.boton-cerrar-sesion:hover {
-  transform: scale(1.05);
-}
-
-@keyframes pulsoBrillo {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(230, 57, 70, 0.6),
-                0 0 20px rgba(230, 57, 70, 0.4);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(230, 57, 70, 0.9),
-                0 0 40px rgba(230, 57, 70, 0.6);
-    transform: scale(1.08);
-  }
-}
-
-/* ========================================
-   BOTONES GRANDES CON TEXTO — COLGAR / ACEPTAR
-======================================== */
-
-.btn-colgar,
-.btn-aceptar,
-.btn-silencio {
-    width: 100%;
-    max-width: 340px;
-    height: 110px;
-    border: none;
-    border-radius: 20px;
-    font-size: 42px;
-    font-weight: 900;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    letter-spacing: 2px;
-    transition: transform 0.15s, box-shadow 0.15s;
-}
-
+/* Botones grandes con texto */
 .btn-colgar {
-    background-color: #e63946;
-    color: #ffffff;
-    box-shadow: 0 8px 0 #8b0000;
+    background: linear-gradient(135deg, #e63946, #c1121f);
+    color: #fff;
+    font-size: 32px;
+    font-weight: 900;
+    padding: 25px 60px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(230,57,70,.5);
+    letter-spacing: 2px;
+    transition: transform .15s;
 }
 
 .btn-colgar:active {
     transform: scale(0.95);
-    box-shadow: 0 3px 0 #8b0000;
 }
 
 .btn-aceptar {
-    background-color: #00c853;
-    color: #ffffff;
-    box-shadow: 0 8px 0 #006400;
+    background: linear-gradient(135deg, #2ecc71, #1a9e52);
+    color: #fff;
+    font-size: 32px;
+    font-weight: 900;
+    padding: 25px 60px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 28px rgba(46,204,113,.5);
+    letter-spacing: 1px;
+    transition: transform .15s;
 }
 
 .btn-aceptar:active {
     transform: scale(0.95);
-    box-shadow: 0 3px 0 #006400;
 }
 
 .btn-silencio {
-    background-color: #555555;
-    color: #ffffff;
-    box-shadow: 0 8px 0 #222222;
+    background-color: #555;
+    color: #fff;
+    font-size: 28px;
+    font-weight: bold;
+    padding: 25px 50px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #333;
+    transition: transform .15s;
 }
 
 .btn-silencio:active {
     transform: scale(0.95);
-    box-shadow: 0 3px 0 #222222;
 }
 
-/* Contenedor botones notificación entrante */
-.controles-entrante {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 25px;
-    width: 100%;
-    margin-top: 20px;
-}
-
-/* Contenedor botones durante llamada */
-#controles-llamada {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 25px;
-    width: 100%;
-    margin-top: 20px;
-}
-
-@media (max-width: 400px) {
-    .btn-colgar,
-    .btn-aceptar,
-    .btn-silencio {
-        font-size: 34px;
-        height: 95px;
-    }
-}
 /* ========================================
-   PANTALLA LLAMADA ENTRANTE — REDISEÑO
+   NOTIFICACIÓN ENTRANTE
 ======================================== */
-
 #notificacion-entrante {
     display: none;
     position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100vh;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
     background: linear-gradient(160deg, #0d0d1a 0%, #1a1a3e 60%, #0d0d1a 100%);
     z-index: 3000;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 30px;
+    padding: 30px;
     gap: 20px;
 }
 
-/* ── Wrapper foto + anillo ── */
 .foto-entrante-wrapper {
     position: relative;
-    width: 220px;
-    height: 220px;
+    width: 200px;
+    height: 200px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 10px;
 }
 
-/* Anillo pulsante detrás de la foto */
 .anillo-pulso {
     position: absolute;
-    width: 220px;
-    height: 220px;
+    width: 200px;
+    height: 200px;
     border-radius: 50%;
     border: 5px solid #00c853;
     animation: anilloPulso 1.4s ease-out infinite;
 }
 
 @keyframes anilloPulso {
-    0%   { transform: scale(1);    opacity: 1; }
-    100% { transform: scale(1.55); opacity: 0; }
+    0%   { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
 }
 
-/* Foto circular del emisor */
 .foto-entrante {
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
     border: 6px solid #ffd700;
     background-color: #2a2a5a;
@@ -1507,66 +423,98 @@ body {
     border-radius: 50%;
 }
 
-/* Nombre del emisor */
 .nombre-entrante {
     font-size: 52px;
     font-weight: 900;
     text-align: center;
     color: #ffffff;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    letter-spacing: 1px;
 }
 
-/* "Te está llamando..." */
 .texto-entrante {
     font-size: 30px;
     color: #ffd700;
     text-align: center;
     font-weight: bold;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
 }
 
-/* Contenedor botones entrante */
 .controles-entrante {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
-    margin-top: 10px;
-}
-
-/* ── Foto en pantalla de llamada saliente ── */
-.avatar-llamada {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background-color: #2a2a5a;
-    display: flex;
-    align-items: center;
+    gap: 30px;
+    margin-top: 20px;
+    flex-wrap: wrap;
     justify-content: center;
-    font-size: 80px;
+}
+
+/* ========================================
+   MODAL
+======================================== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.modal-contenido {
+    background: #1e1e1e;
+    padding: 2em;
+    border-radius: 20px;
+    text-align: center;
+    width: 80%;
+    max-width: 500px;
+    border: 2px solid #ffd700;
+}
+
+.modal-contenido h2 {
+    color: #ffffff;
+    font-size: 32px;
+    margin-bottom: 20px;
+}
+
+.boton-volver {
+    background-color: #e63946;
+    color: white;
+    font-size: 28px;
     font-weight: bold;
-    border: 6px solid #ffd700;
-    overflow: hidden;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+    padding: 20px 50px;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    width: 100%;
 }
 
-/* Responsive */
-@media (max-width: 400px) {
-    .foto-entrante-wrapper { width: 180px; height: 180px; }
-    .foto-entrante         { width: 165px; height: 165px; font-size: 70px; }
-    .anillo-pulso          { width: 180px; height: 180px; }
-    .nombre-entrante       { font-size: 40px; }
-    .texto-entrante        { font-size: 24px; }
+/* ========================================
+   SCROLLBAR
+======================================== */
+.lista-contactos::-webkit-scrollbar {
+    width: 10px;
 }
 
-@media (max-height: 700px) {
-    .foto-entrante-wrapper { width: 150px; height: 150px; margin-bottom: 0; }
-    .foto-entrante         { width: 138px; height: 138px; font-size: 60px; }
-    .anillo-pulso          { width: 150px; height: 150px; }
-    .nombre-entrante       { font-size: 36px; }
-    .texto-entrante        { font-size: 22px; }
-    #notificacion-entrante { gap: 12px; }
+.lista-contactos::-webkit-scrollbar-track {
+    background: #0a0a1a;
+}
+
+.lista-contactos::-webkit-scrollbar-thumb {
+    background: #ffd700;
+    border-radius: 10px;
+}
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+@media (max-width: 600px) {
+    .titulo-seccion { font-size: 22px; }
+    .avatar-contacto { width: 100px; height: 100px; font-size: 50px; }
+    .nombre-contacto { font-size: 28px; }
+    .boton-llamar-directo { width: 120px; height: 45px; font-size: 16px; }
+    .boton-cerrar-sesion { padding: 10px 20px; font-size: 18px; }
+    .nombre-llamada { font-size: 36px; }
+    .avatar-llamada { width: 150px; height: 150px; font-size: 60px; }
+    .btn-colgar, .btn-aceptar { font-size: 26px; padding: 20px 45px; }
 }
