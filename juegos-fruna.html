@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Los Juegos del Hambre - Edición Chilena</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#3d3535; color:#eee; font-family:Arial,Helvetica,sans-serif; font-size:13px; min-height:100vh; }
+
+/* TOP NAV */
+.top-nav { display:flex; background:#1c1616; border-bottom:2px solid #555; flex-wrap:wrap; }
+.top-nav-btn { background:#2a2020; color:#ccc; border:1px solid #666; border-right:none; padding:8px 22px; cursor:pointer; font-size:13px; font-family:Arial,sans-serif; text-decoration:none; display:inline-block; line-height:1.4; }
+.top-nav-btn:hover { background:#444; color:#fff; }
+.top-nav-btn:last-child { border-right:1px solid #666; }
+
+/* LAYOUT */
+.layout { display:flex; min-height:calc(100vh - 38px); }
+
+/* SIDEBAR */
+.sidebar { width:185px; background:#231e1e; flex-shrink:0; padding:6px 0; border-right:1px solid #444; }
+.sidebar-link { display:block; color:#00bcd4; text-decoration:none; padding:4px 14px; cursor:pointer; font-size:13px; }
+.sidebar-link:hover { color:#fff; background:#3a2a2a; }
+.sidebar-link.active { color:#fff; background:#3a2a2a; }
+.sidebar-sep { border-top:1px solid #444; margin:6px 8px; }
+.sidebar-gap { height:8px; }
+.sidebar-section { color:#888; padding:5px 14px 2px; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; }
+.sidebar-indent { padding-left:24px !important; font-size:12px; color:#009baf !important; }
+
+/* CONTENT */
+.content { flex:1; padding:12px 18px; max-width:900px; }
+.game-title-box { display:block; margin:0 auto 6px; background:#2a1c1c; border:1px solid #888; color:#f5c518; padding:6px 22px; font-weight:bold; font-size:15px; cursor:pointer; text-align:center; width:fit-content; }
+.status-btn-main { display:block; margin:0 auto 14px; background:#2a1c1c; border:1px solid #777; color:#ccc; padding:3px 16px; font-size:12px; cursor:pointer; text-align:center; width:fit-content; }
+.status-btn-main:hover { background:#3a2a2a; }
+
+/* DISTRICTS GRID */
+.districts-row { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.district-block { flex:1; min-width:200px; text-align:center; }
+.district-title { font-weight:bold; font-size:14px; color:#f0f0f0; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #555; }
+.tributes-row { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
+.tribute { text-align:center; width:105px; }
+.tribute img { width:96px; height:96px; object-fit:cover; object-position:top center; border:1px solid #666; display:block; margin:0 auto; background:#222; }
+.tribute img.deceased { filter:grayscale(100%); opacity:0.55; }
+.tribute-name { color:#f0f0f0; font-weight:bold; font-size:11px; margin-top:4px; line-height:1.3; }
+.tribute-alive { color:#4caf50; font-size:11px; }
+.tribute-dead { color:#f44336; font-size:11px; }
+.tribute-kills { color:#bbb; font-size:11px; }
+
+/* SIMULATE BUTTON */
+.simulate-btn { display:block; margin:18px auto; background:#1b4d1b; border:2px solid #4caf50; color:#7bc67e; padding:10px 36px; font-size:16px; font-weight:bold; cursor:pointer; letter-spacing:2px; font-family:Arial,sans-serif; }
+.simulate-btn:hover { background:#2a6b2a; color:#fff; box-shadow:0 0 10px rgba(76,175,80,0.4); }
+.simulate-again-btn { display:block; margin:16px auto; background:#1a2a4a; border:2px solid #2196f3; color:#64b5f6; padding:8px 28px; font-size:14px; font-weight:bold; cursor:pointer; font-family:Arial,sans-serif; }
+.simulate-again-btn:hover { background:#1e3a6e; color:#fff; }
+
+/* PHASE TITLE */
+.phase-title { text-align:center; font-size:17px; font-weight:bold; color:#f5c518; background:#1c1010; border:1px solid #777; padding:8px 14px; margin-bottom:14px; }
+
+/* EVENTS */
+.event-list { }
+.event-item { background:#271e1e; border:1px solid #3a2a2a; padding:7px 10px; margin-bottom:5px; display:flex; align-items:center; gap:8px; }
+.event-icons { display:flex; gap:3px; flex-shrink:0; }
+.ev-icon { width:38px; height:38px; object-fit:cover; object-position:top center; border-radius:50%; border:2px solid #555; background:#222; }
+.ev-icon.is-killer { border-color:#ff6f00; }
+.ev-icon.is-victim { border-color:#555; filter:grayscale(60%); }
+.ev-icon.is-survivor { border-color:#388e3c; }
+.event-text { flex:1; color:#ddd; font-size:12.5px; line-height:1.5; }
+.name-killer { font-weight:bold; color:#ffa726; }
+.name-victim { font-weight:bold; color:#90a4ae; }
+.name-survivor { font-weight:bold; color:#81c784; }
+.name-alliance { font-weight:bold; color:#ce93d8; }
+
+/* FALLEN */
+.fallen-header { color:#f44336; font-weight:bold; font-size:15px; text-align:center; margin-bottom:12px; letter-spacing:1px; }
+.fallen-grid { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:14px; }
+.fallen-card { text-align:center; width:80px; }
+.fallen-card img { width:72px; height:72px; object-fit:cover; object-position:top; filter:grayscale(100%); opacity:0.65; border:2px solid #f44336; background:#222; }
+.fallen-card-name { color:#f44336; font-size:10px; margin-top:4px; line-height:1.3; }
+.no-fallen { color:#4caf50; text-align:center; font-size:14px; padding:20px; }
+
+/* WINNER */
+.winner-section { text-align:center; padding:28px 20px; }
+.winner-crown { font-size:48px; display:block; margin-bottom:10px; }
+.winner-title { font-size:22px; font-weight:bold; color:#f5c518; margin-bottom:16px; text-shadow:0 0 8px rgba(245,197,24,0.3); }
+.winner-img { width:170px; height:170px; object-fit:cover; object-position:top; border:4px solid #f5c518; display:block; margin:0 auto; background:#222; box-shadow:0 0 20px rgba(245,197,24,0.2); }
+.winner-name { font-size:20px; color:#f5c518; font-weight:bold; margin-top:12px; }
+.winner-district { color:#aaa; font-size:13px; margin-top:4px; }
+.winner-kills { color:#ddd; font-size:13px; margin-top:4px; }
+.winner-alive-badge { display:inline-block; background:#1b4d1b; border:1px solid #4caf50; color:#4caf50; padding:3px 14px; font-size:12px; margin-top:8px; }
+
+/* NAV BUTTONS */
+.nav-buttons { display:flex; justify-content:center; gap:10px; margin-top:14px; flex-wrap:wrap; }
+.nav-btn { background:#2a1c1c; border:1px solid #777; color:#ccc; padding:6px 18px; cursor:pointer; font-size:12px; font-family:Arial,sans-serif; }
+.nav-btn:hover { background:#3a2a2a; color:#fff; }
+.nav-btn-red { border-color:#f44336; color:#f44336; }
+.nav-btn-red:hover { background:#3a1010; color:#ff6f60; }
+.fallen-link { color:#f44336; cursor:pointer; font-size:12px; text-align:right; display:block; margin-top:6px; }
+.fallen-link:hover { color:#ff8a80; }
+
+/* INTRO */
+.intro-box { background:#1c1010; border:1px solid #555; padding:14px 16px; margin-bottom:16px; color:#bbb; font-size:12.5px; line-height:1.6; text-align:center; }
+.tribute-count-badge { display:inline-block; background:#2a1c10; border:1px solid #f5c518; color:#f5c518; padding:3px 12px; font-size:12px; margin-top:6px; }
+
+img { display:block; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<div class="top-nav">
+  <span class="top-nav-btn" onclick="runSimulation()" style="cursor:pointer;">Simular</span>
+  <span class="top-nav-btn">Blog</span>
+  <span class="top-nav-btn">Reddit</span>
+  <span class="top-nav-btn">Chile Supreme Home</span>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-link" onclick="showStatus()" id="link-status">La Cosecha</div>
+    <div class="sidebar-gap"></div>
+    <div id="phase-nav"></div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-section">Opciones</div>
+    <div class="sidebar-link">Descargo de responsabilidad</div>
+    <div class="sidebar-link">Ayuda</div>
+    <div class="sidebar-link">Reportar Bug</div>
+    <div class="sidebar-link">Modificar Eventos</div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-link" onclick="runSimulation()">Guardar</div>
+    <div class="sidebar-link">Cargar Temporada</div>
+    <div class="sidebar-link">Tu Historial</div>
+    <div class="sidebar-link">Guardar Estadísticas</div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="content">
+    <div class="game-title-box" onclick="showStatus()">Los Juegos del Hambre - Edición Chilena</div>
+    <div class="status-btn-main" onclick="showStatus()">Estado</div>
+    <div id="main-view"></div>
+  </div>
+</div>
+
+<script>
+const CHARS = [
+  { id:0,  name:"Con Respeto",   img:"https://www.radioactiva.cl/wp-content/uploads/2023/01/Julio-Cesar-Rodriguez-1-1.jpg", district:1 },
+  { id:1,  name:"Karol G",       img:"https://tse1.mm.bing.net/th/id/OIP.vt0mFxAiRkON1P7oQuzbJAHaDt?rs=1&pid=ImgDetMain&o=7&rm=3", district:1 },
+  { id:2,  name:"La Difícil",    img:"https://www.fmdos.cl/wp-content/uploads/2021/10/Naya-Facil-en-Colombia.jpg", district:2 },
+  { id:3,  name:"Tío René",      img:"https://s.13.cl/sites/default/files/styles/manualcrop_850x475/public/rec/articulos/field-imagen/2023-12/don_francisco_9.jpg.jpeg?itok=_g8duEZO", district:2 },
+  { id:4,  name:"JR Playboy",    img:"https://i1.sndcdn.com/artworks-NVsTgSjWRqdxwv4w-JwdyeQ-t500x500.jpg", district:3 },
+  { id:5,  name:"Tío Aceite",    img:"https://www.adnradio.cl/resizer/v2/YPISLFWDCFNA3KX767VQ5GNIHE.jpg?auth=cb869ff0ddc0c00e2338d64a0cfb6e6de2556923c9621ea067a1679d3aab0a83&width=768&height=576&quality=70&smart=true", district:3 },
+  { id:6,  name:"El Chorizillo", img:"https://www.adnradio.cl/resizer/v2/YPISLFWDCFNA3KX767VQ5GNIHE.jpg?auth=cb869ff0ddc0c00e2338d64a0cfb6e6de2556923c9621ea067a1679d3aab0a83&width=768&height=576&quality=70&smart=true", district:4 },
+  { id:7,  name:"Sr Bosero",     img:"https://cdn.memegenerator.es/imagenes/memes/full/6/67/6677755.jpg", district:4 },
+  { id:8,  name:"El Papa",       img:"https://th.bing.com/th/id/OIP.NUWqGt4BO10jiDoCmXv_ywHaEK?rs=1&pid=ImgDetMain&o=7&rm=3", district:5 },
+  { id:9,  name:"Kampoto",       img:"https://th.bing.com/th/id/R.bfec77ee64528614eada113da4af83be?rik=ZseytjB6FrpPkg&pid=ImgRaw&r=0", district:5 },
+  { id:10, name:"Benjamón",      img:"https://th.bing.com/th/id/OIP.fkUK0TinjuQB8tnyaSykMwHaFC?w=249&h=180&c=7&r=0&o=7&pid=1.7&rm=3", district:6 },
+  { id:11, name:"Palma",         img:"https://i.ytimg.com/vi/bVF83788wrM/maxresdefault.jpg", district:6 },
+  { id:12, name:"Naxito",        img:"https://wallpapers.com/images/hd/justin-bieber-young-teen-l0hh1pmfrdg6hap7.jpg", district:7 },
+  { id:13, name:"Genaro Preso",  img:"https://www.latercera.com/resizer/v2/B62GHN4X35BKPHABQ7A2MN7GGE.png?quality=80&smart=true&auth=d695ccedad5ca57992737e94c93fd6e5a9432636bc40ab803fd108a52cbc52e6&width=1200&height=800", district:7 },
+  { id:14, name:"El Joepsh",     img:"https://ds-images.bolavip.com/news/image?src=https:%2F%2Fimages.redgol.cl%2Fjpg%2Ffull%2FRDG_20240626_RDG_441039_chile-dario-osorio-scaled-e1719355825933.jpg&width=1200&height=740", district:8 },
+];
+
+const KILL_EVENTS = [
+  (k,v) => `${k} elimina a ${v} sin contemplaciones.`,
+  (k,v) => `${k} embosca a ${v} mientras dormía y lo despacha.`,
+  (k,v) => `${k} le lanza una chapaleta a ${v}. Directo al blanco.`,
+  (k,v) => `${k} traiciona a ${v} y le roba todos los recursos.`,
+  (k,v) => `${k} persigue a ${v} por el bosque y lo da por eliminado.`,
+  (k,v) => `${k} y ${v} se enfrentan en combate. ${k} sale victorioso/a.`,
+  (k,v) => `${k} envenena la comida de ${v}. Efectivísimo.`,
+  (k,v) => `${k} tiende una trampa y ${v} cae sin darse cuenta.`,
+  (k,v) => `${k} le da un mazazo a ${v} que no lo vio venir.`,
+  (k,v) => `${k} le lanza una botella de aceite en llamas a ${v}.`,
+  (k,v) => `${k} convence a ${v} de que es su aliado/a, luego lo elimina.`,
+  (k,v) => `${k} le aplica el "con respeto, pero ya fue" final a ${v}.`,
+  (k,v) => `${k} mete un gol olímpico sobre ${v}. ¡Fuera!`,
+  (k,v) => `${k} se reza a sí mismo/a antes de eliminar a ${v}. Fue rápido.`,
+  (k,v) => `${k} convoca poderes divinos y elimina a ${v}.`,
+  (k,v) => `${k} canta una canción y distrae a ${v} para eliminarlo.`,
+  (k,v) => `${k} escapa de sus cadenas y elimina a ${v} como primer acto.`,
+  (k,v) => `${k} dribles a ${v} hasta dejarlo en el piso, fuera del juego.`,
+];
+
+const SURVIVE_EVENTS = [
+  c => `${c} encuentra comida en el bosque.`,
+  c => `${c} construye un refugio improvisado.`,
+  c => `${c} encuentra agua potable cerca de un río.`,
+  c => `${c} se esconde de los demás tributos.`,
+  c => `${c} descansa y recupera fuerzas.`,
+  c => `${c} afila sus armas para la próxima batalla.`,
+  c => `${c} explora el territorio en busca de recursos.`,
+  c => `${c} planifica su estrategia de supervivencia.`,
+  c => `${c} baila cueca solo/a para mantenerse en forma.`,
+  c => `${c} recibe un paquete de sus patrocinadores.`,
+  c => `${c} trepó a un árbol para vigilar el área.`,
+  c => `${c} encontró una mochila llena de suministros.`,
+  c => `${c} esquivó una trampa por milímetros.`,
+  c => `${c} recoge frutos silvestres con cuidado.`,
+  c => `${c} se mantiene en las sombras, sin hacer ruido.`,
+  c => `${c} da una vuelta entera al arena sin encontrar a nadie.`,
+  c => `${c} llama a su representante en el Capitolio. No contestan.`,
+];
+
+const ALLIANCE_EVENTS = [
+  (a,b) => `${a} y ${b} forman una alianza.`,
+  (a,b) => `${a} y ${b} deciden trabajar juntos por ahora.`,
+  (a,b) => `${a} comparte su comida con ${b}.`,
+  (a,b) => `${a} y ${b} acuerdan no atacarse mutuamente... por ahora.`,
+  (a,b) => `${a} cura las heridas de ${b} y se alían.`,
+  (a,b) => `${a} y ${b} montan guardia juntos durante la noche.`,
+];
+
+const NATURE_DEATHS = [
+  c => `${c} muere de hipotermia durante la noche.`,
+  c => `${c} cae de un árbol y no sobrevive al golpe.`,
+  c => `${c} es envenenado/a por bayas silvestres.`,
+  c => `${c} muere de sed después de días sin agua.`,
+  c => `${c} es devorado/a por mutaciones del Capitolio.`,
+  c => `${c} cae en una trampa y no logra salir.`,
+];
+
+function rand(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+function randInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
+function shuffle(a) { let r=[...a]; for(let i=r.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r; }
+function fallbackImg() { return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Crect fill='%23333' width='96' height='96'/%3E%3Ctext fill='%23777' font-size='28' x='48' y='58' text-anchor='middle' font-family='Arial'%3E%3F%3C/text%3E%3C/svg%3E"; }
+
+let state = null;
+let phases = [];
+
+function generateSim() {
+  let st = CHARS.map(c=>({...c,alive:true,kills:0}));
+  let allPhases = [];
+  const alive = ()=>st.filter(c=>c.alive);
+  
+  function doKill(killer,victim){killer.kills++;victim.alive=false;}
+
+  // BLOODBATH
+  {
+    let events=[],deaths=[];
+    let pool=shuffle(st);
+    let numKills=randInt(4,7);
+    let usedAsVictim=new Set();
+    let killsDone=0;
+    for(let i=0;i<pool.length&&killsDone<numKills;i++){
+      let victim=pool[i];
+      if(usedAsVictim.has(victim.id))continue;
+      let killers=pool.filter(k=>k.id!==victim.id&&!usedAsVictim.has(k.id));
+      if(!killers.length)continue;
+      let killer=rand(killers);
+      doKill(killer,victim);
+      usedAsVictim.add(victim.id);
+      killsDone++;
+      events.push({type:'kill',text:rand(KILL_EVENTS)(killer.name,victim.name),killer,victim});
+      deaths.push({...victim});
+    }
+    shuffle(alive()).forEach(c=>{
+      if(Math.random()<0.55) events.push({type:'survive',text:rand(SURVIVE_EVENTS)(c.name),chars:[c]});
+    });
+    events=shuffle(events);
+    allPhases.push({name:'El Baño de Sangre',type:'bloodbath',events,deaths});
+  }
+
+  let dayNum=1;
+  const MAX_DAYS=12;
+  while(alive().length>1&&dayNum<=MAX_DAYS){
+    // DAY
+    {
+      let events=[],deaths=[];
+      let aliveNow=alive();
+      if(aliveNow.length<=1)break;
+      let numKills=Math.random()<0.75?randInt(1,Math.min(2,aliveNow.length-1)):0;
+      let pool=shuffle(aliveNow),usedV=new Set(),kDone=0;
+      for(let i=0;i<pool.length&&kDone<numKills;i++){
+        if(alive().length<=1)break;
+        let victim=pool[i];
+        if(usedV.has(victim.id))continue;
+        let ks=alive().filter(k=>k.id!==victim.id&&!usedV.has(k.id));
+        if(!ks.length)continue;
+        let killer=rand(ks);
+        doKill(killer,victim);
+        usedV.add(victim.id);
+        kDone++;
+        events.push({type:'kill',text:rand(KILL_EVENTS)(killer.name,victim.name),killer,victim});
+        deaths.push({...victim});
+      }
+      // Natural death
+      if(Math.random()<0.15&&alive().length>2){
+        let v=rand(alive());
+        v.alive=false;
+        events.push({type:'death',text:rand(NATURE_DEATHS)(v.name),chars:[v]});
+        deaths.push({...v});
+      }
+      // Social events
+      let aliveAfter=alive();
+      shuffle(aliveAfter).forEach((c,i)=>{
+        let r=Math.random();
+        if(r<0.25&&i<aliveAfter.length-1){
+          events.push({type:'alliance',text:rand(ALLIANCE_EVENTS)(c.name,aliveAfter[i+1].name),chars:[c,aliveAfter[i+1]]});
+        } else if(r<0.7){
+          events.push({type:'survive',text:rand(SURVIVE_EVENTS)(c.name),chars:[c]});
+        }
+      });
+      allPhases.push({name:`Día ${dayNum}`,type:'day',events:shuffle(events),deaths});
+    }
+    if(alive().length<=1)break;
+
+    // NIGHT
+    {
+      let events=[],deaths=[];
+      let aliveNow=alive();
+      let numKills=Math.random()<0.55?randInt(1,Math.min(2,aliveNow.length-1)):0;
+      let pool=shuffle(aliveNow),usedV=new Set(),kDone=0;
+      for(let i=0;i<pool.length&&kDone<numKills;i++){
+        if(alive().length<=1)break;
+        let victim=pool[i];
+        if(usedV.has(victim.id))continue;
+        let ks=alive().filter(k=>k.id!==victim.id&&!usedV.has(k.id));
+        if(!ks.length)continue;
+        let killer=rand(ks);
+        doKill(killer,victim);
+        usedV.add(victim.id);
+        kDone++;
+        events.push({type:'kill',text:rand(KILL_EVENTS)(killer.name,victim.name),killer,victim});
+        deaths.push({...victim});
+      }
+      alive().forEach(c=>{
+        if(Math.random()<0.5) events.push({type:'survive',text:rand(SURVIVE_EVENTS)(c.name),chars:[c]});
+      });
+      allPhases.push({name:`Noche ${dayNum}`,type:'night',events:shuffle(events),deaths});
+    }
+    dayNum++;
+  }
+
+  let winner=alive()[0];
+  allPhases.push({name:'El Ganador',type:'winner',winner});
+  return {phases:allPhases,finalState:st};
+}
+
+function iconEl(char,cls=''){
+  return `<img class="ev-icon ${cls}" src="${char.img}" alt="${char.name}" onerror="this.src='${fallbackImg()}'">`;
+}
+
+function tributeEl(c){
+  let isAlive=c.alive!==false;
+  return `<div class="tribute">
+    <img src="${c.img}" alt="${c.name}" class="${isAlive?'':'deceased'}" onerror="this.src='${fallbackImg()}'">
+    <div class="tribute-name">${c.name}</div>
+    <div class="${isAlive?'tribute-alive':'tribute-dead'}">${isAlive?'Vivo/a':'Eliminado/a'}</div>
+    ${c.kills?`<div class="tribute-kills">${c.kills} Eliminación${c.kills>1?'es':''}</div>`:''}
+  </div>`;
+}
+
+function showStatus(){
+  let cur = state || CHARS.map(c=>({...c,alive:true,kills:0}));
+  // Group by district
+  let districts={};
+  cur.forEach(c=>{if(!districts[c.district])districts[c.district]=[];districts[c.district].push(c);});
+  let dnums=Object.keys(districts).sort((a,b)=>+a-+b);
+  let html='';
+  
+  if(!state){
+    html+=`<div class="intro-box">
+      <b style="color:#f5c518;font-size:15px;">¡Que comiencen los Juegos!</b><br>
+      15 tributos de 8 distritos de Chile entran al arena.<br>Solo uno puede salir victorioso.<br>
+      <div class="tribute-count-badge">15 Tributos &nbsp;|&nbsp; 8 Distritos</div>
+    </div>`;
+  }
+
+  for(let i=0;i<dnums.length;i+=3){
+    html+='<div class="districts-row">';
+    for(let j=i;j<Math.min(i+3,dnums.length);j++){
+      let dn=dnums[j],chars=districts[dn];
+      html+=`<div class="district-block">
+        <div class="district-title">Distrito ${dn}</div>
+        <div class="tributes-row">${chars.map(tributeEl).join('')}</div>
+      </div>`;
+    }
+    html+='</div>';
+  }
+
+  if(!state){
+    html+=`<button class="simulate-btn" onclick="runSimulation()">▶ &nbsp;SIMULAR&nbsp; ◀</button>`;
+  } else {
+    html+=`<div style="text-align:center;margin-top:10px;">
+      <button class="simulate-again-btn" onclick="runSimulation()">↺ Simular de nuevo</button>
+    </div>`;
+  }
+  document.getElementById('main-view').innerHTML=html;
+}
+
+function updateSidebar(){
+  let html='<div class="sidebar-sep"></div>';
+  phases.forEach((p,i)=>{
+    if(p.type==='winner'){
+      html+=`<div class="sidebar-link" onclick="showPhase(${i})" style="color:#f5c518;">🏆 ${p.name}</div>`;
+    } else {
+      html+=`<div class="sidebar-link" onclick="showPhase(${i})">${p.name}</div>`;
+      if(p.deaths&&p.deaths.length>0){
+        html+=`<div class="sidebar-link sidebar-indent" onclick="showFallen(${i})">↳ Caídos - ${p.name}</div>`;
+      }
+    }
+  });
+  document.getElementById('phase-nav').innerHTML=html;
+}
+
+function runSimulation(){
+  let result=generateSim();
+  state=result.finalState;
+  phases=result.phases;
+  updateSidebar();
+  showPhase(0);
+}
+
+function eventHTML(ev,phaseIdx){
+  let icons='<div class="event-icons">';
+  if(ev.type==='kill'){
+    icons+=iconEl(ev.killer,'is-killer')+iconEl(ev.victim,'is-victim');
+  } else if(ev.chars){
+    let cls=ev.type==='alliance'?'is-survivor':'is-survivor';
+    ev.chars.forEach(c=>{ icons+=iconEl(c,cls); });
+  }
+  icons+='</div>';
+
+  let txt=ev.text||'';
+  if(ev.type==='kill'){
+    txt=txt.replace(ev.killer.name,`<span class="name-killer">${ev.killer.name}</span>`);
+    txt=txt.replace(ev.victim.name,`<span class="name-victim">${ev.victim.name}</span>`);
+  } else if(ev.type==='alliance'&&ev.chars){
+    ev.chars.forEach(c=>{ txt=txt.replace(c.name,`<span class="name-alliance">${c.name}</span>`); });
+  } else if(ev.chars){
+    ev.chars.forEach(c=>{ txt=txt.replace(c.name,`<span class="name-survivor">${c.name}</span>`); });
+  }
+
+  return `<div class="event-item">${icons}<div class="event-text">${txt}</div></div>`;
+}
+
+function showPhase(idx){
+  let p=phases[idx];
+  if(!p)return;
+  if(p.type==='winner'){showWinner(p.winner,idx);return;}
+
+  let phaseLabel=p.name;
+  let bgNote=p.type==='night'?'🌙 ':'☀️ ';
+
+  let html=`<div class="phase-title">${bgNote}${phaseLabel}</div><div class="event-list">`;
+  if(!p.events||p.events.length===0){
+    html+=`<div style="color:#aaa;text-align:center;padding:20px;font-style:italic;">Sin eventos destacados en esta fase.</div>`;
+  } else {
+    p.events.forEach(ev=>{ html+=eventHTML(ev,idx); });
+  }
+  html+='</div>';
+
+  if(p.deaths&&p.deaths.length>0){
+    html+=`<div style="text-align:right;margin-top:8px;">
+      <span class="fallen-link" onclick="showFallen(${idx})">
+        Ver ${p.deaths.length} caído${p.deaths.length>1?'s':''} en ${p.name} →
+      </span>
+    </div>`;
+  } else {
+    html+=`<div style="text-align:right;margin-top:8px;color:#4caf50;font-size:12px;">Sin bajas en esta fase.</div>`;
+  }
+
+  html+='<div class="nav-buttons">';
+  if(idx>0) html+=`<button class="nav-btn" onclick="showPhase(${idx-1})">← Anterior</button>`;
+  if(p.deaths&&p.deaths.length>0) html+=`<button class="nav-btn nav-btn-red" onclick="showFallen(${idx})">☠ Caídos</button>`;
+  if(idx<phases.length-1) html+=`<button class="nav-btn" onclick="showPhase(${idx+1})">Siguiente →</button>`;
+  html+='</div>';
+
+  document.getElementById('main-view').innerHTML=html;
+}
+
+function showFallen(phaseIdx){
+  let p=phases[phaseIdx];
+  if(!p)return;
+
+  let html=`<div class="phase-title">☠ Caídos — ${p.name}</div>`;
+  if(!p.deaths||p.deaths.length===0){
+    html+=`<div class="no-fallen">✔ Ningún tributo cayó en ${p.name}.</div>`;
+  } else {
+    html+=`<div class="fallen-header">☆ ${p.deaths.length} Tributo${p.deaths.length>1?'s':''} ${p.deaths.length>1?'caídos':'caído'} en ${p.name} ☆</div>`;
+    html+='<div class="fallen-grid">';
+    p.deaths.forEach(c=>{
+      html+=`<div class="fallen-card">
+        <img src="${c.img}" alt="${c.name}" onerror="this.src='${fallbackImg()}'">
+        <div class="fallen-card-name">${c.name}</div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  html+='<div class="nav-buttons">';
+  html+=`<button class="nav-btn" onclick="showPhase(${phaseIdx})">← Volver a ${p.name}</button>`;
+  if(phaseIdx<phases.length-1) html+=`<button class="nav-btn" onclick="showPhase(${phaseIdx+1})">Siguiente fase →</button>`;
+  html+='</div>';
+  document.getElementById('main-view').innerHTML=html;
+}
+
+function showWinner(winner,idx){
+  let html=`<div class="winner-section">
+    <span class="winner-crown">🏆</span>
+    <div class="winner-title">¡GANADOR DE LOS JUEGOS DEL HAMBRE!</div>
+    <img class="winner-img" src="${winner.img}" alt="${winner.name}" onerror="this.src='${fallbackImg()}'">
+    <div class="winner-name">${winner.name}</div>
+    <div class="winner-district">Distrito ${winner.district}</div>
+    <div class="winner-alive-badge">SOBREVIVIENTE</div>
+    <div class="winner-kills" style="margin-top:10px;">${winner.kills} Eliminación${winner.kills!==1?'es':''}</div>
+    <br>
+    <button class="simulate-again-btn" onclick="runSimulation()">↺ Simular de nuevo</button>
+    <button class="nav-btn" style="margin:10px auto;display:block;" onclick="showStatus()">Ver estado final</button>
+  </div>`;
+  document.getElementById('main-view').innerHTML=html;
+}
+
+showStatus();
+</script>
+</body>
+</html>
