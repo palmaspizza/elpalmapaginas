@@ -45,10 +45,10 @@ const _listeners = [];
 
 // ===== FOTOS DE USUARIOS =====
 const FOTOS_USUARIOS = {
-    'PEDRO':  'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
-    'MARIA':  'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
-    'DIEGO':  'https://i.ibb.co/9mTjY0T4/diegoperfil.png',
-    'MATIAS': 'https://i.ibb.co/F4xrbDMT/matiasperfil.png'
+    'pedro':  'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
+    'maria':  'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
+    'diego':  'https://i.ibb.co/9mTjY0T4/diegoperfil.png',
+    'matias': 'https://i.ibb.co/F4xrbDMT/matiasperfil.png'
 };
 
 // ===== CONFIGURACIÓN WebRTC =====
@@ -74,10 +74,10 @@ const configICE = {
 // ===== CATÁLOGO DE USUARIOS =====
 // Todos son usuarios individuales — ya no existe "palmitas"
 const CATALOGO_USUARIOS = {
-    'pedro':  { nombre: 'Pedro'  },
-    'maria':  { nombre: 'Maria'  },
-    'diego':  { nombre: 'Diego'  },
-    'matias': { nombre: 'Matias' }
+    'pedro':  { nombre: 'PEDRO'  },
+    'maria':  { nombre: 'MARIA'  },
+    'diego':  { nombre: 'DIEGO'  },
+    'matias': { nombre: 'MATIAS' }
 };
 
 // ===== REGLAS DE VISIBILIDAD =====
