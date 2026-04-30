@@ -1356,3 +1356,87 @@ body {
   }
 }
 
+/* ========================================
+   BOTONES GRANDES CON TEXTO — COLGAR / ACEPTAR
+======================================== */
+
+.btn-colgar,
+.btn-aceptar,
+.btn-silencio {
+    width: 100%;
+    max-width: 340px;
+    height: 110px;
+    border: none;
+    border-radius: 20px;
+    font-size: 42px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    letter-spacing: 2px;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-colgar {
+    background-color: #e63946;
+    color: #ffffff;
+    box-shadow: 0 8px 0 #8b0000;
+}
+
+.btn-colgar:active {
+    transform: scale(0.95);
+    box-shadow: 0 3px 0 #8b0000;
+}
+
+.btn-aceptar {
+    background-color: #00c853;
+    color: #ffffff;
+    box-shadow: 0 8px 0 #006400;
+}
+
+.btn-aceptar:active {
+    transform: scale(0.95);
+    box-shadow: 0 3px 0 #006400;
+}
+
+.btn-silencio {
+    background-color: #555555;
+    color: #ffffff;
+    box-shadow: 0 8px 0 #222222;
+}
+
+.btn-silencio:active {
+    transform: scale(0.95);
+    box-shadow: 0 3px 0 #222222;
+}
+
+/* Contenedor botones notificación entrante */
+.controles-entrante {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+/* Contenedor botones durante llamada */
+#controles-llamada {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+@media (max-width: 400px) {
+    .btn-colgar,
+    .btn-aceptar,
+    .btn-silencio {
+        font-size: 34px;
+        height: 95px;
+    }
+}
