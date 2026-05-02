@@ -562,46 +562,9 @@ function recargarPagina() {
 // ========================================================
 // UI
 // ========================================================
-function mostrarPantallaLlamada(nombre, estado, contactoId) {
-    document.getElementById('pantalla-directorio').style.display = 'none';
-    document.getElementById('pantalla-llamada').style.display    = 'flex';
-    document.getElementById('nombre-llamada').textContent        = nombre;
-    document.getElementById('estado-llamada').textContent        = estado;
-    document.getElementById('timer-llamada').textContent         = '00:00';
-
-    // ── Mostrar foto si existe, si no la inicial ──────────────────────
-    const avatarEl = document.getElementById('avatar-llamada');
-    const fotoUrl  = contactoId ? FOTOS_USUARIOS[contactoId] : null;
-    if (fotoUrl) {
-        avatarEl.innerHTML = `<img src="${fotoUrl}"
-            style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
-            onerror="this.parentElement.textContent='${nombre.charAt(0).toUpperCase()}'">`;
-    } else {
-        avatarEl.textContent = nombre.charAt(0).toUpperCase();
-    }
-
-    document.getElementById('controles-llamada').innerHTML = `
-        <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
-    `;
-}
 function mostrarNotificacionEntrante(nombre, texto) {
-    let emisorId = null;
-    if (llamadaEntranteId) emisorId = llamadaEntranteId.split('_')[0];
-
-    const fotoUrl = emisorId ? FOTOS_USUARIOS[emisorId] : null;
-    const iconoEl = document.getElementById('icono-entrante-contenido');
-
-    if (iconoEl) {
-        if (fotoUrl) {
-            iconoEl.innerHTML = `<img src="${fotoUrl}"
-                onerror="this.parentElement.textContent='📞'">`;
-        } else {
-            iconoEl.textContent = '📞';
-        }
-    }
-
-    document.getElementById('nombre-entrante').textContent = nombre;
-    document.querySelector('#notificacion-entrante .texto-entrante').textContent = texto;
+    // Si estamos dentro de la app Android, la pantalla nativa maneja la llamada
+    if (window.Android) return; // ← esta línea bloquea el div HTML
     document.getElementById('notificacion-entrante').style.display = 'flex';
 }
 
@@ -620,7 +583,23 @@ function mostrarControlesDuranteLlamada() {
     <button class="btn-colgar"                     onclick="colgarLlamada()">📵 COLGAR</button>
 `;
 }
+function toggleBluetooth() {
+    if (window.Android && typeof window.Android.activarBluetooth === 'function') {
+        window.Android.activarBluetooth();
 
+        // Actualizar texto del botón visualmente
+        const estadoEl = document.getElementById('estado-bt');
+        if (estadoEl) {
+            const estaApagado = estadoEl.textContent === 'APAGADO';
+            estadoEl.textContent = estaApagado ? 'APAGAR' : 'APAGADO';
+            document.getElementById('btn-bluetooth').style.background = estaApagado
+                ? 'linear-gradient(135deg, #00c853, #008c3a)'  // verde = encendido
+                : 'linear-gradient(135deg, #0077ff, #0044bb)'; // azul = apagado
+        }
+    } else {
+        alert('Esta función solo está disponible en la app.');
+    }
+}
 // ========================================================
 // TIMER
 // ========================================================
