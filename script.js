@@ -583,23 +583,7 @@ function mostrarControlesDuranteLlamada() {
     <button class="btn-colgar"                     onclick="colgarLlamada()">📵 COLGAR</button>
 `;
 }
-function toggleBluetooth() {
-    if (window.Android && typeof window.Android.activarBluetooth === 'function') {
-        window.Android.activarBluetooth();
 
-        // Actualizar texto del botón visualmente
-        const estadoEl = document.getElementById('estado-bt');
-        if (estadoEl) {
-            const estaApagado = estadoEl.textContent === 'APAGADO';
-            estadoEl.textContent = estaApagado ? 'APAGAR' : 'APAGADO';
-            document.getElementById('btn-bluetooth').style.background = estaApagado
-                ? 'linear-gradient(135deg, #00c853, #008c3a)'  // verde = encendido
-                : 'linear-gradient(135deg, #0077ff, #0044bb)'; // azul = apagado
-        }
-    } else {
-        alert('Esta función solo está disponible en la app.');
-    }
-}
 // ========================================================
 // TIMER
 // ========================================================
