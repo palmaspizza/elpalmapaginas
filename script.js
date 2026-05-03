@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
 import {
     getDatabase,
     ref,
@@ -690,4 +690,46 @@ if (botonSalir) {
             console.log('No estás en la App de Android.');
         }
     });
+}
+
+        let holdDivTimer;
+        let holdVolverTimer;
+
+        function iniciarHoldDiv() {
+            holdDivTimer = setTimeout(() => {
+                document.getElementById('modal-volver').style.display = 'flex';
+            }, 4000);
+        }
+        function cancelarHoldDiv() {
+            clearTimeout(holdDivTimer);
+        }
+
+        function iniciarHoldVolver() {
+            holdVolverTimer = setTimeout(() => {
+                cerrarSesion();
+            }, 3000);
+        }
+        function cancelarHoldVolver() {
+            clearTimeout(holdVolverTimer);
+        }
+
+        function cerrarModalVolver() {
+            document.getElementById('modal-volver').style.display = 'none';
+        }
+        function toggleBluetooth() {
+    if (window.Android && typeof window.Android.activarBluetooth === 'function') {
+        window.Android.activarBluetooth();
+
+        // Actualizar texto del botón visualmente
+        const estadoEl = document.getElementById('estado-bt');
+        if (estadoEl) {
+            const estaApagado = estadoEl.textContent === 'APAGADO';
+            estadoEl.textContent = estaApagado ? 'APAGAR' : 'APAGADO';
+            document.getElementById('btn-bluetooth').style.background = estaApagado
+                ? 'linear-gradient(135deg, #00c853, #008c3a)'  // verde = encendido
+                : 'linear-gradient(135deg, #0077ff, #0044bb)'; // azul = apagado
+        }
+    } else {
+        alert('Esta función solo está disponible en la app.');
+    }
 }
