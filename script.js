@@ -810,24 +810,16 @@ const botonBluetooth = document.getElementById('btn-bluetooth');
 if (botonBluetooth) {
     botonBluetooth.addEventListener('click', () => {
         if (window.Android && typeof window.Android.activarBluetooth === 'function') {
-
-            // Llamar al bridge de Android (enciende o apaga según el estado actual del BT)
             window.Android.activarBluetooth();
 
-            // Alternar estado local
-            bluetoothEncendido = !bluetoothEncendido;
-
-            // Actualizar texto del botón: "CONECTAR MUSICA" / "APAGAR MUSICA"
             const estadoEl = document.getElementById('estado-bt');
             if (estadoEl) {
-                estadoEl.textContent = bluetoothEncendido ? 'APAGAR' : 'CONECTAR';
+                const estaApagado = estadoEl.textContent === 'APAGADO';
+                estadoEl.textContent = estaApagado ? 'APAGAR' : 'APAGADO';
+                botonBluetooth.style.background = estaApagado
+                    ? 'linear-gradient(135deg, #00c853, #008c3a)'
+                    : 'linear-gradient(135deg, #0077ff, #0044bb)';
             }
-
-            // Cambiar color del botón: verde = encendido, azul = apagado
-            botonBluetooth.style.background = bluetoothEncendido
-                ? 'linear-gradient(135deg, #00c853, #008c3a)'
-                : 'linear-gradient(135deg, #0077ff, #0044bb)';
-
         } else {
             alert('Esta función solo está disponible en la app.');
         }
