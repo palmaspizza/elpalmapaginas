@@ -792,19 +792,44 @@ window.cerrarModalVolver = function () {
 // BLUETOOTH
 // FIX: convertida a window.xxx para que el atributo onclick del HTML pueda llamarla
 // ========================================================
-window.toggleBluetooth = function () {
-    if (window.Android && typeof window.Android.activarBluetooth === 'function') {
-        window.Android.activarBluetooth();
+// ========================================================
+// BOTÓN BLUETOOTH
+// Reemplaza el bloque window.toggleBluetooth y el addEventListener
+// del botón bluetooth en script.js
+// ========================================================
 
-        const estadoEl = document.getElementById('estado-bt');
-        if (estadoEl) {
-            const estaApagado = estadoEl.textContent === 'APAGADO';
-            estadoEl.textContent = estaApagado ? 'APAGAR' : 'APAGADO';
-            document.getElementById('btn-bluetooth').style.background = estaApagado
-                ? 'linear-gradient(135deg, #00c853, #008c3a)'  // verde = encendido
-                : 'linear-gradient(135deg, #0077ff, #0044bb)'; // azul = apagado
+// Variable de estado: refleja si el BT está encendido o apagado
+// desde el punto de vista del botón. Se sincroniza al cargar la página.
+let bluetoothEncendido = false;
+
+// Al cargar, revisar si el BT ya estaba encendido (para mostrar el
+// estado correcto si el usuario recarga la página con BT ya activo).
+// Como no hay API JS para consultar el estado BT, iniciamos en apagado.
+
+const botonBluetooth = document.getElementById('btn-bluetooth');
+if (botonBluetooth) {
+    botonBluetooth.addEventListener('click', () => {
+        if (window.Android && typeof window.Android.activarBluetooth === 'function') {
+
+            // Llamar al bridge de Android (enciende o apaga según el estado actual del BT)
+            window.Android.activarBluetooth();
+
+            // Alternar estado local
+            bluetoothEncendido = !bluetoothEncendido;
+
+            // Actualizar texto del botón: "CONECTAR MUSICA" / "APAGAR MUSICA"
+            const estadoEl = document.getElementById('estado-bt');
+            if (estadoEl) {
+                estadoEl.textContent = bluetoothEncendido ? 'APAGAR' : 'CONECTAR';
+            }
+
+            // Cambiar color del botón: verde = encendido, azul = apagado
+            botonBluetooth.style.background = bluetoothEncendido
+                ? 'linear-gradient(135deg, #00c853, #008c3a)'
+                : 'linear-gradient(135deg, #0077ff, #0044bb)';
+
+        } else {
+            alert('Esta función solo está disponible en la app.');
         }
-    } else {
-        alert('Esta función solo está disponible en la app.');
-    }
-};
+    });
+}
