@@ -1,845 +1,116 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-import {
-    getDatabase,
-    ref,
-    set,
-    onValue,
-    off,
-    get,
-    serverTimestamp,
-    push
-} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Llamadas Fáciles - Para Adultos Mayores</title>
+    <link rel="stylesheet" href="style.css">
+    <base target="_blank">
+</head>
+<body>
 
-// ===== CONFIGURACIÓN FIREBASE =====
-const firebaseConfig = {
-    apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
-    authDomain: "palmaxd-32720.firebaseapp.com",
-    databaseURL: "https://palmaxd-32720-default-rtdb.firebaseio.com",
-    projectId: "palmaxd-32720",
-    storageBucket: "palmaxd-32720.appspot.com",
-    messagingSenderId: "527831930817",
-    appId: "1:527831930817:web:05fcfd4b53296068d4c140"
-};
+    <!-- ===== PANTALLA DE INGRESO ===== -->
+    <div id="pantalla-ingreso">
+        <div class="logo-grande">
+            <div class="icono-telefono">📞</div>
+            <div>Llamadas Fáciles</div>
+        </div>
+        <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <label class="etiqueta-campo">¿Cómo te llamas?</label>
+            <input type="text" id="input-username" class="campo-texto" placeholder="Escribe tu nombre" maxlength="20">
+        </div>
+        <button class="boton-principal boton-amarillo" onclick="ingresar()">
+            ENTRAR 🚪
+        </button>
+    </div>
 
-const app      = initializeApp(firebaseConfig);
-const database = getDatabase(app);
-console.log("Firebase conectado");
-
-// ===== VARIABLES GLOBALES =====
-let usuarioActual      = '';
-let llamadaActiva      = false;
-let timerInterval      = null;
-let segundosLlamada    = 0;
-let peerConnection     = null;
-let localStream        = null;
-let miLlamadaId        = null;
-let llamadaEntranteId  = null;
-let yaNotifique        = false;
-let _pendingAutoAccept = false;
-let _pendingAutoReject = false;
-let icePendientes      = [];
-let audiollamandoa     = null;
-
-// FIX: declaradas aquí para que las funciones window.xxx puedan usarlas
-let holdDivTimer;
-let holdVolverTimer;
-
-// Listeners activos para limpiar al colgar
-const _listeners = [];
-
-// ===== FOTOS DE USUARIOS =====
-const FOTOS_USUARIOS = {
-    'pedro':  'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
-    'maria':  'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
-    'diego':  'https://i.ibb.co/9mTjY0T4/diegoperfil.png',
-    'matias': 'https://i.ibb.co/F4xrbDMT/matiasperfil.png'
-};
-
-// ===== CONFIGURACIÓN WebRTC =====
-const configICE = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        {
-            urls:       'turn:openrelay.metered.ca:80',
-            username:   'openrelayproject',
-            credential: 'openrelayproject'
-        },
-        {
-            urls:       'turn:openrelay.metered.ca:443',
-            username:   'openrelayproject',
-            credential: 'openrelayproject'
-        }
-    ]
-};
-
-// ===== CATÁLOGO DE USUARIOS =====
-const CATALOGO_USUARIOS = {
-    'pedro':  { nombre: 'PEDRO'  },
-    'maria':  { nombre: 'MARIA'  },
-    'diego':  { nombre: 'DIEGO'  },
-    'matias': { nombre: 'MATIAS' }
-};
-
-// ===== REGLAS DE VISIBILIDAD =====
-const REGLAS_VISIBILIDAD = {
-    'pedro':  ['maria', 'diego', 'matias'],
-    'maria':  ['pedro', 'diego', 'matias'],
-    'diego':  ['pedro', 'maria', 'matias'],
-    'matias': ['pedro', 'maria', 'diego']
-};
-
-// ========================================================
-// INIT
-// ========================================================
-window.addEventListener('load', () => {
-    if (!document.getElementById('audio-remoto')) {
-        const a = document.createElement('audio');
-        a.id    = 'audio-remoto';
-        a.autoplay = true;
-        a.muted    = false;
-        a.volume   = 1;
-        a.setAttribute('playsinline', '');
-        document.body.appendChild(a);
-    }
-
-    const usuarioGuardado = localStorage.getItem('usuario');
-    if (usuarioGuardado && usuarioGuardado.trim() !== '') {
-        usuarioActual = usuarioGuardado;
-        document.getElementById('pantalla-ingreso').style.display    = 'none';
-        document.getElementById('pantalla-directorio').style.display = 'flex';
-        escucharLlamadasDirectas();
-        renderizarContactos();
-        if (window.Android) window.Android.setUsuario(usuarioActual);
-    } else {
-        document.getElementById('input-username').focus();
-    }
-});
-
-// ========================================================
-// HELPERS LISTENERS FIREBASE
-// ========================================================
-function _escuchar(path, cb) {
-    const dbRef   = ref(database, path);
-    const handler = onValue(dbRef, cb);
-    _listeners.push({ dbRef, handler });
-    return { dbRef, handler };
-}
-
-function _limpiarListeners() {
-    _listeners.forEach(l => off(l.dbRef, 'value', l.handler));
-    _listeners.length = 0;
-}
-
-// ========================================================
-// AUDIO REMOTO
-// ========================================================
-function reproducirAudioRemoto(stream) {
-    const audio = document.getElementById('audio-remoto');
-    if (!audio) { console.error('Elemento audio-remoto no encontrado'); return; }
-
-    audio.muted  = false;
-    audio.volume = 1;
-
-    if (audio.srcObject !== stream) {
-        audio.srcObject = stream;
-    }
-
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-        playPromise
-            .then(() => console.log('Audio remoto reproduciéndose'))
-            .catch(err => {
-                console.warn('Autoplay bloqueado, esperando interacción:', err);
-                const reanudar = () => {
-                    audio.play()
-                        .then(() => console.log('Audio reanudado'))
-                        .catch(console.error);
-                    document.removeEventListener('click',      reanudar);
-                    document.removeEventListener('touchstart', reanudar);
-                    document.removeEventListener('keydown',    reanudar);
-                };
-                document.addEventListener('click',      reanudar, { once: true });
-                document.addEventListener('touchstart', reanudar, { once: true });
-                document.addEventListener('keydown',    reanudar, { once: true });
-            });
-    }
-}
-
-// ========================================================
-// ICE CANDIDATES — llamadas directas
-// ========================================================
-async function aplicarIceCandidate(cand) {
-    if (!peerConnection) return;
-    try {
-        if (!peerConnection.remoteDescription || !peerConnection.remoteDescription.type) {
-            icePendientes.push(cand);
-        } else {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
-        }
-    } catch (e) {
-        console.error('addIceCandidate error:', e);
-    }
-}
-
-async function vaciarColaICE() {
-    while (icePendientes.length > 0 && peerConnection) {
-        const cand = icePendientes.shift();
-        try { await peerConnection.addIceCandidate(new RTCIceCandidate(cand)); }
-        catch (e) { console.error('addIceCandidate (cola) error:', e); }
-    }
-}
-
-// ========================================================
-// ESCUCHAR LLAMADAS ENTRANTES
-// ========================================================
-function escucharLlamadasDirectas() {
-    _escuchar('llamadas_directas', (snapshot) => {
-        const llamadas = snapshot.val();
-        if (!llamadas) return;
-
-        Object.keys(llamadas).forEach(id => {
-            const llamada = llamadas[id];
-
-            if (llamada.para    !== usuarioActual) return;
-            if (llamada.de      === usuarioActual) return;
-            if (llamada.estado  !== 'llamando')    return;
-            if (llamadaActiva)                     return;
-            if (yaNotifique)                       return;
-            if (llamadaEntranteId === id)          return;
-            if (!llamada.oferta?.sdp)              return;
-
-            yaNotifique       = true;
-            llamadaEntranteId = id;
-
-            if (_pendingAutoAccept) {
-                _pendingAutoAccept = false;
-                window.aceptarLlamadaEntrante();
-                return;
-            }
-            if (_pendingAutoReject) {
-                _pendingAutoReject = false;
-                window.rechazarLlamada();
-                return;
-            }
-
-            // Solo mostrar notificación web si la app está en primer plano.
-            // Si está en segundo plano, Android ya muestra IncomingCallActivity.
-            if (document.visibilityState === 'visible') {
-                const nombre = CATALOGO_USUARIOS[llamada.de]?.nombre || llamada.de;
-                mostrarNotificacionEntrante(nombre, 'Te está llamando...');
-            }
-        });
-    });
-}
-
-// ========================================================
-// INGRESAR
-// ========================================================
-window.ingresar = function () {
-    const username = document.getElementById('input-username').value.trim().toLowerCase();
-    if (!username) { alert('Por favor, escribe tu nombre'); return; }
-
-    if (!CATALOGO_USUARIOS[username]) {
-        alert('Usuario no reconocido. Verifica tu nombre.');
-        return;
-    }
-
-    localStorage.setItem('usuario', username);
-    usuarioActual = username;
-    document.getElementById('pantalla-ingreso').style.display    = 'none';
-    document.getElementById('pantalla-directorio').style.display = 'flex';
-    escucharLlamadasDirectas();
-    renderizarContactos();
-    if (window.Android) window.Android.setUsuario(usuarioActual);
-};
-
-// ========================================================
-// CERRAR SESIÓN
-// ========================================================
-window.cerrarSesion = function () {
-    if (llamadaActiva) colgarLlamada();
-    _limpiarListeners();
-    resetEstado();
-    localStorage.removeItem('usuario');
-    usuarioActual = '';
-    document.getElementById('pantalla-directorio').style.display = 'none';
-    document.getElementById('pantalla-ingreso').style.display    = 'flex';
-    document.getElementById('input-username').value = '';
-    document.getElementById('modal-volver').style.display = 'none';
-};
-
-// ========================================================
-// DIRECTORIO
-// ========================================================
-window.renderizarContactos = function () {
-    const contenedor     = document.getElementById('lista-contactos');
-    contenedor.innerHTML = '';
-
-    const visibles = (REGLAS_VISIBILIDAD[usuarioActual] || []).map(id => ({
-        id, nombre: CATALOGO_USUARIOS[id]?.nombre || id
-    }));
-
-    const infoContainer = document.getElementById('info-palmitas-container');
-    if (infoContainer) infoContainer.innerHTML = '';
-
-    visibles.forEach(contacto => {
-        const div     = document.createElement('div');
-        div.className = 'tarjeta-contacto';
-
-        div.onclick = function () {
-            window.iniciarLlamada(contacto.id);
-        };
-
-        const tieneFoto  = FOTOS_USUARIOS[contacto.id];
-        const avatarHTML = tieneFoto
-            ? `<img src="${tieneFoto}" alt="${contacto.nombre}"
-                    onerror="this.style.display='none';
-                             this.parentElement.textContent='${contacto.nombre.charAt(0)}';">`
-            : contacto.nombre.charAt(0);
-
-        div.innerHTML = `
-            <div class="avatar-contacto">
-                ${avatarHTML}
+    <!-- ===== PANTALLA DE DIRECTORIO ===== -->
+    <div id="pantalla-directorio">
+        <div class="barra-superior">
+            <div class="titulo-seccion" 
+                 onmousedown="iniciarHoldDiv()" 
+                 onmouseup="cancelarHoldDiv()" 
+                 onmouseleave="cancelarHoldDiv()" 
+                 ontouchstart="iniciarHoldDiv()" 
+                 ontouchend="cancelarHoldDiv()">
+                📒 PINCHA A ALGUIEN PARA LLAMARLO
             </div>
-            <div class="info-contacto">
-                <div class="nombre-contacto">${contacto.nombre}</div>
+            <button class="boton-cerrar-sesion" id="btn-salir-app">SALIR</button>
+        </div>
+
+        <!-- Modal -->
+        <div id="modal-volver" class="modal" onclick="cerrarModalVolver()">
+            <div class="modal-contenido">
+                <h2>¿Seguro que quieres salir?</h2>
+                <button class="boton-volver"
+                        onmousedown="iniciarHoldVolver()" 
+                        onmouseup="cancelarHoldVolver()" 
+                        onmouseleave="cancelarHoldVolver()" 
+                        ontouchstart="iniciarHoldVolver()" 
+                        ontouchend="cancelarHoldVolver()">
+                    VOLVER
+                </button>
             </div>
-            <span class="icono-llamar telefono-verde" style="font-size:250%;"></span>
-            <button class="boton-llamar-directo"
-                    onclick="event.stopPropagation(); window.iniciarLlamada('${contacto.id}')"
-                    title="Llamar a ${contacto.nombre}">
-                <span class="texto-llamar">LLAMAR</span>
-            </button>
-        `;
-        contenedor.appendChild(div);
-    });
-};
-
-// ========================================================
-// INICIAR LLAMADA — EMISOR
-// ========================================================
-window.iniciarLlamada = async function (contactoId) {
-    if (llamadaActiva) return;
-
-    const nombre    = CATALOGO_USUARIOS[contactoId]?.nombre || contactoId;
-    const llamadaId = `${usuarioActual}_${contactoId}_${Date.now()}`;
-    miLlamadaId     = llamadaId;
-    icePendientes   = [];
-
-    mostrarPantallaLlamada(nombre, 'Llamando...', contactoId);
-    iniciarAudioLlamando();
-
-    try {
-        localStream    = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        peerConnection = new RTCPeerConnection(configICE);
-        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-
-        peerConnection.ontrack = (e) => {
-            console.log('EMISOR: ontrack recibido');
-            if (e.streams && e.streams[0]) reproducirAudioRemoto(e.streams[0]);
-        };
-
-        peerConnection.oniceconnectionstatechange = () => {
-            console.log('EMISOR ICE state:', peerConnection.iceConnectionState);
-            if (peerConnection.iceConnectionState === 'failed') peerConnection.restartIce();
-        };
-
-        peerConnection.onconnectionstatechange = () => {
-            console.log('EMISOR connection state:', peerConnection.connectionState);
-        };
-
-        const offer = await peerConnection.createOffer();
-
-        peerConnection.onicecandidate = async (e) => {
-            if (!e.candidate) return;
-            const r = push(ref(database, `llamadas_directas/${llamadaId}/ice/${usuarioActual}`));
-            await set(r, {
-                candidate:     e.candidate.candidate,
-                sdpMid:        e.candidate.sdpMid,
-                sdpMLineIndex: e.candidate.sdpMLineIndex
-            });
-        };
-
-        await peerConnection.setLocalDescription(offer);
-
-        await set(ref(database, `llamadas_directas/${llamadaId}`), {
-            de:        usuarioActual,
-            para:      contactoId,
-            estado:    'llamando',
-            timestamp: serverTimestamp(),
-            oferta:    { type: offer.type, sdp: offer.sdp }
-        });
-
-        // Escuchar ICE del receptor
-        _escuchar(`llamadas_directas/${llamadaId}/ice/${contactoId}`, (snap) => {
-            const cands = snap.val();
-            if (!cands) return;
-            Object.values(cands).forEach(c => {
-                if (c?.candidate) aplicarIceCandidate(c);
-            });
-        });
-
-        // Escuchar respuesta del receptor
-        _escuchar(`llamadas_directas/${llamadaId}/respuesta`, async (snap) => {
-            const respuesta = snap.val();
-            if (!respuesta?.sdp)                        return;
-            if (!peerConnection)                         return;
-            if (peerConnection.remoteDescription?.type) return;
-
-            console.log('EMISOR: aplicando answer');
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(respuesta));
-            await vaciarColaICE();
-
-            if (!llamadaActiva) {
-                llamadaActiva = true;
-                iniciarTimer();
-                mostrarEstadoConectado();
-                mostrarControlesDuranteLlamada();
-            }
-        });
-
-        // Escuchar estado (rechazada / colgada)
-        _escuchar(`llamadas_directas/${llamadaId}/estado`, (snap) => {
-            const estado = snap.val();
-            if (estado === 'rechazada') recargarPagina();
-            if (estado === 'colgada')   recargarPagina();
-        });
-
-    } catch (err) {
-        console.error('Error iniciando llamada:', err);
-        document.getElementById('estado-llamada').textContent = 'Error al acceder al micrófono ❌';
-        document.getElementById('estado-llamada').style.color = '#ff3333';
-    }
-};
-
-// ========================================================
-// ACEPTAR LLAMADA ENTRANTE — RECEPTOR
-// ========================================================
-window.aceptarLlamadaEntrante = async function () {
-    document.getElementById('notificacion-entrante').style.display = 'none';
-    if (!llamadaEntranteId) return;
-
-    icePendientes = [];
-
-    // Mostrar pantalla inmediatamente
-    const partes    = llamadaEntranteId.split('_');
-    const emisorTmp = partes[0] || '';
-    const nombreTmp = CATALOGO_USUARIOS[emisorTmp]?.nombre || emisorTmp;
-    mostrarPantallaLlamada(nombreTmp, 'Conectando...', emisorTmp);
-
-    try {
-        const snap  = await get(ref(database, `llamadas_directas/${llamadaEntranteId}`));
-        const datos = snap.val();
-
-        if (!datos?.oferta?.sdp) {
-            document.getElementById('estado-llamada').textContent = 'Error al conectar ❌';
-            document.getElementById('estado-llamada').style.color = '#ff3333';
-            return;
-        }
-
-        const emisorId = datos.de;
-        const nombre   = CATALOGO_USUARIOS[emisorId]?.nombre || emisorId;
-
-        document.getElementById('nombre-llamada').textContent = nombre;
-
-        // Mostrar foto del emisor en el avatar de la pantalla de llamada
-        const avatarEl  = document.getElementById('avatar-llamada');
-        const urlFoto   = FOTOS_USUARIOS[emisorId];
-        if (urlFoto) {
-            avatarEl.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
-                onerror="this.style.display='none';
-                         this.parentElement.textContent='${nombre.charAt(0).toUpperCase()}';">`;
-        } else {
-            avatarEl.textContent = nombre.charAt(0).toUpperCase();
-        }
-
-        localStream    = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        peerConnection = new RTCPeerConnection(configICE);
-        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-
-        peerConnection.ontrack = (e) => {
-            console.log('RECEPTOR: ontrack recibido');
-            if (e.streams && e.streams[0]) reproducirAudioRemoto(e.streams[0]);
-        };
-
-        peerConnection.oniceconnectionstatechange = () => {
-            console.log('RECEPTOR ICE state:', peerConnection.iceConnectionState);
-            if (peerConnection.iceConnectionState === 'failed') peerConnection.restartIce();
-        };
-
-        peerConnection.onconnectionstatechange = () => {
-            console.log('RECEPTOR connection state:', peerConnection.connectionState);
-        };
-
-        console.log('RECEPTOR: aplicando offer');
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(datos.oferta));
-        await vaciarColaICE();
-
-        const answer = await peerConnection.createAnswer();
-
-        peerConnection.onicecandidate = async (e) => {
-            if (!e.candidate) return;
-            const r = push(ref(database, `llamadas_directas/${llamadaEntranteId}/ice/${usuarioActual}`));
-            await set(r, {
-                candidate:     e.candidate.candidate,
-                sdpMid:        e.candidate.sdpMid,
-                sdpMLineIndex: e.candidate.sdpMLineIndex
-            });
-        };
-
-        await peerConnection.setLocalDescription(answer);
-
-        console.log('RECEPTOR: enviando answer');
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/respuesta`), {
-            type: answer.type,
-            sdp:  answer.sdp
-        });
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'aceptada');
-
-        // Escuchar ICE del emisor
-        _escuchar(`llamadas_directas/${llamadaEntranteId}/ice/${emisorId}`, (snap) => {
-            const cands = snap.val();
-            if (!cands) return;
-            Object.values(cands).forEach(c => { if (c?.candidate) aplicarIceCandidate(c); });
-        });
-
-        // Escuchar si el emisor cuelga
-        _escuchar(`llamadas_directas/${llamadaEntranteId}/estado`, (snap) => {
-            const estado = snap.val();
-            if (estado === 'colgada') recargarPagina();
-        });
-
-        llamadaActiva = true;
-        iniciarTimer();
-        mostrarEstadoConectado();
-        mostrarControlesDuranteLlamada();
-
-    } catch (err) {
-        console.error('Error aceptando llamada:', err);
-        document.getElementById('estado-llamada').textContent = 'Error al conectar ❌';
-        document.getElementById('estado-llamada').style.color = '#ff3333';
-    }
-};
-
-// ========================================================
-// RECHAZAR LLAMADA
-// ========================================================
-window.rechazarLlamada = async function () {
-    document.getElementById('notificacion-entrante').style.display = 'none';
-    if (llamadaEntranteId) {
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'rechazada');
-    }
-    recargarPagina();
-};
-
-// ========================================================
-// COLGAR LLAMADA
-// ========================================================
-window.colgarLlamada = async function () {
-    // Emisor cuelga
-    if (miLlamadaId) {
-        await set(ref(database, `llamadas_directas/${miLlamadaId}/estado`), 'colgada');
-    }
-    // Receptor cuelga
-    if (llamadaEntranteId && !miLlamadaId) {
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'colgada');
-    }
-    recargarPagina();
-};
-
-// ========================================================
-// RECARGA AL COLGAR
-// ========================================================
-function recargarPagina() {
-    detenerAudioLlamando();
-    if (window.Android && typeof window.Android.setAudioNormal === 'function') {
-        window.Android.setAudioNormal();
-    }
-    if (peerConnection) { peerConnection.close(); peerConnection = null; }
-    if (localStream)    { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-
-    const audioEl = document.getElementById('audio-remoto');
-    if (audioEl) audioEl.srcObject = null;
-
-    _limpiarListeners();
-    setTimeout(() => location.reload(), 400);
-}
-
-// ========================================================
-// UI — MOSTRAR PANTALLA DE LLAMADA
-// FIX: función que faltaba — causaba "mostrarPantallaLlamada is not defined"
-// ========================================================
-function mostrarPantallaLlamada(nombre, estado, contactoId) {
-    document.getElementById('pantalla-directorio').style.display = 'none';
-    document.getElementById('pantalla-llamada').style.display    = 'flex';
-
-    document.getElementById('nombre-llamada').textContent = nombre;
-    document.getElementById('estado-llamada').textContent = estado;
-    document.getElementById('timer-llamada').textContent  = '00:00';
-
-    // Mostrar foto o inicial en el avatar
-    const avatarEl = document.getElementById('avatar-llamada');
-    const urlFoto  = FOTOS_USUARIOS[contactoId];
-    if (urlFoto) {
-        avatarEl.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
-            onerror="this.style.display='none';
-                     this.parentElement.textContent='${nombre.charAt(0).toUpperCase()}';">`;
-    } else {
-        avatarEl.textContent = nombre.charAt(0).toUpperCase();
-    }
-}
-
-// ========================================================
-// UI — NOTIFICACIÓN ENTRANTE
-// ========================================================
-function mostrarNotificacionEntrante(nombre, texto) {
-    // Si estamos dentro de la app Android, la pantalla nativa maneja la llamada
-    if (window.Android) return;
-
-    const contenidoIcono = document.getElementById('icono-entrante-contenido');
-    if (contenidoIcono) {
-        const urlFoto = FOTOS_USUARIOS[llamadaEntranteId?.split('_')[0]];
-        if (urlFoto) {
-            contenidoIcono.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
-                style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
-                onerror="this.style.display='none'; this.parentElement.textContent='📞';">`;
-        }
-    }
-
-    document.getElementById('nombre-entrante').textContent = nombre;
-    document.getElementById('notificacion-entrante').style.display = 'flex';
-}
-
-function mostrarEstadoConectado() {
-    detenerAudioLlamando();
-    if (window.Android && typeof window.Android.setAudioParaLlamada === 'function') {
-        window.Android.setAudioParaLlamada();
-    }
-    const el = document.getElementById('estado-llamada');
-    if (el) { el.textContent = '✅ Conectado'; el.style.color = '#00ff88'; }
-}
-
-function mostrarControlesDuranteLlamada() {
-    document.getElementById('controles-llamada').innerHTML = `
-        <button class="btn-silencio" id="btn-silencio" onclick="window.toggleSilencio(this)">🎤 SILENCIO</button>
-        <button class="btn-colgar" onclick="window.colgarLlamada()">📵 COLGAR</button>
-    `;
-}
-
-// ========================================================
-// TIMER
-// ========================================================
-function iniciarTimer() {
-    segundosLlamada = 0;
-    timerInterval   = setInterval(() => {
-        segundosLlamada++;
-        const m  = Math.floor(segundosLlamada / 60).toString().padStart(2, '0');
-        const s  = (segundosLlamada % 60).toString().padStart(2, '0');
-        const el = document.getElementById('timer-llamada');
-        if (el) el.textContent = `${m}:${s}`;
-    }, 1000);
-}
-
-// ========================================================
-// CONTROLES DE AUDIO
-// ========================================================
-window.toggleSilencio = function (btn) {
-    if (!localStream) return;
-    const track = localStream.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled             = !track.enabled;
-    btn.textContent           = track.enabled ? '🎤 SILENCIO' : '🔇 MUTEADO';
-    btn.style.backgroundColor = track.enabled ? '#555555' : '#e94560';
-};
-
-window.liberarMicrofono = function () {
-    if (localStream) {
-        localStream.getAudioTracks().forEach(t => { t.enabled = false; t.stop(); });
-    }
-    console.log('Micrófono liberado por llamada telefónica');
-};
-
-// ========================================================
-// RESET ESTADO
-// ========================================================
-function resetEstado() {
-    llamadaActiva      = false;
-    peerConnection     = null;
-    localStream        = null;
-    miLlamadaId        = null;
-    llamadaEntranteId  = null;
-    yaNotifique        = false;
-    segundosLlamada    = 0;
-    icePendientes      = [];
-    _pendingAutoAccept = false;
-    _pendingAutoReject = false;
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-}
-
-// ========================================================
-// BRIDGE ANDROID → WEB
-// ========================================================
-window.onLlamadaAceptada = function (de, nombre) {
-    if (llamadaEntranteId) {
-        document.getElementById('notificacion-entrante').style.display = 'none';
-        window.aceptarLlamadaEntrante();
-    } else {
-        _pendingAutoAccept = true;
-    }
-};
-
-window.onLlamadaRechazada = function (de) {
-    if (llamadaEntranteId) {
-        window.rechazarLlamada();
-    } else {
-        _pendingAutoReject = true;
-    }
-};
-
-// ========================================================
-// AUDIO LLAMANDO (tono saliente)
-// ========================================================
-function iniciarAudioLlamando() {
-    if (audiollamandoa) return;
-
-    function sonarUnaVez() {
-        if (!audiollamandoa) return;
-        const tono = new Audio('tono_llamando.mp3');
-        tono.volume = 1;
-        tono.play().catch(e => console.warn('Audio bloqueado:', e));
-    }
-
-    audiollamandoa = true;
-    sonarUnaVez();
-    audiollamandoa = setInterval(sonarUnaVez, 2500);
-}
-
-function detenerAudioLlamando() {
-    if (!audiollamandoa) return;
-    clearInterval(audiollamandoa);
-    audiollamandoa = null;
-}
-
-// ========================================================
-// BOTÓN SALIR
-// ========================================================
-const botonSalir = document.getElementById('btn-salir-app');
-if (botonSalir) {
-    botonSalir.addEventListener('click', () => {
-        if (window.Android && typeof window.Android.minimizarDesdeWeb === 'function') {
-            window.Android.minimizarDesdeWeb();
-        } else {
-            console.log('No estás en la App de Android.');
-        }
-    });
-}
-
-// ========================================================
-// BOTÓN BLUETOOTH  ← agregar aquí
-// ========================================================
-const botonBluetooth = document.getElementById('btn-bluetooth');
-if (botonBluetooth) {
-    botonBluetooth.addEventListener('click', () => {
-        if (window.Android && typeof window.Android.activarBluetooth === 'function') {
-            window.Android.activarBluetooth();
-
-            const estadoEl = document.getElementById('estado-bt');
-            if (estadoEl) {
-                const estaApagado = estadoEl.textContent === 'APAGADO';
-                estadoEl.textContent = estaApagado ? 'APAGAR' : 'APAGADO';
-                botonBluetooth.style.background = estaApagado
-                    ? 'linear-gradient(135deg, #00c853, #008c3a)'
-                    : 'linear-gradient(135deg, #0077ff, #0044bb)';
-            }
-        } else {
-            alert('Esta función solo está disponible en la app.');
-        }
-    });
-}
-
-// ========================================================
-// HOLD — MENÚ OCULTO (SALIR)
-// FIX: convertidas a window.xxx para que los atributos HTML puedan llamarlas
-// ========================================================
-window.iniciarHoldDiv = function () {
-    holdDivTimer = setTimeout(() => {
-        document.getElementById('modal-volver').style.display = 'flex';
-    }, 4000);
-};
-
-window.cancelarHoldDiv = function () {
-    clearTimeout(holdDivTimer);
-};
-
-window.iniciarHoldVolver = function () {
-    holdVolverTimer = setTimeout(() => {
-        window.cerrarSesion();
-    }, 3000);
-};
-
-window.cancelarHoldVolver = function () {
-    clearTimeout(holdVolverTimer);
-};
-
-window.cerrarModalVolver = function () {
-    document.getElementById('modal-volver').style.display = 'none';
-};
-
-// ========================================================
-// BLUETOOTH
-// FIX: convertida a window.xxx para que el atributo onclick del HTML pueda llamarla
-// ========================================================
-// ========================================================
-// BOTÓN BLUETOOTH
-// Reemplaza el bloque window.toggleBluetooth y el addEventListener
-// del botón bluetooth en script.js
-// ========================================================
-
-// Variable de estado: refleja si el BT está encendido o apagado
-// desde el punto de vista del botón. Se sincroniza al cargar la página.
-let bluetoothEncendido = false;
-
-// Al cargar, revisar si el BT ya estaba encendido (para mostrar el
-// estado correcto si el usuario recarga la página con BT ya activo).
-// Como no hay API JS para consultar el estado BT, iniciamos en apagado.
-
-const botonBluetooth = document.getElementById('btn-bluetooth');
-if (botonBluetooth) {
-    botonBluetooth.addEventListener('click', () => {
-        if (window.Android && typeof window.Android.activarBluetooth === 'function') {
-
-            // Llamar al bridge de Android (enciende o apaga según el estado actual del BT)
-            window.Android.activarBluetooth();
-
-            // Alternar estado local
-            bluetoothEncendido = !bluetoothEncendido;
-
-            // Actualizar texto del botón: "CONECTAR MUSICA" / "APAGAR MUSICA"
-            const estadoEl = document.getElementById('estado-bt');
-            if (estadoEl) {
-                estadoEl.textContent = bluetoothEncendido ? 'APAGAR' : 'CONECTAR';
-            }
-
-            // Cambiar color del botón: verde = encendido, azul = apagado
-            botonBluetooth.style.background = bluetoothEncendido
-                ? 'linear-gradient(135deg, #00c853, #008c3a)'
-                : 'linear-gradient(135deg, #0077ff, #0044bb)';
-
-        } else {
-            alert('Esta función solo está disponible en la app.');
-        }
-    });
-}
-
-window.ingresar = ingresar;
-window.colgarLlamada = colgarLlamada;
-window.aceptarLlamadaEntrante = aceptarLlamadaEntrante;
-window.rechazarLlamada = rechazarLlamada;
-window.cerrarModalVolver = cerrarModalVolver;
-window.iniciarHoldDiv = iniciarHoldDiv;
-window.cancelarHoldDiv = cancelarHoldDiv;
-window.iniciarHoldVolver = iniciarHoldVolver;
-window.cancelarHoldVolver = cancelarHoldVolver;
+        </div>
+
+        <div id="info-palmitas-container"></div>
+        <div style="display:flex; justify-content:center; padding: 15px 20px 5px 20px;">
+    <button id="btn-bluetooth"  
+        style="
+            width: 100%;
+            max-width: 500px;
+            height: 70px;
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #0077ff, #0044bb);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #002299;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            letter-spacing: 1px;
+        ">
+        <span id="estado-bt">CONECTAR</span> MUSICA
+    </button>
+</div>
+        <div class="lista-contactos" id="lista-contactos"></div>
+    </div>
+
+    <!-- ===== PANTALLA DE LLAMADA ===== -->
+    <div id="pantalla-llamada">
+        <div class="contenedor-llamada">
+            <div class="avatar-llamada" id="avatar-llamada">?</div>
+            <div class="nombre-llamada" id="nombre-llamada">Nombre</div>
+            <div class="estado-llamada" id="estado-llamada">Conectando...</div>
+            <div class="timer-llamada" id="timer-llamada">00:00</div>
+            <div class="controles-llamada" id="controles-llamada">
+                <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== NOTIFICACIÓN LLAMADA ENTRANTE (única, limpia) ===== -->
+    <div id="notificacion-entrante">
+        <div class="foto-entrante-wrapper">
+            <div class="anillo-pulso"></div>
+            <div class="foto-entrante" id="icono-entrante-contenido">📞</div>
+        </div>
+        <div class="nombre-entrante" id="nombre-entrante">Alguien</div>
+        <div class="texto-entrante">Te está llamando...</div>
+        <div class="controles-entrante">
+            <button class="btn-aceptar" onclick="aceptarLlamadaEntrante()">📞 ACEPTAR</button>
+            <button class="btn-colgar" onclick="rechazarLlamada()">📵 COLGAR</button>
+        </div>
+    </div>
+
+    <script>
+       
+    </script>
+
+    <script src="script.js"></script>
+</body>
+</html>
