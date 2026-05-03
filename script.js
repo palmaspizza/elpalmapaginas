@@ -814,3 +814,16 @@ if (botonBluetooth) {
         }
     });
 }
+
+
+// ========================================================
+// SINCRONIZACIÓN DE ESTADO BT DESDE OVERLAY NATIVO
+// Llamado desde MainActivity cuando el overlay desconecta el BT
+// ========================================================
+window.setBTApagado = function () {
+    bluetoothEncendido = false;
+    const estadoEl = document.getElementById('estado-bt');
+    if (estadoEl) estadoEl.textContent = 'CONECTAR';
+    const btn = document.getElementById('btn-bluetooth');
+    if (btn) btn.style.background = 'linear-gradient(135deg, #0077ff, #0044bb)';
+};
