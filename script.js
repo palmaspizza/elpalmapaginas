@@ -833,3 +833,13 @@ if (botonBluetooth) {
         }
     });
 }
+
+window.ingresar = ingresar;
+window.colgarLlamada = colgarLlamada;
+window.aceptarLlamadaEntrante = aceptarLlamadaEntrante;
+window.rechazarLlamada = rechazarLlamada;
+window.cerrarModalVolver = cerrarModalVolver;
+window.iniciarHoldDiv = iniciarHoldDiv;
+window.cancelarHoldDiv = cancelarHoldDiv;
+window.iniciarHoldVolver = iniciarHoldVolver;
+window.cancelarHoldVolver = cancelarHoldVolver;
