@@ -1,4 +1,4 @@
- import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
 import {
     getDatabase,
     ref,
@@ -26,19 +26,23 @@ const database = getDatabase(app);
 console.log("Firebase conectado");
 
 // ===== VARIABLES GLOBALES =====
-let usuarioActual     = '';
-let llamadaActiva     = false;
-let timerInterval     = null;
-let segundosLlamada   = 0;
-let peerConnection    = null;
-let localStream       = null;
-let miLlamadaId       = null;
-let llamadaEntranteId = null;
-let yaNotifique       = false;
+let usuarioActual      = '';
+let llamadaActiva      = false;
+let timerInterval      = null;
+let segundosLlamada    = 0;
+let peerConnection     = null;
+let localStream        = null;
+let miLlamadaId        = null;
+let llamadaEntranteId  = null;
+let yaNotifique        = false;
 let _pendingAutoAccept = false;
 let _pendingAutoReject = false;
-let icePendientes     = [];
-let audiollamandoa    = null;
+let icePendientes      = [];
+let audiollamandoa     = null;
+
+// FIX: declaradas aquí para que las funciones window.xxx puedan usarlas
+let holdDivTimer;
+let holdVolverTimer;
 
 // Listeners activos para limpiar al colgar
 const _listeners = [];
@@ -72,7 +76,6 @@ const configICE = {
 };
 
 // ===== CATÁLOGO DE USUARIOS =====
-// Todos son usuarios individuales — ya no existe "palmitas"
 const CATALOGO_USUARIOS = {
     'pedro':  { nombre: 'PEDRO'  },
     'maria':  { nombre: 'MARIA'  },
@@ -81,7 +84,6 @@ const CATALOGO_USUARIOS = {
 };
 
 // ===== REGLAS DE VISIBILIDAD =====
-// Define quién puede llamar a quién
 const REGLAS_VISIBILIDAD = {
     'pedro':  ['maria', 'diego', 'matias'],
     'maria':  ['pedro', 'diego', 'matias'],
@@ -223,10 +225,8 @@ function escucharLlamadasDirectas() {
                 return;
             }
 
-            // ── NUEVO: solo mostrar notificación web si la app
-            // está en primer plano (visible). Si está en segundo plano,
-            // Android ya muestra IncomingCallActivity automáticamente
-            // y no necesitamos la doble pantalla del HTML.
+            // Solo mostrar notificación web si la app está en primer plano.
+            // Si está en segundo plano, Android ya muestra IncomingCallActivity.
             if (document.visibilityState === 'visible') {
                 const nombre = CATALOGO_USUARIOS[llamada.de]?.nombre || llamada.de;
                 mostrarNotificacionEntrante(nombre, 'Te está llamando...');
@@ -282,7 +282,6 @@ window.renderizarContactos = function () {
         id, nombre: CATALOGO_USUARIOS[id]?.nombre || id
     }));
 
-    // Limpiar info-palmitas-container (ya no existe "palmitas")
     const infoContainer = document.getElementById('info-palmitas-container');
     if (infoContainer) infoContainer.innerHTML = '';
 
@@ -291,7 +290,7 @@ window.renderizarContactos = function () {
         div.className = 'tarjeta-contacto';
 
         div.onclick = function () {
-            iniciarLlamada(contacto.id);
+            window.iniciarLlamada(contacto.id);
         };
 
         const tieneFoto  = FOTOS_USUARIOS[contacto.id];
@@ -310,7 +309,7 @@ window.renderizarContactos = function () {
             </div>
             <span class="icono-llamar telefono-verde" style="font-size:250%;"></span>
             <button class="boton-llamar-directo"
-                    onclick="event.stopPropagation(); iniciarLlamada('${contacto.id}')"
+                    onclick="event.stopPropagation(); window.iniciarLlamada('${contacto.id}')"
                     title="Llamar a ${contacto.nombre}">
                 <span class="texto-llamar">LLAMAR</span>
             </button>
@@ -325,10 +324,10 @@ window.renderizarContactos = function () {
 window.iniciarLlamada = async function (contactoId) {
     if (llamadaActiva) return;
 
-    const nombre  = CATALOGO_USUARIOS[contactoId]?.nombre || contactoId;
+    const nombre    = CATALOGO_USUARIOS[contactoId]?.nombre || contactoId;
     const llamadaId = `${usuarioActual}_${contactoId}_${Date.now()}`;
-    miLlamadaId   = llamadaId;
-    icePendientes = [];
+    miLlamadaId     = llamadaId;
+    icePendientes   = [];
 
     mostrarPantallaLlamada(nombre, 'Llamando...', contactoId);
     iniciarAudioLlamando();
@@ -386,9 +385,9 @@ window.iniciarLlamada = async function (contactoId) {
         // Escuchar respuesta del receptor
         _escuchar(`llamadas_directas/${llamadaId}/respuesta`, async (snap) => {
             const respuesta = snap.val();
-            if (!respuesta?.sdp)                         return;
-            if (!peerConnection)                          return;
-            if (peerConnection.remoteDescription?.type)  return;
+            if (!respuesta?.sdp)                        return;
+            if (!peerConnection)                         return;
+            if (peerConnection.remoteDescription?.type) return;
 
             console.log('EMISOR: aplicando answer');
             await peerConnection.setRemoteDescription(new RTCSessionDescription(respuesta));
@@ -445,7 +444,17 @@ window.aceptarLlamadaEntrante = async function () {
         const nombre   = CATALOGO_USUARIOS[emisorId]?.nombre || emisorId;
 
         document.getElementById('nombre-llamada').textContent = nombre;
-        document.getElementById('avatar-llamada').textContent = nombre.charAt(0).toUpperCase();
+
+        // Mostrar foto del emisor en el avatar de la pantalla de llamada
+        const avatarEl  = document.getElementById('avatar-llamada');
+        const urlFoto   = FOTOS_USUARIOS[emisorId];
+        if (urlFoto) {
+            avatarEl.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
+                onerror="this.style.display='none';
+                         this.parentElement.textContent='${nombre.charAt(0).toUpperCase()}';">`;
+        } else {
+            avatarEl.textContent = nombre.charAt(0).toUpperCase();
+        }
 
         localStream    = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         peerConnection = new RTCPeerConnection(configICE);
@@ -560,11 +569,47 @@ function recargarPagina() {
 }
 
 // ========================================================
-// UI
+// UI — MOSTRAR PANTALLA DE LLAMADA
+// FIX: función que faltaba — causaba "mostrarPantallaLlamada is not defined"
+// ========================================================
+function mostrarPantallaLlamada(nombre, estado, contactoId) {
+    document.getElementById('pantalla-directorio').style.display = 'none';
+    document.getElementById('pantalla-llamada').style.display    = 'flex';
+
+    document.getElementById('nombre-llamada').textContent = nombre;
+    document.getElementById('estado-llamada').textContent = estado;
+    document.getElementById('timer-llamada').textContent  = '00:00';
+
+    // Mostrar foto o inicial en el avatar
+    const avatarEl = document.getElementById('avatar-llamada');
+    const urlFoto  = FOTOS_USUARIOS[contactoId];
+    if (urlFoto) {
+        avatarEl.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
+            onerror="this.style.display='none';
+                     this.parentElement.textContent='${nombre.charAt(0).toUpperCase()}';">`;
+    } else {
+        avatarEl.textContent = nombre.charAt(0).toUpperCase();
+    }
+}
+
+// ========================================================
+// UI — NOTIFICACIÓN ENTRANTE
 // ========================================================
 function mostrarNotificacionEntrante(nombre, texto) {
     // Si estamos dentro de la app Android, la pantalla nativa maneja la llamada
-    if (window.Android) return; // ← esta línea bloquea el div HTML
+    if (window.Android) return;
+
+    const contenidoIcono = document.getElementById('icono-entrante-contenido');
+    if (contenidoIcono) {
+        const urlFoto = FOTOS_USUARIOS[llamadaEntranteId?.split('_')[0]];
+        if (urlFoto) {
+            contenidoIcono.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
+                style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+                onerror="this.style.display='none'; this.parentElement.textContent='📞';">`;
+        }
+    }
+
+    document.getElementById('nombre-entrante').textContent = nombre;
     document.getElementById('notificacion-entrante').style.display = 'flex';
 }
 
@@ -579,9 +624,9 @@ function mostrarEstadoConectado() {
 
 function mostrarControlesDuranteLlamada() {
     document.getElementById('controles-llamada').innerHTML = `
-    <button class="btn-silencio" id="btn-silencio" onclick="toggleSilencio(this)">🎤 SILENCIO</button>
-    <button class="btn-colgar"                     onclick="colgarLlamada()">📵 COLGAR</button>
-`;
+        <button class="btn-silencio" id="btn-silencio" onclick="window.toggleSilencio(this)">🎤 SILENCIO</button>
+        <button class="btn-colgar" onclick="window.colgarLlamada()">📵 COLGAR</button>
+    `;
 }
 
 // ========================================================
@@ -621,14 +666,14 @@ window.liberarMicrofono = function () {
 // RESET ESTADO
 // ========================================================
 function resetEstado() {
-    llamadaActiva     = false;
-    peerConnection    = null;
-    localStream       = null;
-    miLlamadaId       = null;
-    llamadaEntranteId = null;
-    yaNotifique       = false;
-    segundosLlamada   = 0;
-    icePendientes     = [];
+    llamadaActiva      = false;
+    peerConnection     = null;
+    localStream        = null;
+    miLlamadaId        = null;
+    llamadaEntranteId  = null;
+    yaNotifique        = false;
+    segundosLlamada    = 0;
+    icePendientes      = [];
     _pendingAutoAccept = false;
     _pendingAutoReject = false;
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
@@ -692,35 +737,42 @@ if (botonSalir) {
     });
 }
 
-        let holdDivTimer;
-        let holdVolverTimer;
+// ========================================================
+// HOLD — MENÚ OCULTO (SALIR)
+// FIX: convertidas a window.xxx para que los atributos HTML puedan llamarlas
+// ========================================================
+window.iniciarHoldDiv = function () {
+    holdDivTimer = setTimeout(() => {
+        document.getElementById('modal-volver').style.display = 'flex';
+    }, 4000);
+};
 
-        function iniciarHoldDiv() {
-            holdDivTimer = setTimeout(() => {
-                document.getElementById('modal-volver').style.display = 'flex';
-            }, 4000);
-        }
-        function cancelarHoldDiv() {
-            clearTimeout(holdDivTimer);
-        }
+window.cancelarHoldDiv = function () {
+    clearTimeout(holdDivTimer);
+};
 
-        function iniciarHoldVolver() {
-            holdVolverTimer = setTimeout(() => {
-                cerrarSesion();
-            }, 3000);
-        }
-        function cancelarHoldVolver() {
-            clearTimeout(holdVolverTimer);
-        }
+window.iniciarHoldVolver = function () {
+    holdVolverTimer = setTimeout(() => {
+        window.cerrarSesion();
+    }, 3000);
+};
 
-        function cerrarModalVolver() {
-            document.getElementById('modal-volver').style.display = 'none';
-        }
-        function toggleBluetooth() {
+window.cancelarHoldVolver = function () {
+    clearTimeout(holdVolverTimer);
+};
+
+window.cerrarModalVolver = function () {
+    document.getElementById('modal-volver').style.display = 'none';
+};
+
+// ========================================================
+// BLUETOOTH
+// FIX: convertida a window.xxx para que el atributo onclick del HTML pueda llamarla
+// ========================================================
+window.toggleBluetooth = function () {
     if (window.Android && typeof window.Android.activarBluetooth === 'function') {
         window.Android.activarBluetooth();
 
-        // Actualizar texto del botón visualmente
         const estadoEl = document.getElementById('estado-bt');
         if (estadoEl) {
             const estaApagado = estadoEl.textContent === 'APAGADO';
@@ -732,4 +784,4 @@ if (botonSalir) {
     } else {
         alert('Esta función solo está disponible en la app.');
     }
-}
+};
