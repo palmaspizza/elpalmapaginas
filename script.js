@@ -738,6 +738,29 @@ if (botonSalir) {
 }
 
 // ========================================================
+// BOTÓN BLUETOOTH  ← agregar aquí
+// ========================================================
+const botonBluetooth = document.getElementById('btn-bluetooth');
+if (botonBluetooth) {
+    botonBluetooth.addEventListener('click', () => {
+        if (window.Android && typeof window.Android.activarBluetooth === 'function') {
+            window.Android.activarBluetooth();
+
+            const estadoEl = document.getElementById('estado-bt');
+            if (estadoEl) {
+                const estaApagado = estadoEl.textContent === 'APAGADO';
+                estadoEl.textContent = estaApagado ? 'APAGAR' : 'APAGADO';
+                botonBluetooth.style.background = estaApagado
+                    ? 'linear-gradient(135deg, #00c853, #008c3a)'
+                    : 'linear-gradient(135deg, #0077ff, #0044bb)';
+            }
+        } else {
+            alert('Esta función solo está disponible en la app.');
+        }
+    });
+}
+
+// ========================================================
 // HOLD — MENÚ OCULTO (SALIR)
 // FIX: convertidas a window.xxx para que los atributos HTML puedan llamarlas
 // ========================================================
