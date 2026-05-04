@@ -113,6 +113,7 @@ window.addEventListener('load', () => {
         escucharLlamadasDirectas();
         renderizarContactos();
         if (window.Android) window.Android.setUsuario(usuarioActual);
+        actualizarBotonEnac();
     } else {
         document.getElementById('input-username').focus();
     }
@@ -254,6 +255,7 @@ window.ingresar = function () {
     escucharLlamadasDirectas();
     renderizarContactos();
     if (window.Android) window.Android.setUsuario(usuarioActual);
+    actualizarBotonEnac();
 };
 
 // ========================================================
@@ -814,16 +816,17 @@ if (botonBluetooth) {
         }
     });
 }
-
-
 // ========================================================
-// SINCRONIZACIÓN DE ESTADO BT DESDE OVERLAY NATIVO
-// Llamado desde MainActivity cuando el overlay desconecta el BT
+// BOTÓN ENAC — solo visible para Maria
 // ========================================================
-window.setBTApagado = function () {
-    bluetoothEncendido = false;
-    const estadoEl = document.getElementById('estado-bt');
-    if (estadoEl) estadoEl.textContent = 'CONECTAR';
-    const btn = document.getElementById('btn-bluetooth');
-    if (btn) btn.style.background = 'linear-gradient(135deg, #0077ff, #0044bb)';
+function actualizarBotonEnac() {
+    const contenedor = document.getElementById('btn-enac-container');
+    if (!contenedor) return;
+    contenedor.style.display = (usuarioActual === 'maria') ? 'flex' : 'none';
+}
+
+window.abrirEnac = function () {
+    const url = 'https://portalestudiante.enac.cl/menu/inscripcion-de-asignaturas/resumen-inscripcion-asignaturas';
+    // En la app Android el WebViewClient redirige URLs externas al navegador del sistema
+    window.open(url, '_blank');
 };
