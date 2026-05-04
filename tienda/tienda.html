@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Palma Inc. — Tienda</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="app.js"></script>
+<base target="_blank">
+</head>
+<body>
+
+<!-- Background -->
+<div id="bg"><canvas id="starsCanvas"></canvas></div>
+
+<!-- HEADER -->
+<header>
+  <a class="logo-wrap" href="#">
+    <div class="logo-main">TuLOGO <span>Store</span></div>
+    <div class="logo-sub">Jeans del Universo</div>
+  </a>
+
+  <div class="search-wrap">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" id="searchInput" placeholder="Buscar jeans…">
+  </div>
+
+  <div class="cart-btn" onclick="openCart()">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+    </svg>
+    <div class="cart-count" id="cartCount">0</div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="page-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="filter-section">
+      <div class="filter-label">Categorías</div>
+      <button class="cat-btn active" data-cat="all" onclick="setCat('all', this)">
+        Todos los jeans
+        <span class="cat-count" id="cnt-all">0</span>
+      </button>
+      <button class="cat-btn" data-cat="categoria-1" onclick="setCat('categoria-1', this)">
+        Categoría 1
+        <span class="cat-count" id="cnt-1">0</span>
+      </button>
+      <button class="cat-btn" data-cat="categoria-2" onclick="setCat('categoria-2', this)">
+        Categoría 2
+        <span class="cat-count" id="cnt-2">0</span>
+      </button>
+      <button class="cat-btn" data-cat="categoria-3" onclick="setCat('categoria-3', this)">
+        Categoría 3
+        <span class="cat-count" id="cnt-3">0</span>
+      </button>
+      <button class="cat-btn" data-cat="categoria-4" onclick="setCat('categoria-4', this)">
+        Categoría 4
+        <span class="cat-count" id="cnt-4">0</span>
+      </button>
+      <button class="cat-btn" data-cat="categoria-5" onclick="setCat('categoria-5', this)">
+        Categoría 5
+        <span class="cat-count" id="cnt-5">0</span>
+      </button>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-label">Rango de Precio</div>
+      <div class="price-range">
+        <input type="number" class="price-input" id="priceMin" placeholder="Mín" min="0">
+        <span class="price-sep">–</span>
+        <input type="number" class="price-input" id="priceMax" placeholder="Máx" min="0">
+      </div>
+      <button class="filter-reset" onclick="resetFilters()">Limpiar filtros</button>
+    </div>
+  </aside>
+
+  <!-- GRID -->
+  <main class="grid-area">
+    <div class="grid-topbar">
+      <div class="grid-count" id="gridCount"><span>0</span> productos</div>
+    </div>
+    <div class="product-grid" id="productGrid">
+      <div id="gridStatus">
+        <div class="loading-spinner"></div>
+        Conectando con la base de datos…
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- =================== PRODUCT MODAL =================== -->
+<div class="modal-overlay" id="productModal" onclick="closeProductModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('productModal')">×</button>
+    <div class="pm-image">
+      <img id="pmImg" src="" alt="">
+      <div class="oferta-badge" id="pmBadge" style="display:none">OFERTA</div>
+    </div>
+    <div class="pm-body">
+      <div class="pm-cat" id="pmCat"></div>
+      <div class="pm-name" id="pmName"></div>
+      <div class="pm-prices" id="pmPrices"></div>
+      <div class="pm-divider"></div>
+      <div class="pm-desc" id="pmDesc"></div>
+
+      <div id="pmTallasWrap">
+        <div class="selector-label">Talla</div>
+        <div class="chips" id="pmTallas"></div>
+      </div>
+
+      <div id="pmColoresWrap">
+        <div class="selector-label">Color</div>
+        <div class="chips" id="pmColores"></div>
+      </div>
+
+      <button class="btn-add-cart" onclick="addToCart()">+ Añadir al carrito</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================== CART MODAL =================== -->
+<div class="modal-overlay" id="cartModal" onclick="closeCartModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('cartModal')">×</button>
+    <div class="cart-title">Tu <span>Carrito</span></div>
+
+    <div id="cartItems"></div>
+
+    <div class="cart-total-row">
+      <div class="cart-total-label">Total del pedido</div>
+      <div class="cart-total-val" id="cartTotal">$0</div>
+    </div>
+
+    <!-- Order form -->
+    <div class="order-form-section">
+      <div class="order-label">Nombre Completo</div>
+      <input class="order-input" id="orderName" type="text" placeholder="Tu nombre completo">
+    </div>
+
+    <div class="order-form-section">
+      <div class="order-label">Forma de Pago</div>
+      <select class="order-select" id="orderPago">
+        <option value="" disabled selected>— Seleccionar —</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Débito">Débito</option>
+        <option value="Crédito">Crédito</option>
+      </select>
+    </div>
+
+    <div class="order-form-section">
+      <div class="order-label">Tipo de Entrega</div>
+      <div class="delivery-type">
+        <div class="delivery-opt" id="dRetiro" onclick="setDelivery('retiro')">
+          <div class="d-icon">🏪</div>
+          Entrega presencial
+        </div>
+        <div class="delivery-opt" id="dEnvio" onclick="setDelivery('envio')">
+          <div class="d-icon">🚚</div>
+          Envío a Domicilio
+        </div>
+      </div>
+      <div id="addressWrap">
+        <input class="order-input" id="orderAddress" type="text" placeholder="Ingresa tu dirección completa…">
+      </div>
+    </div>
+
+    <button class="btn-whatsapp" id="whatsappBtn" onclick="sendWhatsApp()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+      </svg>
+      Confirmar pedido por WhatsApp
+    </button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+</body>
+</html>
