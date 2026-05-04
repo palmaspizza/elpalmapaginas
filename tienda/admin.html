@@ -12,14 +12,9 @@
   Configuración del Proyecto → Tus Apps → SDK de Firebase
 ============================================================ -->
 <script type="module">
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// ⬇️ PEGA TUS CREDENCIALES AQUÍ ⬇️
 const firebaseConfig = {
   apiKey: "AIzaSyCRJ_l7BXJtwVDGc-KbBkLuSgMCBDtGY4M",
   authDomain: "tienda-de-ropa-2b4f6.firebaseapp.com",
@@ -30,9 +25,10 @@ const firebaseConfig = {
   measurementId: "G-WRXQD1D7TK"
 };
 
-// Initialize Firebase
+// Inicializar Firebase y Firestore
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const db = getFirestore(app);
+
 // Configuración de Cloudinary
 const CLOUD_NAME = "dkszomv2f"; 
 const UPLOAD_PRESET = "tienda_de_ropa";
