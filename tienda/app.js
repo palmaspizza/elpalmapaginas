@@ -7,8 +7,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics"
 const firebaseConfig = {
   apiKey: "AIzaSyCRJ_l7BXJtwVDGc-KbBkLuSgMCBDtGY4M",
   authDomain: "tienda-de-ropa-2b4f6.firebaseapp.com",
