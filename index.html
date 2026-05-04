@@ -55,8 +55,9 @@
 
         <div id="info-palmitas-container"></div>
         <div style="display:flex; justify-content:center; padding: 15px 20px 5px 20px;">
-    <button hidden id="btn-bluetooth"  
+    <button id="btn-bluetooth"  
         style="
+        display: none !important;
             width: 100%;
             max-width: 500px;
             height: 70px;
@@ -77,6 +78,45 @@
         <span id="estado-bt">CONECTAR</span> MUSICA
     </button>
 </div>
+        <!-- ===== BOTÓN ENAC — solo visible para Maria ===== -->
+        <div id="btn-enac-container" style="display:none; justify-content:center; padding: 8px 20px 5px 20px;">
+            <button id="btn-enac"
+                onclick="abrirEnac()"
+                style="
+                    width: 100%;
+                    max-width: 500px;
+                    height: 70px;
+                    font-size: 26px;
+                    font-weight: bold;
+                    background: linear-gradient(135deg, #ff6a00, #cc4400);
+                    color: white;
+                    border: none;
+                    border-radius: 20px;
+                    cursor: pointer;
+                    box-shadow: 0 6px 0 #992200;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 14px;
+                    letter-spacing: 1px;
+                ">
+                <span style="
+                    background: white;
+                    color: #cc4400;
+                    font-size: 26px;
+                    font-weight: 900;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                ">E</span>
+                Horarios ENAC
+            </button>
+        </div>
+
         <div class="lista-contactos" id="lista-contactos"></div>
     </div>
 
