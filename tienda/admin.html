@@ -12,8 +12,9 @@
   Configuración del Proyecto → Tus Apps → SDK de Firebase
 ============================================================ -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter } 
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 // ⬇️ PEGA TUS CREDENCIALES AQUÍ ⬇️
 const firebaseConfig = {
   apiKey: "AIzaSyCRJ_l7BXJtwVDGc-KbBkLuSgMCBDtGY4M",
