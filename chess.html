@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajedrez Multijugador Online</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div id="login-screen" class="screen">
+            <h1>♟️ Ajedrez Multijugador</h1>
+            <div class="login-form">
+                <input type="text" id="username" placeholder="Tu nombre" maxlength="20">
+                <button id="login-btn">Entrar</button>
+                <div id="login-error" class="error"></div>
+            </div>
+        </div>
+
+        <div id="lobby-screen" class="screen hidden">
+            <div class="header">
+                <div class="player-info">
+                    <span id="player-name-display"></span>
+                    <span class="elo-badge">ELO: <span id="player-elo">1200</span></span>
+                </div>
+                <button id="logout-btn">Salir</button>
+            </div>
+            
+            <div class="lobby-content">
+                <div class="matchmaking-section">
+                    <h2>Buscar Partida</h2>
+                    <div id="searching-status" class="hidden">
+                        <div class="spinner"></div>
+                        <p>Buscando oponente...</p>
+                        <button id="cancel-search-btn">Cancelar</button>
+                    </div>
+                    <button id="find-match-btn">Jugar Partida Rápida</button>
+                </div>
+                
+                <div class="stats-section">
+                    <h2>Tus Estadísticas</h2>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Partidas</span>
+                            <span class="stat-value" id="games-played">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Victorias</span>
+                            <span class="stat-value" id="games-won">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Derrotas</span>
+                            <span class="stat-value" id="games-lost">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Tablas</span>
+                            <span class="stat-value" id="games-drawn">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-screen" class="screen hidden">
+            <div class="game-header">
+                <div class="opponent-info">
+                    <span id="opponent-name"></span>
+                    <span class="elo-badge">ELO: <span id="opponent-elo">1200</span></span>
+                    <span class="timer" id="opponent-timer">10:00</span>
+                </div>
+                <div id="game-status"></div>
+                <div class="player-game-info">
+                    <span id="player-game-name"></span>
+                    <span class="elo-badge">ELO: <span id="player-game-elo">1200</span></span>
+                    <span class="timer" id="player-timer">10:00</span>
+                </div>
+            </div>
+            
+            <div class="game-container">
+                <div class="board-and-chat">
+                    <div class="board-section">
+                        <div id="turn-indicator"></div>
+                        <div id="board"></div>
+                        <div id="move-history">
+                            <h3>Historial de Movimientos</h3>
+                            <div id="moves-list"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-section">
+                        <div id="chat-messages"></div>
+                        <div class="chat-input-container">
+                            <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100">
+                            <button id="send-chat-btn">Enviar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <button id="resign-btn">Abandonar</button>
+                <button id="draw-offer-btn">Ofrecer Tablas</button>
+                <button id="leave-game-btn" class="hidden">Salir</button>
+            </div>
+        </div>
+        
+        <div id="dialog-overlay" class="hidden">
+            <div id="dialog">
+                <div id="dialog-message"></div>
+                <div id="dialog-buttons"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="chess.js"></script>
+    <script src="chat.js"></script>
+    <script src="multiplayer.js"></script>
+</body>
+</html>
