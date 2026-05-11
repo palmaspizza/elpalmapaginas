@@ -1,6 +1,4 @@
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Configuración de Firebase (reemplaza con tus propias credenciales)
 const firebaseConfig = {
   apiKey: "AIzaSyCSqgJA6uL8SkY-kphhuaR9TuGPulucPic",
   authDomain: "ajedrez-65b15.firebaseapp.com",
@@ -11,9 +9,9 @@ const firebaseConfig = {
   measurementId: "G-HH7PYX89EG"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
 class MultiplayerChess {
     constructor() {
