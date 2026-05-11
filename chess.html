@@ -10,15 +10,17 @@
 </head>
 <body>
     <div id="app">
+        <!-- Pantalla Login -->
         <div id="login-screen" class="screen">
             <h1>♟️ Ajedrez Multijugador</h1>
             <div class="login-form">
-                <input type="text" id="username" placeholder="Tu nombre" maxlength="20">
+                <input type="text" id="username" placeholder="Tu nombre" maxlength="20" minlength="3">
                 <button id="login-btn">Entrar</button>
                 <div id="login-error" class="error"></div>
             </div>
         </div>
 
+        <!-- Pantalla Lobby -->
         <div id="lobby-screen" class="screen hidden">
             <div class="header">
                 <div class="player-info">
@@ -27,7 +29,6 @@
                 </div>
                 <button id="logout-btn">Salir</button>
             </div>
-            
             <div class="lobby-content">
                 <div class="matchmaking-section">
                     <h2>Buscar Partida</h2>
@@ -36,37 +37,25 @@
                         <p>Buscando oponente...</p>
                         <button id="cancel-search-btn">Cancelar</button>
                     </div>
-                    <button id="find-match-btn">Jugar Partida Rápida</button>
+                    <button id="find-match-btn">Jugar Partida</button>
                 </div>
-                
                 <div class="stats-section">
                     <h2>Tus Estadísticas</h2>
                     <div class="stats-grid">
-                        <div class="stat-item">
-                            <span class="stat-label">Partidas</span>
-                            <span class="stat-value" id="games-played">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Victorias</span>
-                            <span class="stat-value" id="games-won">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Derrotas</span>
-                            <span class="stat-value" id="games-lost">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Tablas</span>
-                            <span class="stat-value" id="games-drawn">0</span>
-                        </div>
+                        <div class="stat-item"><span class="stat-label">Partidas</span><span class="stat-value" id="games-played">0</span></div>
+                        <div class="stat-item"><span class="stat-label">Victorias</span><span class="stat-value" id="games-won">0</span></div>
+                        <div class="stat-item"><span class="stat-label">Derrotas</span><span class="stat-value" id="games-lost">0</span></div>
+                        <div class="stat-item"><span class="stat-label">Tablas</span><span class="stat-value" id="games-drawn">0</span></div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Pantalla Juego -->
         <div id="game-screen" class="screen hidden">
             <div class="game-header">
                 <div class="opponent-info">
-                    <span id="opponent-name"></span>
+                    <span id="opponent-name">Oponente</span>
                     <span class="elo-badge">ELO: <span id="opponent-elo">1200</span></span>
                     <span class="timer" id="opponent-timer">10:00</span>
                 </div>
@@ -77,7 +66,6 @@
                     <span class="timer" id="player-timer">10:00</span>
                 </div>
             </div>
-            
             <div class="game-container">
                 <div class="board-and-chat">
                     <div class="board-section">
@@ -88,7 +76,6 @@
                             <div id="moves-list"></div>
                         </div>
                     </div>
-                    
                     <div class="chat-section">
                         <div id="chat-messages"></div>
                         <div class="chat-input-container">
@@ -98,14 +85,14 @@
                     </div>
                 </div>
             </div>
-            
             <div class="game-controls">
                 <button id="resign-btn">Abandonar</button>
                 <button id="draw-offer-btn">Ofrecer Tablas</button>
                 <button id="leave-game-btn" class="hidden">Salir</button>
             </div>
         </div>
-        
+
+        <!-- Diálogo Modal -->
         <div id="dialog-overlay" class="hidden">
             <div id="dialog">
                 <div id="dialog-message"></div>
