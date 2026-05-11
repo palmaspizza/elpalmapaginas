@@ -2,155 +2,120 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Llamadas Fáciles - Para Adultos Mayores</title>
-    <link rel="stylesheet" href="style.css">
-    <base target="_blank">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajedrez Multijugador Online</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
-
-    <!-- ===== PANTALLA DE INGRESO ===== -->
-    <div id="pantalla-ingreso">
-        <div class="logo-grande">
-            <div class="icono-telefono">📞</div>
-            <div>Llamadas Fáciles</div>
-        </div>
-        <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-            <label class="etiqueta-campo">¿Cómo te llamas?</label>
-            <input type="text" id="input-username" class="campo-texto" placeholder="Escribe tu nombre" maxlength="20">
-        </div>
-        <button class="boton-principal boton-amarillo" onclick="ingresar()">
-            ENTRAR 🚪
-        </button>
-    </div>
-
-    <!-- ===== PANTALLA DE DIRECTORIO ===== -->
-    <div id="pantalla-directorio">
-        <div class="barra-superior">
-            <div class="titulo-seccion" 
-                 onmousedown="iniciarHoldDiv()" 
-                 onmouseup="cancelarHoldDiv()" 
-                 onmouseleave="cancelarHoldDiv()" 
-                 ontouchstart="iniciarHoldDiv()" 
-                 ontouchend="cancelarHoldDiv()">
-                📒 PINCHA A ALGUIEN PARA LLAMARLO
-            </div>
-            <button class="boton-cerrar-sesion" id="btn-salir-app">SALIR</button>
-        </div>
-
-        <!-- Modal -->
-        <div id="modal-volver" class="modal" onclick="cerrarModalVolver()">
-            <div class="modal-contenido">
-                <h2>¿Seguro que quieres salir?</h2>
-                <button class="boton-volver"
-                        onmousedown="iniciarHoldVolver()" 
-                        onmouseup="cancelarHoldVolver()" 
-                        onmouseleave="cancelarHoldVolver()" 
-                        ontouchstart="iniciarHoldVolver()" 
-                        ontouchend="cancelarHoldVolver()">
-                    VOLVER
-                </button>
+    <div id="app">
+        <div id="login-screen" class="screen">
+            <h1>♟️ Ajedrez Multijugador</h1>
+            <div class="login-form">
+                <input type="text" id="username" placeholder="Tu nombre" maxlength="20">
+                <button id="login-btn">Entrar</button>
+                <div id="login-error" class="error"></div>
             </div>
         </div>
 
-        <div id="info-palmitas-container"></div>
-        <div style="display:flex; justify-content:center; padding: 15px 20px 5px 20px;">
-    <button id="btn-bluetooth"  
-        style="
-        display: none !important;
-            width: 100%;
-            max-width: 500px;
-            height: 70px;
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #0077ff, #0044bb);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            box-shadow: 0 6px 0 #002299;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            letter-spacing: 1px;
-        ">
-        <span id="estado-bt">CONECTAR</span> MUSICA
-    </button>
-</div>
-        <!-- ===== BOTÓN ENAC — solo visible para Maria ===== -->
-        <div id="btn-enac-container" style="display:none; justify-content:center; padding: 8px 20px 5px 20px;">
-            <button id="btn-enac"
-                onclick="abrirEnac()"
-                style="
-                    width: 100%;
-                    max-width: 500px;
-                    height: 70px;
-                    font-size: 26px;
-                    font-weight: bold;
-                    background: linear-gradient(135deg, #ff6a00, #cc4400);
-                    color: white;
-                    border: none;
-                    border-radius: 20px;
-                    cursor: pointer;
-                    box-shadow: 0 6px 0 #992200;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 14px;
-                    letter-spacing: 1px;
-                ">
-                <span style="
-                    background: white;
-                    color: #cc4400;
-                    font-size: 26px;
-                    font-weight: 900;
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 10px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                ">E</span>
-                Horarios ENAC
-            </button>
+        <div id="lobby-screen" class="screen hidden">
+            <div class="header">
+                <div class="player-info">
+                    <span id="player-name-display"></span>
+                    <span class="elo-badge">ELO: <span id="player-elo">1200</span></span>
+                </div>
+                <button id="logout-btn">Salir</button>
+            </div>
+            
+            <div class="lobby-content">
+                <div class="matchmaking-section">
+                    <h2>Buscar Partida</h2>
+                    <div id="searching-status" class="hidden">
+                        <div class="spinner"></div>
+                        <p>Buscando oponente...</p>
+                        <button id="cancel-search-btn">Cancelar</button>
+                    </div>
+                    <button id="find-match-btn">Jugar Partida Rápida</button>
+                </div>
+                
+                <div class="stats-section">
+                    <h2>Tus Estadísticas</h2>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Partidas</span>
+                            <span class="stat-value" id="games-played">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Victorias</span>
+                            <span class="stat-value" id="games-won">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Derrotas</span>
+                            <span class="stat-value" id="games-lost">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Tablas</span>
+                            <span class="stat-value" id="games-drawn">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="lista-contactos" id="lista-contactos"></div>
-    </div>
-
-    <!-- ===== PANTALLA DE LLAMADA ===== -->
-    <div id="pantalla-llamada">
-        <div class="contenedor-llamada">
-            <div class="avatar-llamada" id="avatar-llamada">?</div>
-            <div class="nombre-llamada" id="nombre-llamada">Nombre</div>
-            <div class="estado-llamada" id="estado-llamada">Conectando...</div>
-            <div class="timer-llamada" id="timer-llamada">00:00</div>
-            <div class="controles-llamada" id="controles-llamada">
-                <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
+        <div id="game-screen" class="screen hidden">
+            <div class="game-header">
+                <div class="opponent-info">
+                    <span id="opponent-name"></span>
+                    <span class="elo-badge">ELO: <span id="opponent-elo">1200</span></span>
+                    <span class="timer" id="opponent-timer">10:00</span>
+                </div>
+                <div id="game-status"></div>
+                <div class="player-game-info">
+                    <span id="player-game-name"></span>
+                    <span class="elo-badge">ELO: <span id="player-game-elo">1200</span></span>
+                    <span class="timer" id="player-timer">10:00</span>
+                </div>
+            </div>
+            
+            <div class="game-container">
+                <div class="board-and-chat">
+                    <div class="board-section">
+                        <div id="turn-indicator"></div>
+                        <div id="board"></div>
+                        <div id="move-history">
+                            <h3>Historial de Movimientos</h3>
+                            <div id="moves-list"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-section">
+                        <div id="chat-messages"></div>
+                        <div class="chat-input-container">
+                            <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100">
+                            <button id="send-chat-btn">Enviar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <button id="resign-btn">Abandonar</button>
+                <button id="draw-offer-btn">Ofrecer Tablas</button>
+                <button id="leave-game-btn" class="hidden">Salir</button>
+            </div>
+        </div>
+        
+        <div id="dialog-overlay" class="hidden">
+            <div id="dialog">
+                <div id="dialog-message"></div>
+                <div id="dialog-buttons"></div>
             </div>
         </div>
     </div>
 
-    <!-- ===== NOTIFICACIÓN LLAMADA ENTRANTE (única, limpia) ===== -->
-    <div id="notificacion-entrante">
-        <div class="foto-entrante-wrapper">
-            <div class="anillo-pulso"></div>
-            <div class="foto-entrante" id="icono-entrante-contenido">📞</div>
-        </div>
-        <div class="nombre-entrante" id="nombre-entrante">Alguien</div>
-        <div class="texto-entrante">Te está llamando...</div>
-        <div class="controles-entrante">
-            <button class="btn-aceptar" onclick="aceptarLlamadaEntrante()">📞 ACEPTAR</button>
-            <button class="btn-colgar" onclick="rechazarLlamada()">📵 COLGAR</button>
-        </div>
-    </div>
-
-    <script>
-       
-    </script>
-
-    <script type="module" src="script.js"></script>
+    <script src="chess.js"></script>
+    <script src="chat.js"></script>
+    <script src="multiplayer.js"></script>
 </body>
 </html>
