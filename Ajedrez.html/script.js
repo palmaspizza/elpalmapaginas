@@ -32,7 +32,56 @@ let roomDataCache = null;
 let capturedPiecesRed = [];
 let capturedPiecesGreen = [];
 
+// Audios de captura
+// Audios cuando TE COMEN una pieza (victima)
+const victimAudios = [
+    { src: 'audios/aweonao.mp3', name: 'aweonao' },
+    { src: 'audios/conesta.mp3', name: 'conesta' },
+    { src: 'audios/veggeta.mp3', name: 'veggeta' }
+];
+
+// Audios cuando CAPTURAS una pieza (atacante)
+const attackerAudios = [
+    { src: 'audios/uena.mp3', name: 'uena' },
+    { src: 'audios/bonk.mp3', name: 'bonk' },
+    { src: 'audios/choche.mp3', name: 'choche' }
+];
+
+// Pre-cargar audios para evitar delays
+const preloadedVictimAudios = [];
+const preloadedAttackerAudios = [];
+
+function preloadAudios() {
+    victimAudios.forEach(audio => {
+        const audioElement = new Audio(audio.src);
+        audioElement.preload = 'auto';
+        preloadedVictimAudios.push(audioElement);
+    });
+    
+    attackerAudios.forEach(audio => {
+        const audioElement = new Audio(audio.src);
+        audioElement.preload = 'auto';
+        preloadedAttackerAudios.push(audioElement);
+    });
+}
+
+function playRandomVictimAudio() {
+    const randomIndex = Math.floor(Math.random() * preloadedVictimAudios.length);
+    const audio = preloadedVictimAudios[randomIndex];
+    audio.currentTime = 0;
+    audio.play().catch(e => console.log('Error reproduciendo audio:', e));
+}
+
+function playRandomAttackerAudio() {
+    const randomIndex = Math.floor(Math.random() * preloadedAttackerAudios.length);
+    const audio = preloadedAttackerAudios[randomIndex];
+    audio.currentTime = 0;
+    audio.play().catch(e => console.log('Error reproduciendo audio:', e));
+}
+
 $(document).ready(() => {
+    preloadAudios();
+    
     const savedName = localStorage.getItem('chessPlayerName');
     if (savedName) {
         $('#player-name').val(savedName);
@@ -72,7 +121,6 @@ function findOrCreateRoom() {
         
         if (rooms) {
             for (const [roomId, roomData] of Object.entries(rooms)) {
-                // No unirse a salas creadas por uno mismo y que tengan espacio
                 if (roomData.player1 && roomData.player1.id !== playerUniqueId && !roomData.player2 && !roomData.gameOver) {
                     availableRoom = { id: roomId, ...roomData };
                     break;
@@ -168,26 +216,21 @@ function setupGame(roomReference, playerPosition, color) {
     playerColor = color;
     roomRef = roomReference;
     
-    // Crear instancia de ajedrez
     game = new Chess();
     
-    // Limpiar listener anterior si existe
     if (roomListener) {
         roomListener();
         roomListener = null;
     }
     
-    // Resetear piezas capturadas
     resetCapturedPieces();
     
-    // Configurar listener de Firebase
     roomListener = onValue(roomRef, (snapshot) => {
         const roomData = snapshot.val();
         if (!roomData) return;
         
         roomDataCache = roomData;
         
-        // Verificar si el oponente es uno mismo (mismo ID)
         if (roomData.player2 && roomData.player2.id === playerUniqueId && currentPlayer === 'player1') {
             leaveGame();
             alert('No puedes jugar contra ti mismo. Buscando otra partida...');
@@ -195,14 +238,11 @@ function setupGame(roomReference, playerPosition, color) {
             return;
         }
         
-        // Guardar FEN anterior para detectar capturas
         const oldFEN = game ? game.fen() : null;
         
-        // Actualizar el tablero si hay un nuevo FEN
         if (roomData.fen && game && game.fen() !== roomData.fen) {
             game.load(roomData.fen);
             
-            // Detectar captura remota
             if (oldFEN && oldFEN !== roomData.fen) {
                 detectAndRegisterCapture(oldFEN, roomData.fen, playerColor);
             }
@@ -212,22 +252,18 @@ function setupGame(roomReference, playerPosition, color) {
             }
         }
         
-        // Actualizar el turno local
         if (roomData.turn) {
             const myColorCode = playerColor === 'w' ? 'w' : 'b';
             isMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
         }
         
-        // Actualizar UI con nombres
         updateUI(roomData);
         
-        // Verificar fin del juego
         if (roomData.gameOver && !roomData.gameOverHandled) {
             isGameActive = false;
             const statusMsg = roomData.winner === 'draw' ? 'Tablas!' : 
                             `Ganador: ${roomData.winnerName || (roomData.winner === 'w' ? roomData.player1?.name : roomData.player2?.name)}`;
             
-            // Marcar como manejado para no mostrar múltiples veces
             update(roomRef, { gameOverHandled: true }).catch(() => {});
             
             setTimeout(() => {
@@ -238,7 +274,6 @@ function setupGame(roomReference, playerPosition, color) {
             }, 500);
         }
         
-        // Ocultar overlay cuando ambos jugadores estén listos
         if (roomData.player1 && roomData.player2 && roomData.fen && !roomData.gameOver) {
             if ($('#overlay').is(':visible')) {
                 $('#overlay').fadeOut();
@@ -246,10 +281,8 @@ function setupGame(roomReference, playerPosition, color) {
         }
     });
     
-    // Inicializar el tablero
     initBoard();
     
-    // Cargar posición inicial desde Firebase
     get(roomRef).then((snapshot) => {
         const roomData = snapshot.val();
         if (roomData && roomData.fen) {
@@ -258,7 +291,6 @@ function setupGame(roomReference, playerPosition, color) {
                 board.position(roomData.fen, false);
             }
         }
-        // Establecer turno inicial
         if (roomData && roomData.turn) {
             const myColorCode = playerColor === 'w' ? 'w' : 'b';
             isMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
@@ -270,28 +302,35 @@ function setupGame(roomReference, playerPosition, color) {
 }
 
 function initBoard() {
-    // Determinar orientación del tablero según el color del jugador
     const orientation = playerColor === 'w' ? 'white' : 'black';
     
-    // Destruir tablero existente si hay
     if (board) {
         board.destroy();
         $('#board-container').empty();
     }
     
-    // Configuración del tablero - Usando imágenes locales
     const config = {
         draggable: true,
         position: 'start',
         orientation: orientation,
         showNotation: true,
         pieceTheme: function(piece) {
-            // Mapeo de piezas a nombres de archivo
-            const pieceMap = {
-                'wp': 'wp.png', 'wn': 'wn.png', 'wb': 'wb.png', 'wr': 'wr.png', 'wq': 'wq.png', 'wk': 'wk.png',
-                'bp': 'bp.png', 'bn': 'bn.png', 'bb': 'bb.png', 'br': 'br.png', 'bq': 'bq.png', 'bk': 'bk.png'
-            };
-            return `pieces/${pieceMap[piece]}`;
+            let pieceFile = '';
+            if (piece === 'wP') pieceFile = 'wp.png';
+            else if (piece === 'wN') pieceFile = 'wn.png';
+            else if (piece === 'wB') pieceFile = 'wb.png';
+            else if (piece === 'wR') pieceFile = 'wr.png';
+            else if (piece === 'wQ') pieceFile = 'wq.png';
+            else if (piece === 'wK') pieceFile = 'wk.png';
+            else if (piece === 'bP') pieceFile = 'bp.png';
+            else if (piece === 'bN') pieceFile = 'bn.png';
+            else if (piece === 'bB') pieceFile = 'bb.png';
+            else if (piece === 'bR') pieceFile = 'br.png';
+            else if (piece === 'bQ') pieceFile = 'bq.png';
+            else if (piece === 'bK') pieceFile = 'bk.png';
+            else pieceFile = 'wp.png';
+            
+            return `pieces/${pieceFile}`;
         },
         onDragStart: onDragStart,
         onDrop: onDrop,
@@ -304,30 +343,21 @@ function initBoard() {
 function onDragStart(source, piece, position, orientation) {
     if (!isGameActive) return false;
     if (!game) return false;
-    
-    // Verificar si es el turno del jugador
     if (!isMyTurn) return false;
-    
-    // Verificar si el juego ha terminado
     if (game.game_over()) return false;
     
-    // Determinar el color de la pieza que se está arrastrando
-    const pieceColor = piece.charAt(0); // 'w' para blancas, 'b' para negras
-    
-    // Solo permitir arrastrar piezas del color del jugador
+    const pieceColor = piece.charAt(0);
     if (playerColor !== pieceColor) return false;
     
     return true;
 }
 
 function onDrop(source, target) {
-    // Verificar si el juego ha terminado
     if (game.game_over()) {
         if (board) board.position(game.fen(), false);
         return 'snapback';
     }
     
-    // Verificar si es el turno del jugador
     if (!isMyTurn) {
         if (board) board.position(game.fen(), false);
         return 'snapback';
@@ -335,20 +365,17 @@ function onDrop(source, target) {
     
     const oldFEN = game.fen();
     
-    // Intentar realizar el movimiento usando chess.js
     const move = game.move({
         from: source,
         to: target,
         promotion: 'q'
     });
     
-    // Si el movimiento es ilegal, hacer snapback (rebote)
     if (move === null) {
         if (board) board.position(game.fen(), false);
         return 'snapback';
     }
     
-    // Detectar captura
     const newFEN = game.fen();
     const wasCapture = detectAndRegisterCapture(oldFEN, newFEN, playerColor);
     
@@ -359,7 +386,6 @@ function onDrop(source, target) {
         turn: newTurn
     };
     
-    // Verificar fin del juego
     if (game.game_over()) {
         updates.gameOver = true;
         if (game.in_checkmate()) {
@@ -372,13 +398,11 @@ function onDrop(source, target) {
         }
     }
     
-    // Actualizar Firebase
     update(roomRef, updates).then(() => {
         if (board) board.position(newFEN, false);
         isMyTurn = false;
     }).catch((error) => {
         console.error('Error al actualizar Firebase:', error);
-        // Revertir movimiento local si falla la actualización
         game.undo();
         if (board) board.position(game.fen(), false);
     });
@@ -395,11 +419,9 @@ function onSnapEnd() {
 function updateUI(roomData) {
     if (!roomData) return;
     
-    // Actualizar nombres
     $('#player1-name').text(roomData.player1?.name || 'Esperando jugador...');
     $('#player2-name').text(roomData.player2?.name || 'Esperando jugador...');
     
-    // Actualizar indicador de turno
     if (!roomData.gameOver && roomData.player1 && roomData.player2) {
         if (isMyTurn) {
             $('#turn-text').html(`Tu turno <i class="fas fa-chess-${playerColor === 'w' ? 'king' : 'knight'}"></i>`);
@@ -421,7 +443,6 @@ function updateUI(roomData) {
         $('#game-status').html(statusMessage);
     }
     
-    // Mostrar jaque
     if (!roomData.gameOver && game && game.in_check()) {
         const checkedColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
         $('#game-status').html(`⚠️ ¡${checkedColor} en jaque! ⚠️`);
@@ -436,6 +457,7 @@ function showCaptureAnimation(isAttacker, pieceName, position) {
     const overlay = $('<div class="capture-overlay"></div>');
     
     if (isAttacker) {
+        // El que CAPTURA ve pantalla VERDE
         overlay.addClass('capture-overlay-green');
         const message = $('<div class="capture-message">🎯 ¡CAPTURA EXITOSA! 🎯</div>');
         overlay.append(message);
@@ -444,7 +466,11 @@ function showCaptureAnimation(isAttacker, pieceName, position) {
         setTimeout(() => {
             $('#board-container').removeClass('victory-shake');
         }, 500);
+        
+        // Reproducir audio de atacante (uena, bonk o choche)
+        playRandomAttackerAudio();
     } else {
+        // El que es VÍCTIMA ve pantalla ROJA
         overlay.addClass('capture-overlay-red');
         const pieceNameSpanish = getPieceNameSpanish(pieceName);
         const message = $(`<div class="capture-message">💀 ¡TE COMIERON LA ${pieceNameSpanish}! 💀</div>`);
@@ -454,6 +480,9 @@ function showCaptureAnimation(isAttacker, pieceName, position) {
         setTimeout(() => {
             $('body').removeClass('screen-shake');
         }, 500);
+        
+        // Reproducir audio de víctima (aweonao, conesta o veggeta)
+        playRandomVictimAudio();
     }
     
     $('body').append(overlay);
@@ -548,9 +577,11 @@ function detectAndRegisterCapture(oldFEN, newFEN, currentPlayerColor) {
         const lostPieceColor = isWhitePiece ? 'w' : 'b';
         
         if (lostPieceColor === currentPlayerColor) {
+            // A MI me comieron una pieza (soy víctima)
             capturedPiecesRed.push(capturedPiece);
             showCaptureAnimation(false, capturedPiece, captureSquare);
         } else {
+            // YO le comí una pieza al oponente (soy atacante)
             capturedPiecesGreen.push(capturedPiece);
             showCaptureAnimation(true, capturedPiece, captureSquare);
         }
