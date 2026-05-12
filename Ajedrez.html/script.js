@@ -277,7 +277,7 @@ function initBoard() {
         position: 'start',
         orientation: orientation,
         showNotation: false,
-        pieceTheme: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/{piece}.png',
+        pieceTheme: 'https://cdn.jsdelivr.net/npm/chessboard-element@1.0.0/lib/assets/pieces/{piece}.png',
         onDragStart: onDragStart,
         onDrop: onDrop,
         onSnapEnd: onSnapEnd
