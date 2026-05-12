@@ -13,7 +13,9 @@ body {
     align-items: center;
     padding: 20px;
 }
-
+#board-container {
+    margin-top: 110px !important;
+}
 .container {
     max-width: 1200px;
     width: 100%;
@@ -1142,7 +1144,6 @@ body {
 #board-container canvas,
 #board-container .chessboard-container {
     width: 100% !important;
-    height: auto !important;
 }
 
 #game-info {
@@ -1338,6 +1339,7 @@ body {
         padding: 10px;
         max-width: 95vw;
         width: 95vw;
+        padding-top: 210px;
     }
     
     .player-card {
@@ -1623,15 +1625,4 @@ body {
     0% { transform: scale(0.8); opacity: 0; }
     50% { transform: scale(1.1); }
     100% { transform: scale(1); opacity: 1; }
-}
-/* Para desktop */
-#board-container {
-    margin-top: 60px;
-}
-
-/* Para móviles */
-@media (max-width: 768px) {
-    #board-container {
-        margin-top: 280px; /* Más espacio en móviles */
-    }
 }
