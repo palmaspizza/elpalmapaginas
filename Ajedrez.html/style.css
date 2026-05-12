@@ -1624,3 +1624,14 @@ body {
     50% { transform: scale(1.1); }
     100% { transform: scale(1); opacity: 1; }
 }
+/* Para desktop */
+#board-container {
+    margin-top: 60px;
+}
+
+/* Para móviles */
+@media (max-width: 768px) {
+    #board-container {
+        margin-top: 280px; /* Más espacio en móviles */
+    }
+}
