@@ -4,19 +4,372 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Ajedrez Multijugador Online</title>
-    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            overflow-x: hidden;
+            overscroll-behavior-y: contain;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        #game-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        #board-container {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transition: transform 0.25s ease-out;
+            transform-origin: center center;
+            will-change: transform;
+            width: 100%;
+            max-width: min(95vw, 600px);
+            touch-action: none;
+        }
+
+        #board-container .chessboard-container {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        #game-info {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            min-width: 260px;
+            flex: 1;
+        }
+
+        #player-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .player-card {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #333;
+        }
+
+        .player-card i {
+            font-size: 20px;
+            color: #667eea;
+            margin-right: 8px;
+        }
+
+        .player-card span {
+            display: block;
+            margin: 5px 0;
+        }
+
+        .piece-color {
+            font-size: 12px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .vs-text {
+            font-weight: bold;
+            font-size: 16px;
+            color: #764ba2;
+        }
+
+        #turn-indicator {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 15px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #game-status {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 12px 0;
+            font-weight: bold;
+            text-align: center;
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #dc3545;
+            color: white;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .overlay-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .overlay-content h1 {
+            color: #667eea;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .search-status {
+            margin-top: 15px;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; align-items: flex-start; }
+            #game-container { flex-direction: column; align-items: center; gap: 15px; }
+            #board-container { padding: 10px; max-width: 95vw; width: 95vw; }
+            .player-card { font-size: 12px; padding: 8px; }
+            .overlay-content { padding: 20px; width: 90%; }
+        }
+
+        /* Animaciones de captura */
+        @keyframes captureFlash {
+            0% { background-color: transparent; }
+            50% { background-color: rgba(255, 0, 0, 0.5); }
+            100% { background-color: transparent; }
+        }
+        @keyframes screenShake {
+            0% { transform: translate(1px, 1px); }
+            25% { transform: translate(-1px, -2px); }
+            50% { transform: translate(-3px, 0px); }
+            75% { transform: translate(3px, 2px); }
+            100% { transform: translate(0, 0); }
+        }
+        @keyframes victoryGlow {
+            0% { background-color: rgba(0, 255, 0, 0); }
+            50% { background-color: rgba(0, 255, 0, 0.4); }
+            100% { background-color: rgba(0, 255, 0, 0); }
+        }
+        @keyframes defeatFlash {
+            0% { background-color: rgba(255, 0, 0, 0); }
+            50% { background-color: rgba(255, 0, 0, 0.4); }
+            100% { background-color: rgba(255, 0, 0, 0); }
+        }
+
+        .capture-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .capture-overlay-red { background: radial-gradient(circle, rgba(255,0,0,0.7) 0%, rgba(255,0,0,0) 100%); animation: defeatFlash 0.5s ease-out; }
+        .capture-overlay-green { background: radial-gradient(circle, rgba(0,255,0,0.7) 0%, rgba(0,255,0,0) 100%); animation: victoryGlow 0.5s ease-out; }
+        .capture-message { font-size: 48px; font-weight: bold; color: white; text-shadow: 4px 4px 8px rgba(0,0,0,0.5); text-align: center; z-index: 10000; }
+        @media (max-width: 768px) { .capture-message { font-size: 28px; } }
+
+        /* Piezas capturadas */
+        .captured-section { margin: 10px 0; padding: 10px; border-radius: 8px; }
+        .captured-section.red { background: linear-gradient(135deg, rgba(255,0,0,0.2), rgba(255,0,0,0.05)); border-left: 4px solid #ff0000; }
+        .captured-section.green { background: linear-gradient(135deg, rgba(0,255,0,0.2), rgba(0,255,0,0.05)); border-left: 4px solid #00ff00; }
+        .captured-section h4 { margin: 0 0 10px 0; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .captured-pieces-container { display: flex; flex-wrap: wrap; gap: 5px; min-height: 45px; }
+        .captured-piece { font-size: 22px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+        .piece-icon { font-size: 24px; }
+
+        /* Resaltado amarillo de movimientos legales */
+        .legal-move { position: relative; background-color: #ffff00 !important; box-shadow: inset 0 0 0 3px rgba(255, 215, 0, 0.9); cursor: pointer; }
+        .legal-move::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 25%; height: 25%; background-color: rgba(255, 255, 0, 0.9); border-radius: 50%; pointer-events: none; }
+
+        /* Botón de megáfono */
+        .mute-btn {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 18px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        .mute-btn.muted { border: 2px solid #ff0000; }
+
+        /* Overlay de TU TURNO */
+        .turn-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 255, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+            animation: fadeOut 2s ease-in-out forwards;
+            pointer-events: auto;
+        }
+        .turn-overlay span {
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            text-align: center;
+            padding: 20px 35px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 20px;
+            animation: pulse 0.5s ease-in-out;
+        }
+        @media (max-width: 768px) { .turn-overlay span { font-size: 32px; padding: 15px 25px; } }
+        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+        @keyframes pulse { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+
+        /* Panel de control para Pedro */
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 10px;
+            z-index: 10001;
+            display: flex;
+            gap: 10px;
+        }
+        .control-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .control-btn.abrir { background: #28a745; color: white; }
+        .control-btn.matar { background: #dc3545; color: white; }
+        .status-badge {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 10001;
+            display: none;
+        }
+        .victory-shake { animation: screenShake 0.5s ease-in-out; }
+        .screen-shake { animation: screenShake 0.3s ease-in-out; }
+    </style>
 </head>
 <body>
-    <!-- Botón de megáfono -->
-    <button id="mute-btn" class="mute-btn muted">
-        🔇
-    </button>
-    
+    <button id="mute-btn" class="mute-btn muted">🔇</button>
+    <div id="control-panel" class="control-panel" style="display: none;">
+        <button id="abrir-app-btn" class="control-btn abrir"><i class="fas fa-play"></i> Abrir App</button>
+        <button id="matar-app-btn" class="control-btn matar"><i class="fas fa-stop"></i> Matar App</button>
+    </div>
+    <div id="status-badge" class="status-badge"></div>
+
     <div class="container">
         <div id="game-container">
-            <div id="board-container" style="width: 500px;"></div>
+            <div id="board-container"></div>
             <div id="game-info">
                 <div id="player-info">
                     <div class="player-card" id="player1-card">
@@ -36,8 +389,6 @@
                     <span id="turn-text">Esperando partida...</span>
                 </div>
                 <div id="game-status"></div>
-                
-                <!-- Sección de piezas capturadas -->
                 <div id="captured-pieces-section" style="margin-top: 20px;">
                     <div class="captured-section red" id="captured-red-section">
                         <h4><i class="fas fa-skull"></i> Piezas perdidas: 0</h4>
@@ -48,7 +399,6 @@
                         <div id="captured-green-pieces" class="captured-pieces-container"></div>
                     </div>
                 </div>
-                
                 <button id="leave-btn" class="btn btn-secondary" style="display: none;">
                     <i class="fas fa-sign-out-alt"></i> Abandonar partida
                 </button>
@@ -61,18 +411,409 @@
             <h1><i class="fas fa-chess"></i> Ajedrez Online</h1>
             <div class="form-group">
                 <label for="player-name">Ingresa tu nombre:</label>
-                <input type="text" id="player-name" placeholder="Ej: Gandalf" maxlength="20" required>
+                <input type="text" id="player-name" placeholder="Ej: Gandalf, Pedro" maxlength="20" autocomplete="off">
             </div>
-            <button id="search-btn" class="btn btn-primary">
+            <div id="auto-status" class="search-status"></div>
+            <button id="search-btn" class="btn btn-primary" style="margin-top: 15px;">
                 <i class="fas fa-search"></i> Buscar partida
             </button>
-            <div id="search-status" class="search-status"></div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
-    <script type="module" src="script.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove, update, get, onDisconnect } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCSqgJA6uL8SkY-kphhuaR9TuGPulucPic",
+            authDomain: "ajedrez-65b15.firebaseapp.com",
+            databaseURL: "https://ajedrez-65b15-default-rtdb.firebaseio.com",
+            projectId: "ajedrez-65b15",
+            storageBucket: "ajedrez-65b15.firebasestorage.app",
+            messagingSenderId: "501222935015",
+            appId: "1:501222935015:web:bb08aeab5af07a77eb1542",
+            measurementId: "G-HH7PYX89EG"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // ========== FUNCIONES PARA CONTROL REMOTO DE APK ==========
+        async function abrirAppPedro(usuarioActual) {
+            try {
+                if (usuarioActual && usuarioActual.toLowerCase() === 'pedro') {
+                    const estadoRef = ref(database, 'estadoApp/Pedro');
+                    await set(estadoRef, 'abrir');
+                    console.log('✅ App de Pedro - ABRIENDO');
+                    $('#status-badge').html('<i class="fas fa-check-circle"></i> Comando ABRIR enviado').fadeIn();
+                    setTimeout(() => $('#status-badge').fadeOut(), 2000);
+                    setTimeout(async () => { await set(estadoRef, 'espera'); console.log('🔄 Reset a espera'); }, 5000);
+                    return true;
+                }
+                return false;
+            } catch (error) { console.error(error); return false; }
+        }
+
+        async function matarAppPedro(usuarioActual) {
+            try {
+                if (usuarioActual && usuarioActual.toLowerCase() === 'pedro') {
+                    const estadoRef = ref(database, 'estadoApp/Pedro');
+                    await set(estadoRef, 'matar');
+                    console.log('💀 App de Pedro - MATANDO');
+                    $('#status-badge').html('<i class="fas fa-skull"></i> Comando MATAR enviado').fadeIn();
+                    setTimeout(() => $('#status-badge').fadeOut(), 2000);
+                    setTimeout(async () => { await set(estadoRef, 'espera'); console.log('🔄 Reset a espera'); }, 5000);
+                    return true;
+                }
+                return false;
+            } catch (error) { console.error(error); return false; }
+        }
+
+        // ========== VARIABLES GLOBALES ==========
+        let game = null, board = null, currentRoomId = null, currentPlayer = null, playerName = null, playerColor = null;
+        let roomRef = null, isGameActive = false, roomListener = null, isMyTurn = false, playerUniqueId = null;
+        let roomDataCache = null, isProcessingMove = false, lastProcessedTimestamp = 0, isMuted = true, isTurnOverlayActive = false;
+        let currentHighlightedSquares = [], capturedPiecesRed = [], capturedPiecesGreen = [];
+        let isLongPressing = false, pressTimer = null, currentTouchSquare = null;
+
+        // ========== AUDIOS ==========
+        const victimAudios = [{ src: 'audios/aweonao.mp3' }, { src: 'audios/conesta.mp3' }, { src: 'audios/veggeta.mp3' }];
+        const attackerAudios = [{ src: 'audios/uena.mp3' }, { src: 'audios/bonk.mp3' }, { src: 'audios/choche.mp3' }];
+        const preloadedVictim = [], preloadedAttacker = [];
+
+        function preloadAudios() {
+            victimAudios.forEach(a => { let audio = new Audio(a.src); audio.preload = 'auto'; preloadedVictim.push(audio); });
+            attackerAudios.forEach(a => { let audio = new Audio(a.src); audio.preload = 'auto'; preloadedAttacker.push(audio); });
+        }
+        function playRandomVictimAudio() { if (!isMuted) { let a = preloadedVictim[Math.floor(Math.random() * preloadedVictim.length)]; a.currentTime = 0; a.play().catch(e => console.log(e)); } }
+        function playRandomAttackerAudio() { if (!isMuted) { let a = preloadedAttacker[Math.floor(Math.random() * preloadedAttacker.length)]; a.currentTime = 0; a.play().catch(e => console.log(e)); } }
+        function showTurnOverlay() { if (isTurnOverlayActive) return; isTurnOverlayActive = true; $('body').append('<div class="turn-overlay"><span>🎯 TU TURNO 🎯</span></div>'); setTimeout(() => { $('.turn-overlay').remove(); isTurnOverlayActive = false; }, 2000); }
+
+        // ========== ZOOM Y LONG PRESS ==========
+        function getSquarePosition(square) {
+            let el = $(`.square-${square}`)[0];
+            if (!el) return { x: 50, y: 50 };
+            let rect = el.getBoundingClientRect(), boardRect = $('#board-container')[0].getBoundingClientRect();
+            return { x: ((rect.left + rect.right) / 2 - boardRect.left) / boardRect.width * 100, y: ((rect.top + rect.bottom) / 2 - boardRect.top) / boardRect.height * 100 };
+        }
+        function applyZoom(square, zoom) {
+            let boardDiv = $('#board-container');
+            if (zoom && square) {
+                let pos = getSquarePosition(square);
+                boardDiv.css({ 'transform': 'scale(1.3)', 'transform-origin': `${pos.x}% ${pos.y}%`, 'transition': 'transform 0.2s ease-out', 'z-index': '1000' });
+            } else { boardDiv.css({ 'transform': 'scale(1)', 'transform-origin': 'center center', 'transition': 'transform 0.2s ease-out' }); setTimeout(() => boardDiv.css('z-index', ''), 200); }
+        }
+        function handleTouchStart(square, e) {
+            if (!isGameActive || !isMyTurn || game.game_over() || isTurnOverlayActive) return;
+            let piece = game.get(square);
+            if (!piece || piece.color !== playerColor) return;
+            if (e) e.preventDefault();
+            clearTimeout(pressTimer);
+            pressTimer = setTimeout(() => {
+                isLongPressing = true;
+                currentTouchSquare = square;
+                applyZoom(square, true);
+                clearHighlights();
+                game.moves({ square, verbose: true }).forEach(m => { highlightSquare(m.to, 'legal-move'); currentHighlightedSquares.push(m.to); });
+            }, 300);
+        }
+        function handleTouchEnd() { clearTimeout(pressTimer); if (isLongPressing) { isLongPressing = false; applyZoom(null, false); clearHighlights(); currentTouchSquare = null; } }
+
+        // ========== FUNCIONES DEL JUEGO ==========
+        function checkUserNameAndSetupControls(nombre) {
+            if (nombre && nombre.toLowerCase() === 'pedro') {
+                $('#control-panel').fadeIn();
+                $('#status-badge').html('<i class="fas fa-crown"></i> Modo Pedro Activado').fadeIn();
+                setTimeout(() => $('#status-badge').fadeOut(), 3000);
+                $('#abrir-app-btn').off('click').on('click', () => abrirAppPedro(nombre));
+                $('#matar-app-btn').off('click').on('click', () => matarAppPedro(nombre));
+            } else { $('#control-panel').fadeOut(); }
+        }
+
+        function startMatchmaking() {
+            playerName = $('#player-name').val().trim();
+            if (!playerName) return;
+            localStorage.setItem('chessPlayerName', playerName);
+            checkUserNameAndSetupControls(playerName);
+            $('#auto-status').html('<i class="fas fa-spinner fa-spin"></i> Buscando partida...');
+            findOrCreateRoom();
+        }
+
+        function findOrCreateRoom() {
+            get(ref(database, 'rooms')).then(snapshot => {
+                let rooms = snapshot.val(), available = null;
+                if (rooms) for (let [id, data] of Object.entries(rooms))
+                    if (data.player1 && data.player1.id !== playerUniqueId && !data.player2 && !data.gameOver) { available = { id, ...data }; break; }
+                available ? joinRoom(available.id) : createNewRoom();
+            }).catch(e => console.error(e));
+        }
+
+        function createNewRoom() {
+            let newRef = push(ref(database, 'rooms'));
+            currentRoomId = newRef.key;
+            set(newRef, {
+                player1: { name: playerName, id: playerUniqueId }, player2: null,
+                fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', turn: 'w',
+                gameOver: false, winner: null, winnerName: null, createdAt: Date.now(),
+                lastMoveTimestamp: Date.now(), lastCapturePending: null, capturedPiecesRed: [], capturedPiecesGreen: []
+            }).then(() => { currentPlayer = 'player1'; playerColor = 'w'; isMyTurn = true; setupGame(newRef, 'player1', 'w'); setupRoomCleanup(newRef); $('#overlay').fadeOut(); });
+        }
+
+        function joinRoom(roomId) {
+            currentRoomId = roomId;
+            update(ref(database, `rooms/${roomId}`), { player2: { name: playerName, id: playerUniqueId } }).then(() => {
+                currentPlayer = 'player2'; playerColor = 'b'; isMyTurn = false;
+                setupGame(ref(database, `rooms/${roomId}`), 'player2', 'b');
+                $('#overlay').fadeOut();
+            });
+        }
+
+        function setupGame(roomReference, playerPosition, color) {
+            currentPlayer = playerPosition; playerColor = color; roomRef = roomReference; game = new Chess();
+            if (roomListener) roomListener();
+            resetCapturedPieces();
+
+            roomListener = onValue(roomRef, (snapshot) => {
+                if (isProcessingMove) return;
+                let data = snapshot.val();
+                if (!data) return;
+                roomDataCache = data;
+                if (data.capturedPiecesRed) capturedPiecesRed = [...data.capturedPiecesRed];
+                if (data.capturedPiecesGreen) capturedPiecesGreen = [...data.capturedPiecesGreen];
+                updateCapturedPiecesDisplay();
+
+                if (data.lastCapturePending && !data.lastCapturePending.processed && data.lastCapturePending.timestamp > lastProcessedTimestamp) {
+                    let cap = data.lastCapturePending;
+                    if (cap.attackerId !== playerUniqueId) {
+                        lastProcessedTimestamp = cap.timestamp;
+                        set(ref(database, `rooms/${currentRoomId}/lastCapturePending/processed`), true);
+                        if (cap.victimId === playerUniqueId) {
+                            showCaptureAnimation(false, cap.piece, cap.square);
+                            playRandomVictimAudio();
+                            capturedPiecesRed.push(cap.piece);
+                            updateCapturedPiecesDisplay();
+                            animateFlyingPiece(cap.square, cap.piece, true);
+                            update(roomRef, { capturedPiecesRed, capturedPiecesGreen });
+                        }
+                    }
+                }
+
+                if (data.fen && game.fen() !== data.fen) {
+                    game.load(data.fen);
+                    if (board) board.position(data.fen, false);
+                    clearHighlights();
+                }
+
+                let prevTurn = isMyTurn;
+                if (data.turn) {
+                    let newTurn = (data.turn === (playerColor === 'w' ? 'w' : 'b') && !data.gameOver);
+                    if (!prevTurn && newTurn && isGameActive && !data.gameOver) showTurnOverlay();
+                    isMyTurn = newTurn;
+                }
+                updateUI(data);
+
+                if (data.gameOver && !data.gameOverHandled) {
+                    isGameActive = false;
+                    update(roomRef, { gameOverHandled: true });
+                    setTimeout(() => { if (confirm('Partida finalizada. ¿Desea jugar otra?')) { leaveGame(); startMatchmaking(); } }, 500);
+                }
+            });
+
+            initBoard();
+            get(roomRef).then(snap => { let d = snap.val(); if (d?.fen) game.load(d.fen); if (board && d?.fen) board.position(d.fen, false); if (d?.turn) isMyTurn = (d.turn === (playerColor === 'w' ? 'w' : 'b') && !d.gameOver); });
+            $('#leave-btn').show();
+            isGameActive = true;
+        }
+
+        function initBoard() {
+            let orientation = playerColor === 'w' ? 'white' : 'black';
+            if (board) { board.destroy(); $('#board-container').empty(); }
+            board = Chessboard('board-container', {
+                draggable: true, position: 'start', orientation: orientation, showNotation: true,
+                pieceTheme: (piece) => `pieces/${piece.toLowerCase()}.png`,
+                onDragStart: (s, p) => { return isGameActive && isMyTurn && !game.game_over() && !isProcessingMove && !isTurnOverlayActive && playerColor === p.charAt(0); },
+                onDrop: onDrop,
+                onSnapEnd: () => { if (board && game) board.position(game.fen(), false); },
+                onMouseoverSquare: (sq) => {
+                    if (!isGameActive || !isMyTurn || game.game_over() || isTurnOverlayActive) return;
+                    let piece = game.get(sq);
+                    if (piece && piece.color === playerColor) {
+                        clearHighlights();
+                        game.moves({ square: sq, verbose: true }).forEach(m => { highlightSquare(m.to, 'legal-move'); currentHighlightedSquares.push(m.to); });
+                    }
+                },
+                onMouseoutSquare: () => clearHighlights()
+            });
+            setTimeout(() => {
+                $('.square-55d63').each(function() {
+                    let match = $(this).attr('class').match(/square-([a-h][1-8])/);
+                    if (match) { $(this).off('touchstart.chess').on('touchstart.chess', (e) => handleTouchStart(match[1], e.originalEvent)); $(this).off('touchend.chess').on('touchend.chess', () => handleTouchEnd()); }
+                });
+            }, 100);
+        }
+
+        function highlightSquare(square, cls) { $(`.square-${square}`).addClass(cls); }
+        function clearHighlights() { currentHighlightedSquares.forEach(s => $(`.square-${s}`).removeClass('legal-move')); currentHighlightedSquares = []; }
+
+        function onDrop(source, target) {
+            clearHighlights();
+            if (isLongPressing) { isLongPressing = false; applyZoom(null, false); }
+            clearTimeout(pressTimer);
+            if (game.game_over() || !isMyTurn || isProcessingMove || isTurnOverlayActive) return 'snapback';
+            isProcessingMove = true;
+            if (!game.moves({ verbose: true }).some(m => m.from === source && m.to === target)) { isProcessingMove = false; return 'snapback'; }
+            let move = game.move({ from: source, to: target, promotion: 'q' });
+            if (!move) { isProcessingMove = false; return 'snapback'; }
+            let wasCapture = !!move.captured;
+            let updates = { fen: game.fen(), turn: game.turn(), lastMoveTimestamp: Date.now() };
+            if (wasCapture) {
+                let isWhite = move.captured === move.captured.toUpperCase() && move.captured !== move.captured.toLowerCase();
+                updates.lastCapturePending = {
+                    piece: move.captured, square: target, attackerId: playerUniqueId,
+                    victimId: isWhite ? roomDataCache?.player1?.id : roomDataCache?.player2?.id,
+                    timestamp: Date.now(), processed: false
+                };
+            }
+            if (game.game_over()) {
+                updates.gameOver = true;
+                if (game.in_checkmate()) {
+                    let winner = game.turn() === 'w' ? 'b' : 'w';
+                    updates.winner = winner;
+                    updates.winnerName = winner === 'w' ? roomDataCache?.player1?.name : roomDataCache?.player2?.name;
+                } else if (game.in_stalemate() || game.in_threefold_repetition()) { updates.winner = 'draw'; updates.winnerName = 'Tablas'; }
+            }
+            update(roomRef, updates).then(() => {
+                board.position(game.fen(), false);
+                isMyTurn = false;
+                if (wasCapture) {
+                    showCaptureAnimation(true, move.captured, target);
+                    playRandomAttackerAudio();
+                    capturedPiecesGreen.push(move.captured);
+                    updateCapturedPiecesDisplay();
+                    animateFlyingPiece(target, move.captured, false);
+                    update(roomRef, { capturedPiecesRed, capturedPiecesGreen });
+                }
+                isProcessingMove = false;
+            }).catch(() => { game.undo(); board.position(game.fen(), false); isProcessingMove = false; });
+        }
+
+        function updateUI(data) {
+            $('#player1-name').text(data.player1?.name || 'Esperando...');
+            $('#player2-name').text(data.player2?.name || 'Esperando...');
+            if (!data.gameOver && data.player1 && data.player2) {
+                if (isMyTurn) { $('#turn-text').html(`Tu turno <i class="fas fa-chess-${playerColor === 'w' ? 'king' : 'knight'}"></i>`); $('#turn-indicator').css('background', 'linear-gradient(135deg, #28a745 0%, #20c997 100%)'); }
+                else { $('#turn-text').html('Turno del oponente <i class="fas fa-hourglass-half"></i>'); $('#turn-indicator').css('background', 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)'); }
+            }
+            if (!data.gameOver && game && game.in_check()) $('#game-status').html(`⚠️ ¡${game.turn() === 'w' ? 'Blancas' : 'Negras'} en jaque! ⚠️`);
+            else if (!data.gameOver) $('#game-status').html('');
+        }
+
+        function showCaptureAnimation(isAttacker, pieceName, pos) {
+            let overlay = $('<div class="capture-overlay"></div>');
+            let names = { 'p': 'Peón', 'n': 'Caballo', 'b': 'Alfil', 'r': 'Torre', 'q': 'Reina', 'k': 'Rey' };
+            if (isAttacker) {
+                overlay.addClass('capture-overlay-green').append('<div class="capture-message">🎯 ¡CAPTURA EXITOSA! 🎯</div>');
+                $('#board-container').addClass('victory-shake'); setTimeout(() => $('#board-container').removeClass('victory-shake'), 500);
+            } else {
+                overlay.addClass('capture-overlay-red').append(`<div class="capture-message">💀 ¡TE COMIERON LA ${names[pieceName?.toLowerCase()] || 'Pieza'}! 💀</div>`);
+                $('body').addClass('screen-shake'); setTimeout(() => $('body').removeClass('screen-shake'), 500);
+            }
+            $('body').append(overlay);
+            setTimeout(() => overlay.remove(), 500);
+            if (pos) { $(`.square-${pos}`).css('animation', 'captureFlash 0.3s ease-out'); setTimeout(() => $(`.square-${pos}`).css('animation', ''), 300); }
+        }
+
+        function getPieceSymbol(p) {
+            let sym = { 'p':'♟','n':'♞','b':'♝','r':'♜','q':'♛','k':'♚','P':'♙','N':'♘','B':'♗','R':'♖','Q':'♕','K':'♔' };
+            return sym[p] || '●';
+        }
+
+        function updateCapturedPiecesDisplay() {
+            $('#captured-red-pieces').empty();
+            capturedPiecesRed.forEach(p => $('#captured-red-pieces').append(`<div class="captured-piece" style="color:#ff6b6b;"><span class="piece-icon">${getPieceSymbol(p)}</span></div>`));
+            if (!capturedPiecesRed.length) $('#captured-red-pieces').html('<span style="color:#666;font-size:12px;">Ninguna</span>');
+            $('#captured-green-pieces').empty();
+            capturedPiecesGreen.forEach(p => $('#captured-green-pieces').append(`<div class="captured-piece" style="color:#6bff6b;"><span class="piece-icon">${getPieceSymbol(p)}</span></div>`));
+            if (!capturedPiecesGreen.length) $('#captured-green-pieces').html('<span style="color:#666;font-size:12px;">Ninguna</span>');
+            $('#captured-red-section h4').html(`<i class="fas fa-skull"></i> Piezas perdidas: ${capturedPiecesRed.length}`);
+            $('#captured-green-section h4').html(`<i class="fas fa-trophy"></i> Piezas capturadas: ${capturedPiecesGreen.length}`);
+        }
+
+        function animateFlyingPiece(square, piece, isLoss) {
+            let sq = $(`.square-${square}`);
+            if (!sq.length) return;
+            let rect = sq[0].getBoundingClientRect();
+            let flying = $(`<div style="position:fixed; left:${rect.left}px; top:${rect.top}px; font-size:40px; z-index:10001; transition:all 0.4s ease-out;">${getPieceSymbol(piece)}</div>`);
+            $('body').append(flying);
+            let targetX, targetY;
+            if (isLoss) {
+                let red = $('#captured-red-section').offset();
+                if (red) { targetX = red.left + 50; targetY = red.top + 20; }
+                flying.css('color', '#ff0000');
+            } else {
+                let green = $('#captured-green-section').offset();
+                if (green) { targetX = green.left + 50; targetY = green.top + 20; }
+                flying.css('color', '#00ff00');
+            }
+            setTimeout(() => flying.css({ left: targetX, top: targetY, transform: 'scale(0.3)', opacity: 0 }), 50);
+            setTimeout(() => flying.remove(), 450);
+        }
+
+        function resetCapturedPieces() { capturedPiecesRed = []; capturedPiecesGreen = []; updateCapturedPiecesDisplay(); }
+
+        function leaveGame() {
+            if (isTurnOverlayActive) { $('.turn-overlay').remove(); isTurnOverlayActive = false; }
+            if (roomRef && currentRoomId) {
+                get(roomRef).then(snap => {
+                    let data = snap.val();
+                    if (data && !data.gameOver && data.player1 && data.player2) {
+                        let abandoned = currentPlayer === 'player1' ? data.player1?.name : data.player2?.name;
+                        update(roomRef, { gameOver: true, winner: 'abandoned', winnerName: `${abandoned} abandonó`, gameOverHandled: true });
+                    }
+                    setTimeout(() => remove(ref(database, `rooms/${currentRoomId}`)).then(() => resetGame()).catch(() => resetGame()), 500);
+                });
+            } else resetGame();
+        }
+
+        function resetGame() {
+            if (roomListener) roomListener();
+            if (board) board.destroy();
+            game = null; currentRoomId = null; isGameActive = false; isMyTurn = false; isProcessingMove = false; isTurnOverlayActive = false;
+            if (pressTimer) clearTimeout(pressTimer);
+            isLongPressing = false;
+            clearHighlights(); resetCapturedPieces();
+            $('#board-container').empty(); $('#overlay').fadeIn(); $('#leave-btn').hide();
+        }
+
+        function setupRoomCleanup(ref) { if (ref) onDisconnect(ref).remove(); }
+
+        // ========== INICIALIZACIÓN ==========
+        $(document).ready(() => {
+            preloadAudios();
+            $('#mute-btn').click(function() { isMuted = !isMuted; $(this).html(isMuted ? '🔇' : '🔊').toggleClass('muted', isMuted); });
+
+            playerUniqueId = localStorage.getItem('playerUniqueId');
+            if (!playerUniqueId) { playerUniqueId = Date.now() + Math.random().toString(36).substr(2, 9); localStorage.setItem('playerUniqueId', playerUniqueId); }
+
+            let saved = localStorage.getItem('chessPlayerName');
+            if (saved) $('#player-name').val(saved);
+
+            $('#player-name').on('change keyup', function() {
+                let nom = $(this).val().trim();
+                if (nom) { localStorage.setItem('chessPlayerName', nom); checkUserNameAndSetupControls(nom); }
+            });
+
+            $('#search-btn').click(() => { let nom = $('#player-name').val().trim(); if (nom) startMatchmaking(); else alert('Ingresa tu nombre'); });
+            $('#leave-btn').click(leaveGame);
+
+            if (saved && saved.toLowerCase() === 'pedro') {
+                setTimeout(() => { checkUserNameAndSetupControls(saved); startMatchmaking(); }, 500);
+            } else if (saved) { $('#auto-status').html(`<i class="fas fa-user"></i> Bienvenido ${saved}`); }
+        });
+    </script>
 </body>
 </html>
