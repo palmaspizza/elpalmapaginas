@@ -2,27 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Ajedrez Multijugador Online</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
-    <style>
-        /* Estilos adicionales para asegurar que el tablero se vea bien */
-        #board-container {
-            width: 500px;
-        }
-        .square-55d63 {
-            width: 12.5%;
-            height: auto;
-            aspect-ratio: 1 / 1;
-        }
-        .chessboard-container {
-            width: 100%;
-        }
-    </style>
 </head>
 <body>
+    <!-- Botón de megáfono -->
+    <button id="mute-btn" class="mute-btn muted">
+        🔇
+    </button>
+    
     <div class="container">
         <div id="game-container">
             <div id="board-container" style="width: 500px;"></div>
