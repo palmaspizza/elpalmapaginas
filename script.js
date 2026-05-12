@@ -1,832 +1,849 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-import {
-    getDatabase,
-    ref,
-    set,
-    onValue,
-    off,
-    get,
-    serverTimestamp,
-    push
-} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getDatabase, ref, set, onValue, push, remove, update, get, onDisconnect } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// ===== CONFIGURACIÓN FIREBASE =====
 const firebaseConfig = {
-    apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
-    authDomain: "palmaxd-32720.firebaseapp.com",
-    databaseURL: "https://palmaxd-32720-default-rtdb.firebaseio.com",
-    projectId: "palmaxd-32720",
-    storageBucket: "palmaxd-32720.appspot.com",
-    messagingSenderId: "527831930817",
-    appId: "1:527831930817:web:05fcfd4b53296068d4c140"
+    apiKey: "AIzaSyCSqgJA6uL8SkY-kphhuaR9TuGPulucPic",
+    authDomain: "ajedrez-65b15.firebaseapp.com",
+    databaseURL: "https://ajedrez-65b15-default-rtdb.firebaseio.com",
+    projectId: "ajedrez-65b15",
+    storageBucket: "ajedrez-65b15.firebasestorage.app",
+    messagingSenderId: "501222935015",
+    appId: "1:501222935015:web:bb08aeab5af07a77eb1542",
+    measurementId: "G-HH7PYX89EG"
 };
 
-const app      = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
-console.log("Firebase conectado");
 
-// ===== VARIABLES GLOBALES =====
-let usuarioActual      = '';
-let llamadaActiva      = false;
-let timerInterval      = null;
-let segundosLlamada    = 0;
-let peerConnection     = null;
-let localStream        = null;
-let miLlamadaId        = null;
-let llamadaEntranteId  = null;
-let yaNotifique        = false;
-let _pendingAutoAccept = false;
-let _pendingAutoReject = false;
-let icePendientes      = [];
-let audiollamandoa     = null;
+let game = null;
+let board = null;
+let currentRoomId = null;
+let currentPlayer = null;
+let playerName = null;
+let playerColor = null;
+let roomRef = null;
+let isGameActive = false;
+let roomListener = null;
+let isMyTurn = false;
+let playerUniqueId = null;
+let roomDataCache = null;
+let isProcessingMove = false;
+let lastProcessedTimestamp = 0;
+let isMuted = true; // Estado muteado por defecto
+let isTurnOverlayActive = false; // Evita múltiples overlays
 
-// FIX: declaradas aquí para que las funciones window.xxx puedan usarlas
-let holdDivTimer;
-let holdVolverTimer;
+// Variables para resaltado de movimientos legales
+let currentHighlightedSquares = [];
 
-// Listeners activos para limpiar al colgar
-const _listeners = [];
+// Variables para piezas capturadas
+let capturedPiecesRed = [];
+let capturedPiecesGreen = [];
 
-// ===== FOTOS DE USUARIOS =====
-const FOTOS_USUARIOS = {
-    'pedro':  'https://i.ibb.co/yFPG4sjP/pedrofoto.png',
-    'maria':  'https://i.ibb.co/3yzQ2WBb/mariafoto.png',
-    'diego':  'https://i.ibb.co/9mTjY0T4/diegoperfil.png',
-    'matias': 'https://i.ibb.co/F4xrbDMT/matiasperfil.png'
-};
+// Audios de captura
+const victimAudios = [
+    { src: 'audios/aweonao.mp3', name: 'aweonao' },
+    { src: 'audios/conesta.mp3', name: 'conesta' },
+    { src: 'audios/veggeta.mp3', name: 'veggeta' }
+];
 
-// ===== CONFIGURACIÓN WebRTC =====
-const configICE = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        {
-            urls:       'turn:openrelay.metered.ca:80',
-            username:   'openrelayproject',
-            credential: 'openrelayproject'
-        },
-        {
-            urls:       'turn:openrelay.metered.ca:443',
-            username:   'openrelayproject',
-            credential: 'openrelayproject'
+const attackerAudios = [
+    { src: 'audios/uena.mp3', name: 'uena' },
+    { src: 'audios/bonk.mp3', name: 'bonk' },
+    { src: 'audios/choche.mp3', name: 'choche' }
+];
+
+const preloadedVictimAudios = [];
+const preloadedAttackerAudios = [];
+
+function preloadAudios() {
+    victimAudios.forEach(audio => {
+        const audioElement = new Audio(audio.src);
+        audioElement.preload = 'auto';
+        preloadedVictimAudios.push(audioElement);
+    });
+    
+    attackerAudios.forEach(audio => {
+        const audioElement = new Audio(audio.src);
+        audioElement.preload = 'auto';
+        preloadedAttackerAudios.push(audioElement);
+    });
+}
+
+function playRandomVictimAudio() {
+    if (isMuted) return; // No reproducir si está muteado
+    const randomIndex = Math.floor(Math.random() * preloadedVictimAudios.length);
+    const audio = preloadedVictimAudios[randomIndex];
+    audio.currentTime = 0;
+    audio.play().catch(e => console.log('Error reproduciendo audio:', e));
+}
+
+function playRandomAttackerAudio() {
+    if (isMuted) return; // No reproducir si está muteado
+    const randomIndex = Math.floor(Math.random() * preloadedAttackerAudios.length);
+    const audio = preloadedAttackerAudios[randomIndex];
+    audio.currentTime = 0;
+    audio.play().catch(e => console.log('Error reproduciendo audio:', e));
+}
+
+function showTurnOverlay() {
+    if (isTurnOverlayActive) return;
+    isTurnOverlayActive = true;
+    
+    const overlay = $('<div class="turn-overlay"><span>🎯 TU TURNO 🎯</span></div>');
+    $('body').append(overlay);
+    
+    setTimeout(() => {
+        overlay.remove();
+        isTurnOverlayActive = false;
+    }, 2000);
+}
+
+$(document).ready(() => {
+    preloadAudios();
+    
+    // Configurar botón de mute
+    const muteBtn = $('#mute-btn');
+    muteBtn.click(() => {
+        isMuted = !isMuted;
+        if (isMuted) {
+            muteBtn.html('🔇');
+            muteBtn.addClass('muted');
+        } else {
+            muteBtn.html('🔊');
+            muteBtn.removeClass('muted');
         }
-    ]
-};
-
-// ===== CATÁLOGO DE USUARIOS =====
-const CATALOGO_USUARIOS = {
-    'pedro':  { nombre: 'PEDRO'  },
-    'maria':  { nombre: 'MARIA'  },
-    'diego':  { nombre: 'DIEGO'  },
-    'matias': { nombre: 'MATIAS' }
-};
-
-// ===== REGLAS DE VISIBILIDAD =====
-const REGLAS_VISIBILIDAD = {
-    'pedro':  ['maria', 'diego', 'matias'],
-    'maria':  ['pedro', 'diego', 'matias'],
-    'diego':  ['pedro', 'maria', 'matias'],
-    'matias': ['pedro', 'maria', 'diego']
-};
-
-// ========================================================
-// INIT
-// ========================================================
-window.addEventListener('load', () => {
-    if (!document.getElementById('audio-remoto')) {
-        const a = document.createElement('audio');
-        a.id    = 'audio-remoto';
-        a.autoplay = true;
-        a.muted    = false;
-        a.volume   = 1;
-        a.setAttribute('playsinline', '');
-        document.body.appendChild(a);
+    });
+    
+    // Prevenir pull-to-refresh en móviles
+    document.body.addEventListener('touchmove', (e) => {
+        if (e.target.closest('.chessboard-container')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    const savedName = localStorage.getItem('chessPlayerName');
+    if (savedName) {
+        $('#player-name').val(savedName);
     }
-
-    const usuarioGuardado = localStorage.getItem('usuario');
-    if (usuarioGuardado && usuarioGuardado.trim() !== '') {
-        usuarioActual = usuarioGuardado;
-        document.getElementById('pantalla-ingreso').style.display    = 'none';
-        document.getElementById('pantalla-directorio').style.display = 'flex';
-        escucharLlamadasDirectas();
-        renderizarContactos();
-        if (window.Android) window.Android.setUsuario(usuarioActual);
-        actualizarBotonEnac();
-    } else {
-        document.getElementById('input-username').focus();
+    
+    $('#search-btn').click(startMatchmaking);
+    $('#leave-btn').click(leaveGame);
+    
+    playerUniqueId = localStorage.getItem('playerUniqueId');
+    if (!playerUniqueId) {
+        playerUniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('playerUniqueId', playerUniqueId);
     }
 });
 
-// ========================================================
-// HELPERS LISTENERS FIREBASE
-// ========================================================
-function _escuchar(path, cb) {
-    const dbRef   = ref(database, path);
-    const handler = onValue(dbRef, cb);
-    _listeners.push({ dbRef, handler });
-    return { dbRef, handler };
-}
-
-function _limpiarListeners() {
-    _listeners.forEach(l => off(l.dbRef, 'value', l.handler));
-    _listeners.length = 0;
-}
-
-// ========================================================
-// AUDIO REMOTO
-// ========================================================
-function reproducirAudioRemoto(stream) {
-    const audio = document.getElementById('audio-remoto');
-    if (!audio) { console.error('Elemento audio-remoto no encontrado'); return; }
-
-    audio.muted  = false;
-    audio.volume = 1;
-
-    if (audio.srcObject !== stream) {
-        audio.srcObject = stream;
-    }
-
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-        playPromise
-            .then(() => console.log('Audio remoto reproduciéndose'))
-            .catch(err => {
-                console.warn('Autoplay bloqueado, esperando interacción:', err);
-                const reanudar = () => {
-                    audio.play()
-                        .then(() => console.log('Audio reanudado'))
-                        .catch(console.error);
-                    document.removeEventListener('click',      reanudar);
-                    document.removeEventListener('touchstart', reanudar);
-                    document.removeEventListener('keydown',    reanudar);
-                };
-                document.addEventListener('click',      reanudar, { once: true });
-                document.addEventListener('touchstart', reanudar, { once: true });
-                document.addEventListener('keydown',    reanudar, { once: true });
-            });
-    }
-}
-
-// ========================================================
-// ICE CANDIDATES — llamadas directas
-// ========================================================
-async function aplicarIceCandidate(cand) {
-    if (!peerConnection) return;
-    try {
-        if (!peerConnection.remoteDescription || !peerConnection.remoteDescription.type) {
-            icePendientes.push(cand);
-        } else {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
-        }
-    } catch (e) {
-        console.error('addIceCandidate error:', e);
-    }
-}
-
-async function vaciarColaICE() {
-    while (icePendientes.length > 0 && peerConnection) {
-        const cand = icePendientes.shift();
-        try { await peerConnection.addIceCandidate(new RTCIceCandidate(cand)); }
-        catch (e) { console.error('addIceCandidate (cola) error:', e); }
-    }
-}
-
-// ========================================================
-// ESCUCHAR LLAMADAS ENTRANTES
-// ========================================================
-function escucharLlamadasDirectas() {
-    _escuchar('llamadas_directas', (snapshot) => {
-        const llamadas = snapshot.val();
-        if (!llamadas) return;
-
-        Object.keys(llamadas).forEach(id => {
-            const llamada = llamadas[id];
-
-            if (llamada.para    !== usuarioActual) return;
-            if (llamada.de      === usuarioActual) return;
-            if (llamada.estado  !== 'llamando')    return;
-            if (llamadaActiva)                     return;
-            if (yaNotifique)                       return;
-            if (llamadaEntranteId === id)          return;
-            if (!llamada.oferta?.sdp)              return;
-
-            yaNotifique       = true;
-            llamadaEntranteId = id;
-
-            if (_pendingAutoAccept) {
-                _pendingAutoAccept = false;
-                window.aceptarLlamadaEntrante();
-                return;
-            }
-            if (_pendingAutoReject) {
-                _pendingAutoReject = false;
-                window.rechazarLlamada();
-                return;
-            }
-
-            // Solo mostrar notificación web si la app está en primer plano.
-            // Si está en segundo plano, Android ya muestra IncomingCallActivity.
-            if (document.visibilityState === 'visible') {
-                const nombre = CATALOGO_USUARIOS[llamada.de]?.nombre || llamada.de;
-                mostrarNotificacionEntrante(nombre, 'Te está llamando...');
-            }
-        });
-    });
-}
-
-// ========================================================
-// INGRESAR
-// ========================================================
-window.ingresar = function () {
-    const username = document.getElementById('input-username').value.trim().toLowerCase();
-    if (!username) { alert('Por favor, escribe tu nombre'); return; }
-
-    if (!CATALOGO_USUARIOS[username]) {
-        alert('Usuario no reconocido. Verifica tu nombre.');
+function startMatchmaking() {
+    playerName = $('#player-name').val().trim();
+    if (!playerName) {
+        alert('Por favor ingresa tu nombre');
         return;
     }
+    
+    localStorage.setItem('chessPlayerName', playerName);
+    $('#search-status').html('<i class="fas fa-spinner fa-spin"></i> Buscando partida...');
+    $('#search-btn').prop('disabled', true);
+    
+    findOrCreateRoom();
+}
 
-    localStorage.setItem('usuario', username);
-    usuarioActual = username;
-    document.getElementById('pantalla-ingreso').style.display    = 'none';
-    document.getElementById('pantalla-directorio').style.display = 'flex';
-    escucharLlamadasDirectas();
-    renderizarContactos();
-    if (window.Android) window.Android.setUsuario(usuarioActual);
-    actualizarBotonEnac();
-};
-
-// ========================================================
-// CERRAR SESIÓN
-// ========================================================
-window.cerrarSesion = function () {
-    if (llamadaActiva) colgarLlamada();
-    _limpiarListeners();
-    resetEstado();
-    localStorage.removeItem('usuario');
-    usuarioActual = '';
-    document.getElementById('pantalla-directorio').style.display = 'none';
-    document.getElementById('pantalla-ingreso').style.display    = 'flex';
-    document.getElementById('input-username').value = '';
-    document.getElementById('modal-volver').style.display = 'none';
-};
-
-// ========================================================
-// DIRECTORIO
-// ========================================================
-window.renderizarContactos = function () {
-    const contenedor     = document.getElementById('lista-contactos');
-    contenedor.innerHTML = '';
-
-    const visibles = (REGLAS_VISIBILIDAD[usuarioActual] || []).map(id => ({
-        id, nombre: CATALOGO_USUARIOS[id]?.nombre || id
-    }));
-
-    const infoContainer = document.getElementById('info-palmitas-container');
-    if (infoContainer) infoContainer.innerHTML = '';
-
-    visibles.forEach(contacto => {
-        const div     = document.createElement('div');
-        div.className = 'tarjeta-contacto';
-
-        div.onclick = function () {
-            window.iniciarLlamada(contacto.id);
-        };
-
-        const tieneFoto  = FOTOS_USUARIOS[contacto.id];
-        const avatarHTML = tieneFoto
-            ? `<img src="${tieneFoto}" alt="${contacto.nombre}"
-                    onerror="this.style.display='none';
-                             this.parentElement.textContent='${contacto.nombre.charAt(0)}';">`
-            : contacto.nombre.charAt(0);
-
-        div.innerHTML = `
-            <div class="avatar-contacto">
-                ${avatarHTML}
-            </div>
-            <div class="info-contacto">
-                <div class="nombre-contacto">${contacto.nombre}</div>
-            </div>
-            <span class="icono-llamar telefono-verde" style="font-size:250%;"></span>
-            <button class="boton-llamar-directo"
-                    onclick="event.stopPropagation(); window.iniciarLlamada('${contacto.id}')"
-                    title="Llamar a ${contacto.nombre}">
-                <span class="texto-llamar">LLAMAR</span>
-            </button>
-        `;
-        contenedor.appendChild(div);
-    });
-};
-
-// ========================================================
-// INICIAR LLAMADA — EMISOR
-// ========================================================
-window.iniciarLlamada = async function (contactoId) {
-    if (llamadaActiva) return;
-
-    const nombre    = CATALOGO_USUARIOS[contactoId]?.nombre || contactoId;
-    const llamadaId = `${usuarioActual}_${contactoId}_${Date.now()}`;
-    miLlamadaId     = llamadaId;
-    icePendientes   = [];
-
-    mostrarPantallaLlamada(nombre, 'Llamando...', contactoId);
-    iniciarAudioLlamando();
-
-    try {
-        localStream    = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        peerConnection = new RTCPeerConnection(configICE);
-        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-
-        peerConnection.ontrack = (e) => {
-            console.log('EMISOR: ontrack recibido');
-            if (e.streams && e.streams[0]) reproducirAudioRemoto(e.streams[0]);
-        };
-
-        peerConnection.oniceconnectionstatechange = () => {
-            console.log('EMISOR ICE state:', peerConnection.iceConnectionState);
-            if (peerConnection.iceConnectionState === 'failed') peerConnection.restartIce();
-        };
-
-        peerConnection.onconnectionstatechange = () => {
-            console.log('EMISOR connection state:', peerConnection.connectionState);
-        };
-
-        const offer = await peerConnection.createOffer();
-
-        peerConnection.onicecandidate = async (e) => {
-            if (!e.candidate) return;
-            const r = push(ref(database, `llamadas_directas/${llamadaId}/ice/${usuarioActual}`));
-            await set(r, {
-                candidate:     e.candidate.candidate,
-                sdpMid:        e.candidate.sdpMid,
-                sdpMLineIndex: e.candidate.sdpMLineIndex
-            });
-        };
-
-        await peerConnection.setLocalDescription(offer);
-
-        await set(ref(database, `llamadas_directas/${llamadaId}`), {
-            de:        usuarioActual,
-            para:      contactoId,
-            estado:    'llamando',
-            timestamp: serverTimestamp(),
-            oferta:    { type: offer.type, sdp: offer.sdp }
-        });
-
-        // Escuchar ICE del receptor
-        _escuchar(`llamadas_directas/${llamadaId}/ice/${contactoId}`, (snap) => {
-            const cands = snap.val();
-            if (!cands) return;
-            Object.values(cands).forEach(c => {
-                if (c?.candidate) aplicarIceCandidate(c);
-            });
-        });
-
-        // Escuchar respuesta del receptor
-        _escuchar(`llamadas_directas/${llamadaId}/respuesta`, async (snap) => {
-            const respuesta = snap.val();
-            if (!respuesta?.sdp)                        return;
-            if (!peerConnection)                         return;
-            if (peerConnection.remoteDescription?.type) return;
-
-            console.log('EMISOR: aplicando answer');
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(respuesta));
-            await vaciarColaICE();
-
-            if (!llamadaActiva) {
-                llamadaActiva = true;
-                iniciarTimer();
-                mostrarEstadoConectado();
-                mostrarControlesDuranteLlamada();
+function findOrCreateRoom() {
+    const roomsRef = ref(database, 'rooms');
+    
+    get(roomsRef).then((snapshot) => {
+        const rooms = snapshot.val();
+        let availableRoom = null;
+        
+        if (rooms) {
+            for (const [roomId, roomData] of Object.entries(rooms)) {
+                if (roomData.player1 && roomData.player1.id !== playerUniqueId && !roomData.player2 && !roomData.gameOver) {
+                    availableRoom = { id: roomId, ...roomData };
+                    break;
+                }
             }
-        });
+        }
+        
+        if (availableRoom) {
+            joinRoom(availableRoom.id, availableRoom);
+        } else {
+            createNewRoom();
+        }
+    }).catch((error) => {
+        console.error('Error al buscar salas:', error);
+        $('#search-status').html('Error al conectar. Reintentando...');
+        setTimeout(() => {
+            $('#search-btn').prop('disabled', false);
+            $('#search-status').html('');
+        }, 2000);
+    });
+}
 
-        // Escuchar estado (rechazada / colgada)
-        _escuchar(`llamadas_directas/${llamadaId}/estado`, (snap) => {
-            const estado = snap.val();
-            if (estado === 'rechazada') recargarPagina();
-            if (estado === 'colgada')   recargarPagina();
-        });
+function createNewRoom() {
+    const roomsRef = ref(database, 'rooms');
+    const newRoomRef = push(roomsRef);
+    currentRoomId = newRoomRef.key;
+    
+    const initialFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    
+    const roomData = {
+        player1: {
+            name: playerName,
+            id: playerUniqueId
+        },
+        player2: null,
+        fen: initialFEN,
+        turn: 'w',
+        gameOver: false,
+        winner: null,
+        winnerName: null,
+        createdAt: Date.now(),
+        lastMoveTimestamp: Date.now(),
+        lastCapturePending: null
+    };
+    
+    set(newRoomRef, roomData).then(() => {
+        currentPlayer = 'player1';
+        playerColor = 'w';
+        isMyTurn = true;
+        setupGame(newRoomRef, 'player1', 'w');
+        setupRoomCleanup(newRoomRef);
+        $('#search-status').html('Esperando oponente... <i class="fas fa-hourglass-half"></i>');
+    }).catch((error) => {
+        console.error('Error al crear sala:', error);
+        $('#search-status').html('Error al crear sala. Reintentando...');
+        setTimeout(() => {
+            $('#search-btn').prop('disabled', false);
+            $('#search-status').html('');
+        }, 2000);
+    });
+}
 
-    } catch (err) {
-        console.error('Error iniciando llamada:', err);
-        document.getElementById('estado-llamada').textContent = 'Error al acceder al micrófono ❌';
-        document.getElementById('estado-llamada').style.color = '#ff3333';
+function joinRoom(roomId, roomData) {
+    currentRoomId = roomId;
+    const roomRef_full = ref(database, `rooms/${roomId}`);
+    
+    const updatedData = {
+        player2: {
+            name: playerName,
+            id: playerUniqueId
+        }
+    };
+    
+    update(roomRef_full, updatedData).then(() => {
+        currentPlayer = 'player2';
+        playerColor = 'b';
+        isMyTurn = false;
+        setupGame(roomRef_full, 'player2', 'b');
+        $('#search-status').html('¡Partida encontrada! <i class="fas fa-check"></i>');
+        setTimeout(() => {
+            $('#overlay').fadeOut();
+        }, 1000);
+    }).catch((error) => {
+        console.error('Error al unirse a sala:', error);
+        $('#search-status').html('Error al unirse. Reintentando...');
+        setTimeout(() => {
+            $('#search-btn').prop('disabled', false);
+            $('#search-status').html('');
+        }, 2000);
+    });
+}
+
+function setupGame(roomReference, playerPosition, color) {
+    currentPlayer = playerPosition;
+    playerColor = color;
+    roomRef = roomReference;
+    
+    game = new Chess();
+    
+    if (roomListener) {
+        roomListener();
+        roomListener = null;
     }
-};
-
-// ========================================================
-// ACEPTAR LLAMADA ENTRANTE — RECEPTOR
-// ========================================================
-window.aceptarLlamadaEntrante = async function () {
-    document.getElementById('notificacion-entrante').style.display = 'none';
-    if (!llamadaEntranteId) return;
-
-    icePendientes = [];
-
-    // Mostrar pantalla inmediatamente
-    const partes    = llamadaEntranteId.split('_');
-    const emisorTmp = partes[0] || '';
-    const nombreTmp = CATALOGO_USUARIOS[emisorTmp]?.nombre || emisorTmp;
-    mostrarPantallaLlamada(nombreTmp, 'Conectando...', emisorTmp);
-
-    try {
-        const snap  = await get(ref(database, `llamadas_directas/${llamadaEntranteId}`));
-        const datos = snap.val();
-
-        if (!datos?.oferta?.sdp) {
-            document.getElementById('estado-llamada').textContent = 'Error al conectar ❌';
-            document.getElementById('estado-llamada').style.color = '#ff3333';
+    
+    resetCapturedPieces();
+    
+    roomListener = onValue(roomRef, (snapshot) => {
+        if (isProcessingMove) return;
+        
+        const roomData = snapshot.val();
+        if (!roomData) return;
+        
+        roomDataCache = roomData;
+        
+        if (roomData.player2 && roomData.player2.id === playerUniqueId && currentPlayer === 'player1') {
+            leaveGame();
+            alert('No puedes jugar contra ti mismo. Buscando otra partida...');
+            setTimeout(() => startMatchmaking(), 1000);
             return;
         }
-
-        const emisorId = datos.de;
-        const nombre   = CATALOGO_USUARIOS[emisorId]?.nombre || emisorId;
-
-        document.getElementById('nombre-llamada').textContent = nombre;
-
-        // Mostrar foto del emisor en el avatar de la pantalla de llamada
-        const avatarEl  = document.getElementById('avatar-llamada');
-        const urlFoto   = FOTOS_USUARIOS[emisorId];
-        if (urlFoto) {
-            avatarEl.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
-                onerror="this.style.display='none';
-                         this.parentElement.textContent='${nombre.charAt(0).toUpperCase()}';">`;
-        } else {
-            avatarEl.textContent = nombre.charAt(0).toUpperCase();
-        }
-
-        localStream    = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        peerConnection = new RTCPeerConnection(configICE);
-        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-
-        peerConnection.ontrack = (e) => {
-            console.log('RECEPTOR: ontrack recibido');
-            if (e.streams && e.streams[0]) reproducirAudioRemoto(e.streams[0]);
-        };
-
-        peerConnection.oniceconnectionstatechange = () => {
-            console.log('RECEPTOR ICE state:', peerConnection.iceConnectionState);
-            if (peerConnection.iceConnectionState === 'failed') peerConnection.restartIce();
-        };
-
-        peerConnection.onconnectionstatechange = () => {
-            console.log('RECEPTOR connection state:', peerConnection.connectionState);
-        };
-
-        console.log('RECEPTOR: aplicando offer');
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(datos.oferta));
-        await vaciarColaICE();
-
-        const answer = await peerConnection.createAnswer();
-
-        peerConnection.onicecandidate = async (e) => {
-            if (!e.candidate) return;
-            const r = push(ref(database, `llamadas_directas/${llamadaEntranteId}/ice/${usuarioActual}`));
-            await set(r, {
-                candidate:     e.candidate.candidate,
-                sdpMid:        e.candidate.sdpMid,
-                sdpMLineIndex: e.candidate.sdpMLineIndex
-            });
-        };
-
-        await peerConnection.setLocalDescription(answer);
-
-        console.log('RECEPTOR: enviando answer');
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/respuesta`), {
-            type: answer.type,
-            sdp:  answer.sdp
-        });
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'aceptada');
-
-        // Escuchar ICE del emisor
-        _escuchar(`llamadas_directas/${llamadaEntranteId}/ice/${emisorId}`, (snap) => {
-            const cands = snap.val();
-            if (!cands) return;
-            Object.values(cands).forEach(c => { if (c?.candidate) aplicarIceCandidate(c); });
-        });
-
-        // Escuchar si el emisor cuelga
-        _escuchar(`llamadas_directas/${llamadaEntranteId}/estado`, (snap) => {
-            const estado = snap.val();
-            if (estado === 'colgada') recargarPagina();
-        });
-
-        llamadaActiva = true;
-        iniciarTimer();
-        mostrarEstadoConectado();
-        mostrarControlesDuranteLlamada();
-
-    } catch (err) {
-        console.error('Error aceptando llamada:', err);
-        document.getElementById('estado-llamada').textContent = 'Error al conectar ❌';
-        document.getElementById('estado-llamada').style.color = '#ff3333';
-    }
-};
-
-// ========================================================
-// RECHAZAR LLAMADA
-// ========================================================
-window.rechazarLlamada = async function () {
-    document.getElementById('notificacion-entrante').style.display = 'none';
-    if (llamadaEntranteId) {
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'rechazada');
-    }
-    recargarPagina();
-};
-
-// ========================================================
-// COLGAR LLAMADA
-// ========================================================
-window.colgarLlamada = async function () {
-    // Emisor cuelga
-    if (miLlamadaId) {
-        await set(ref(database, `llamadas_directas/${miLlamadaId}/estado`), 'colgada');
-    }
-    // Receptor cuelga
-    if (llamadaEntranteId && !miLlamadaId) {
-        await set(ref(database, `llamadas_directas/${llamadaEntranteId}/estado`), 'colgada');
-    }
-    recargarPagina();
-};
-
-// ========================================================
-// RECARGA AL COLGAR
-// ========================================================
-function recargarPagina() {
-    detenerAudioLlamando();
-    if (window.Android && typeof window.Android.setAudioNormal === 'function') {
-        window.Android.setAudioNormal();
-    }
-    if (peerConnection) { peerConnection.close(); peerConnection = null; }
-    if (localStream)    { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-
-    const audioEl = document.getElementById('audio-remoto');
-    if (audioEl) audioEl.srcObject = null;
-
-    _limpiarListeners();
-    setTimeout(() => location.reload(), 400);
-}
-
-// ========================================================
-// UI — MOSTRAR PANTALLA DE LLAMADA
-// FIX: función que faltaba — causaba "mostrarPantallaLlamada is not defined"
-// ========================================================
-function mostrarPantallaLlamada(nombre, estado, contactoId) {
-    document.getElementById('pantalla-directorio').style.display = 'none';
-    document.getElementById('pantalla-llamada').style.display    = 'flex';
-
-    document.getElementById('nombre-llamada').textContent = nombre;
-    document.getElementById('estado-llamada').textContent = estado;
-    document.getElementById('timer-llamada').textContent  = '00:00';
-
-    // Mostrar foto o inicial en el avatar
-    const avatarEl = document.getElementById('avatar-llamada');
-    const urlFoto  = FOTOS_USUARIOS[contactoId];
-    if (urlFoto) {
-        avatarEl.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
-            onerror="this.style.display='none';
-                     this.parentElement.textContent='${nombre.charAt(0).toUpperCase()}';">`;
-    } else {
-        avatarEl.textContent = nombre.charAt(0).toUpperCase();
-    }
-}
-
-// ========================================================
-// UI — NOTIFICACIÓN ENTRANTE
-// ========================================================
-function mostrarNotificacionEntrante(nombre, texto) {
-    // Si estamos dentro de la app Android, la pantalla nativa maneja la llamada
-    if (window.Android) return;
-
-    const contenidoIcono = document.getElementById('icono-entrante-contenido');
-    if (contenidoIcono) {
-        const urlFoto = FOTOS_USUARIOS[llamadaEntranteId?.split('_')[0]];
-        if (urlFoto) {
-            contenidoIcono.innerHTML = `<img src="${urlFoto}" alt="${nombre}"
-                style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
-                onerror="this.style.display='none'; this.parentElement.textContent='📞';">`;
-        }
-    }
-
-    document.getElementById('nombre-entrante').textContent = nombre;
-    document.getElementById('notificacion-entrante').style.display = 'flex';
-}
-
-function mostrarEstadoConectado() {
-    detenerAudioLlamando();
-    if (window.Android && typeof window.Android.setAudioParaLlamada === 'function') {
-        window.Android.setAudioParaLlamada();
-    }
-    const el = document.getElementById('estado-llamada');
-    if (el) { el.textContent = '✅ Conectado'; el.style.color = '#00ff88'; }
-}
-
-function mostrarControlesDuranteLlamada() {
-    document.getElementById('controles-llamada').innerHTML = `
-        <button class="btn-silencio" id="btn-silencio" onclick="window.toggleSilencio(this)">🎤 SILENCIO</button>
-        <button class="btn-colgar" onclick="window.colgarLlamada()">📵 COLGAR</button>
-    `;
-}
-
-// ========================================================
-// TIMER
-// ========================================================
-function iniciarTimer() {
-    segundosLlamada = 0;
-    timerInterval   = setInterval(() => {
-        segundosLlamada++;
-        const m  = Math.floor(segundosLlamada / 60).toString().padStart(2, '0');
-        const s  = (segundosLlamada % 60).toString().padStart(2, '0');
-        const el = document.getElementById('timer-llamada');
-        if (el) el.textContent = `${m}:${s}`;
-    }, 1000);
-}
-
-// ========================================================
-// CONTROLES DE AUDIO
-// ========================================================
-window.toggleSilencio = function (btn) {
-    if (!localStream) return;
-    const track = localStream.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled             = !track.enabled;
-    btn.textContent           = track.enabled ? '🎤 SILENCIO' : '🔇 MUTEADO';
-    btn.style.backgroundColor = track.enabled ? '#555555' : '#e94560';
-};
-
-window.liberarMicrofono = function () {
-    if (localStream) {
-        localStream.getAudioTracks().forEach(t => { t.enabled = false; t.stop(); });
-    }
-    console.log('Micrófono liberado por llamada telefónica');
-};
-
-// ========================================================
-// RESET ESTADO
-// ========================================================
-function resetEstado() {
-    llamadaActiva      = false;
-    peerConnection     = null;
-    localStream        = null;
-    miLlamadaId        = null;
-    llamadaEntranteId  = null;
-    yaNotifique        = false;
-    segundosLlamada    = 0;
-    icePendientes      = [];
-    _pendingAutoAccept = false;
-    _pendingAutoReject = false;
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-}
-
-// ========================================================
-// BRIDGE ANDROID → WEB
-// ========================================================
-window.onLlamadaAceptada = function (de, nombre) {
-    if (llamadaEntranteId) {
-        document.getElementById('notificacion-entrante').style.display = 'none';
-        window.aceptarLlamadaEntrante();
-    } else {
-        _pendingAutoAccept = true;
-    }
-};
-
-window.onLlamadaRechazada = function (de) {
-    if (llamadaEntranteId) {
-        window.rechazarLlamada();
-    } else {
-        _pendingAutoReject = true;
-    }
-};
-
-// ========================================================
-// AUDIO LLAMANDO (tono saliente)
-// ========================================================
-function iniciarAudioLlamando() {
-    if (audiollamandoa) return;
-
-    function sonarUnaVez() {
-        if (!audiollamandoa) return;
-        const tono = new Audio('tono_llamando.mp3');
-        tono.volume = 1;
-        tono.play().catch(e => console.warn('Audio bloqueado:', e));
-    }
-
-    audiollamandoa = true;
-    sonarUnaVez();
-    audiollamandoa = setInterval(sonarUnaVez, 2500);
-}
-
-function detenerAudioLlamando() {
-    if (!audiollamandoa) return;
-    clearInterval(audiollamandoa);
-    audiollamandoa = null;
-}
-
-// ========================================================
-// BOTÓN SALIR
-// ========================================================
-const botonSalir = document.getElementById('btn-salir-app');
-if (botonSalir) {
-    botonSalir.addEventListener('click', () => {
-        if (window.Android && typeof window.Android.minimizarDesdeWeb === 'function') {
-            window.Android.minimizarDesdeWeb();
-        } else {
-            console.log('No estás en la App de Android.');
-        }
-    });
-}
-
-// ========================================================
-// BOTÓN BLUETOOTH  ← agregar aquí
-// ========================================================
-
-// ========================================================
-// HOLD — MENÚ OCULTO (SALIR)
-// FIX: convertidas a window.xxx para que los atributos HTML puedan llamarlas
-// ========================================================
-window.iniciarHoldDiv = function () {
-    holdDivTimer = setTimeout(() => {
-        document.getElementById('modal-volver').style.display = 'flex';
-    }, 4000);
-};
-
-window.cancelarHoldDiv = function () {
-    clearTimeout(holdDivTimer);
-};
-
-window.iniciarHoldVolver = function () {
-    holdVolverTimer = setTimeout(() => {
-        window.cerrarSesion();
-    }, 3000);
-};
-
-window.cancelarHoldVolver = function () {
-    clearTimeout(holdVolverTimer);
-};
-
-window.cerrarModalVolver = function () {
-    document.getElementById('modal-volver').style.display = 'none';
-};
-
-// ========================================================
-// BLUETOOTH
-// FIX: convertida a window.xxx para que el atributo onclick del HTML pueda llamarla
-// ========================================================
-// ========================================================
-// BOTÓN BLUETOOTH
-// Reemplaza el bloque window.toggleBluetooth y el addEventListener
-// del botón bluetooth en script.js
-// ========================================================
-
-// Variable de estado: refleja si el BT está encendido o apagado
-// desde el punto de vista del botón. Se sincroniza al cargar la página.
-let bluetoothEncendido = false;
-
-// Al cargar, revisar si el BT ya estaba encendido (para mostrar el
-// estado correcto si el usuario recarga la página con BT ya activo).
-// Como no hay API JS para consultar el estado BT, iniciamos en apagado.
-
-const botonBluetooth = document.getElementById('btn-bluetooth');
-if (botonBluetooth) {
-    botonBluetooth.addEventListener('click', () => {
-        if (window.Android && typeof window.Android.activarBluetooth === 'function') {
-
-            // Llamar al bridge de Android (enciende o apaga según el estado actual del BT)
-            window.Android.activarBluetooth();
-
-            // Alternar estado local
-            bluetoothEncendido = !bluetoothEncendido;
-
-            // Actualizar texto del botón: "CONECTAR MUSICA" / "APAGAR MUSICA"
-            const estadoEl = document.getElementById('estado-bt');
-            if (estadoEl) {
-                estadoEl.textContent = bluetoothEncendido ? 'APAGAR' : 'CONECTAR';
+        
+        // Procesar captura pendiente
+        if (roomData.lastCapturePending && !roomData.lastCapturePending.processed && 
+            roomData.lastCapturePending.timestamp && roomData.lastCapturePending.timestamp > lastProcessedTimestamp) {
+            
+            const capture = roomData.lastCapturePending;
+            
+            if (capture.attackerId !== playerUniqueId) {
+                lastProcessedTimestamp = capture.timestamp;
+                
+                const captureRef = ref(database, `rooms/${currentRoomId}/lastCapturePending/processed`);
+                set(captureRef, true).catch(() => {});
+                
+                const isCaptureOnMe = (capture.victimId === playerUniqueId);
+                
+                if (isCaptureOnMe) {
+                    showCaptureAnimation(false, capture.piece, capture.square);
+                    playRandomVictimAudio();
+                    capturedPiecesRed.push(capture.piece);
+                    updateCapturedPiecesDisplay();
+                    animateFlyingPiece(capture.square, capture.piece, true);
+                }
             }
-
-            // Cambiar color del botón: verde = encendido, azul = apagado
-            botonBluetooth.style.background = bluetoothEncendido
-                ? 'linear-gradient(135deg, #00c853, #008c3a)'
-                : 'linear-gradient(135deg, #0077ff, #0044bb)';
-
-        } else {
-            alert('Esta función solo está disponible en la app.');
+        }
+        
+        // Actualizar tablero si hay cambios
+        if (roomData.fen && game && game.fen() !== roomData.fen) {
+            game.load(roomData.fen);
+            if (board) {
+                board.position(roomData.fen, false);
+                clearHighlights();
+            }
+        }
+        
+        const previousTurn = isMyTurn;
+        
+        if (roomData.turn) {
+            const myColorCode = playerColor === 'w' ? 'w' : 'b';
+            const newIsMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
+            
+            // Mostrar overlay si el turno cambió a MI turno
+            if (!previousTurn && newIsMyTurn && isGameActive && !roomData.gameOver) {
+                showTurnOverlay();
+            }
+            
+            isMyTurn = newIsMyTurn;
+        }
+        
+        updateUI(roomData);
+        
+        if (roomData.gameOver && !roomData.gameOverHandled) {
+            isGameActive = false;
+            const statusMsg = roomData.winner === 'draw' ? 'Tablas!' : 
+                            `Ganador: ${roomData.winnerName || (roomData.winner === 'w' ? roomData.player1?.name : roomData.player2?.name)}`;
+            
+            update(roomRef, { gameOverHandled: true }).catch(() => {});
+            
+            setTimeout(() => {
+                if (confirm(`Partida finalizada. ${statusMsg} ¿Desea jugar otra?`)) {
+                    leaveGame();
+                    startMatchmaking();
+                }
+            }, 500);
+        }
+        
+        if (roomData.player1 && roomData.player2 && roomData.fen && !roomData.gameOver) {
+            if ($('#overlay').is(':visible')) {
+                $('#overlay').fadeOut();
+            }
         }
     });
-}
-// ========================================================
-// BOTÓN ENAC — solo visible para Maria
-// ========================================================
-function actualizarBotonEnac() {
-    const contenedor = document.getElementById('btn-enac-container');
-    if (!contenedor) return;
-    contenedor.style.display = (usuarioActual === 'maria') ? 'flex' : 'none';
+    
+    initBoard();
+    
+    get(roomRef).then((snapshot) => {
+        const roomData = snapshot.val();
+        if (roomData && roomData.fen) {
+            game.load(roomData.fen);
+            if (board) {
+                board.position(roomData.fen, false);
+            }
+        }
+        if (roomData && roomData.turn) {
+            const myColorCode = playerColor === 'w' ? 'w' : 'b';
+            isMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
+        }
+    });
+    
+    $('#leave-btn').show();
+    isGameActive = true;
 }
 
-window.abrirEnac = function () {
-    const url = 'https://portalestudiante.enac.cl/menu/inscripcion-de-asignaturas/resumen-inscripcion-asignaturas';
-    // En la app Android el WebViewClient redirige URLs externas al navegador del sistema
-    window.open(url, '_blank');
-};
+function initBoard() {
+    const orientation = playerColor === 'w' ? 'white' : 'black';
+    
+    if (board) {
+        board.destroy();
+        $('#board-container').empty();
+    }
+    
+    const config = {
+        draggable: true,
+        position: 'start',
+        orientation: orientation,
+        showNotation: true,
+        pieceTheme: function(piece) {
+            let pieceFile = '';
+            if (piece === 'wP') pieceFile = 'wp.png';
+            else if (piece === 'wN') pieceFile = 'wn.png';
+            else if (piece === 'wB') pieceFile = 'wb.png';
+            else if (piece === 'wR') pieceFile = 'wr.png';
+            else if (piece === 'wQ') pieceFile = 'wq.png';
+            else if (piece === 'wK') pieceFile = 'wk.png';
+            else if (piece === 'bP') pieceFile = 'bp.png';
+            else if (piece === 'bN') pieceFile = 'bn.png';
+            else if (piece === 'bB') pieceFile = 'bb.png';
+            else if (piece === 'bR') pieceFile = 'br.png';
+            else if (piece === 'bQ') pieceFile = 'bq.png';
+            else if (piece === 'bK') pieceFile = 'bk.png';
+            else pieceFile = 'wp.png';
+            
+            return `pieces/${pieceFile}`;
+        },
+        onDragStart: onDragStart,
+        onDrop: onDrop,
+        onSnapEnd: onSnapEnd,
+        onMouseoverSquare: onMouseoverSquare,
+        onMouseoutSquare: onMouseoutSquare
+    };
+    
+    board = Chessboard('board-container', config);
+}
+
+function onMouseoverSquare(square) {
+    if (!isGameActive) return;
+    if (!isMyTurn) return;
+    if (game.game_over()) return;
+    if (isTurnOverlayActive) return;
+    
+    const piece = game.get(square);
+    if (!piece) return;
+    
+    const pieceColor = piece.color;
+    if (playerColor !== pieceColor) return;
+    
+    highlightLegalMoves(square);
+}
+
+function onMouseoutSquare(square) {
+    clearHighlights();
+}
+
+function highlightLegalMoves(square) {
+    clearHighlights();
+    
+    const moves = game.moves({
+        square: square,
+        verbose: true
+    });
+    
+    if (moves.length === 0) return;
+    
+    moves.forEach(move => {
+        const targetSquare = move.to;
+        highlightSquare(targetSquare, 'legal-move');
+        currentHighlightedSquares.push(targetSquare);
+    });
+}
+
+function highlightSquare(square, className) {
+    const squareElement = $(`.square-${square}`);
+    if (squareElement.length) {
+        squareElement.addClass(className);
+    }
+}
+
+function clearHighlights() {
+    currentHighlightedSquares.forEach(square => {
+        const squareElement = $(`.square-${square}`);
+        if (squareElement.length) {
+            squareElement.removeClass('legal-move');
+        }
+    });
+    currentHighlightedSquares = [];
+}
+
+function onDragStart(source, piece, position, orientation) {
+    if (!isGameActive) return false;
+    if (!game) return false;
+    if (!isMyTurn) return false;
+    if (game.game_over()) return false;
+    if (isProcessingMove) return false;
+    if (isTurnOverlayActive) return false;
+    
+    const pieceColor = piece.charAt(0);
+    if (playerColor !== pieceColor) return false;
+    
+    return true;
+}
+
+function onDrop(source, target) {
+    clearHighlights();
+    
+    if (game.game_over()) {
+        if (board) board.position(game.fen(), false);
+        return 'snapback';
+    }
+    
+    if (!isMyTurn) {
+        if (board) board.position(game.fen(), false);
+        return 'snapback';
+    }
+    
+    if (isProcessingMove) {
+        return 'snapback';
+    }
+    
+    if (isTurnOverlayActive) {
+        return 'snapback';
+    }
+    
+    isProcessingMove = true;
+    
+    const moves = game.moves({ verbose: true });
+    const isValidMove = moves.some(move => move.from === source && move.to === target);
+    
+    if (!isValidMove) {
+        console.log('Movimiento ilegal rechazado:', source, '->', target);
+        isProcessingMove = false;
+        if (board) board.position(game.fen(), false);
+        return 'snapback';
+    }
+    
+    const move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q'
+    });
+    
+    if (move === null) {
+        isProcessingMove = false;
+        if (board) board.position(game.fen(), false);
+        return 'snapback';
+    }
+    
+    const newFEN = game.fen();
+    const wasCapture = (move.captured !== undefined);
+    const capturedPiece = move.captured;
+    const captureSquare = target;
+    
+    const updates = {
+        fen: newFEN,
+        turn: game.turn(),
+        lastMoveTimestamp: Date.now()
+    };
+    
+    if (wasCapture) {
+        const roomData = roomDataCache;
+        const player1Id = roomData?.player1?.id;
+        const player2Id = roomData?.player2?.id;
+        
+        const isWhiteCaptured = (capturedPiece === capturedPiece.toUpperCase() && capturedPiece !== capturedPiece.toLowerCase());
+        const victimColor = isWhiteCaptured ? 'w' : 'b';
+        let victimId = (victimColor === 'w') ? player1Id : player2Id;
+        
+        const captureInfo = {
+            piece: capturedPiece,
+            square: captureSquare,
+            attackerId: playerUniqueId,
+            victimId: victimId,
+            timestamp: Date.now(),
+            processed: false
+        };
+        
+        updates.lastCapturePending = captureInfo;
+    }
+    
+    if (game.game_over()) {
+        updates.gameOver = true;
+        if (game.in_checkmate()) {
+            const winner = game.turn() === 'w' ? 'b' : 'w';
+            updates.winner = winner;
+            updates.winnerName = winner === 'w' ? roomDataCache?.player1?.name : roomDataCache?.player2?.name;
+        } else if (game.in_stalemate() || game.in_threefold_repetition()) {
+            updates.winner = 'draw';
+            updates.winnerName = 'Tablas';
+        }
+    }
+    
+    update(roomRef, updates).then(() => {
+        if (board) board.position(newFEN, false);
+        isMyTurn = false;
+        
+        if (wasCapture) {
+            showCaptureAnimation(true, capturedPiece, captureSquare);
+            playRandomAttackerAudio();
+            capturedPiecesGreen.push(capturedPiece);
+            updateCapturedPiecesDisplay();
+            animateFlyingPiece(captureSquare, capturedPiece, false);
+        }
+        
+        isProcessingMove = false;
+    }).catch((error) => {
+        console.error('Error al actualizar Firebase:', error);
+        game.undo();
+        if (board) board.position(game.fen(), false);
+        isProcessingMove = false;
+    });
+    
+    return;
+}
+
+function onSnapEnd() {
+    if (board && game) {
+        board.position(game.fen(), false);
+    }
+}
+
+function updateUI(roomData) {
+    if (!roomData) return;
+    
+    $('#player1-name').text(roomData.player1?.name || 'Esperando jugador...');
+    $('#player2-name').text(roomData.player2?.name || 'Esperando jugador...');
+    
+    if (!roomData.gameOver && roomData.player1 && roomData.player2) {
+        if (isMyTurn) {
+            $('#turn-text').html(`Tu turno <i class="fas fa-chess-${playerColor === 'w' ? 'king' : 'knight'}"></i>`);
+            $('#turn-indicator').css('background', 'linear-gradient(135deg, #28a745 0%, #20c997 100%)');
+        } else {
+            $('#turn-text').html(`Turno del oponente <i class="fas fa-hourglass-half"></i>`);
+            $('#turn-indicator').css('background', 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)');
+        }
+    } else if (roomData.gameOver) {
+        $('#turn-text').html('Partida finalizada');
+        let statusMessage = '';
+        if (roomData.winner === 'draw') {
+            statusMessage = '♟️ ¡Tablas! Partida empatada ♟️';
+        } else if (roomData.winner === 'w') {
+            statusMessage = `🏆 ¡Jaque Mate! Ganan las Blancas (${roomData.player1?.name}) 🏆`;
+        } else if (roomData.winner === 'b') {
+            statusMessage = `🏆 ¡Jaque Mate! Ganan las Negras (${roomData.player2?.name}) 🏆`;
+        }
+        $('#game-status').html(statusMessage);
+    }
+    
+    if (!roomData.gameOver && game && game.in_check()) {
+        const checkedColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
+        $('#game-status').html(`⚠️ ¡${checkedColor} en jaque! ⚠️`);
+    } else if (!roomData.gameOver && $('#game-status').html().includes('jaque')) {
+        $('#game-status').html('');
+    }
+}
+
+// ========== FUNCIONES DE CAPTURA Y ANIMACIONES ==========
+
+function showCaptureAnimation(isAttacker, pieceName, position) {
+    const overlay = $('<div class="capture-overlay"></div>');
+    
+    if (isAttacker) {
+        overlay.addClass('capture-overlay-green');
+        const message = $('<div class="capture-message">🎯 ¡CAPTURA EXITOSA! 🎯</div>');
+        overlay.append(message);
+        
+        $('#board-container').addClass('victory-shake');
+        setTimeout(() => {
+            $('#board-container').removeClass('victory-shake');
+        }, 500);
+    } else {
+        overlay.addClass('capture-overlay-red');
+        const pieceNameSpanish = getPieceNameSpanish(pieceName);
+        const message = $(`<div class="capture-message">💀 ¡TE COMIERON LA ${pieceNameSpanish}! 💀</div>`);
+        overlay.append(message);
+        
+        $('body').addClass('screen-shake');
+        setTimeout(() => {
+            $('body').removeClass('screen-shake');
+        }, 500);
+    }
+    
+    $('body').append(overlay);
+    
+    setTimeout(() => {
+        overlay.remove();
+    }, 500);
+    
+    if (position) {
+        const square = $(`.square-${position}`);
+        square.css('animation', 'captureFlash 0.3s ease-out');
+        setTimeout(() => {
+            square.css('animation', '');
+        }, 300);
+    }
+}
+
+function getPieceNameSpanish(piece) {
+    const pieceNames = {
+        'p': 'Peón', 'n': 'Caballo', 'b': 'Alfil',
+        'r': 'Torre', 'q': 'Reina', 'k': 'Rey'
+    };
+    return pieceNames[piece.toLowerCase()] || 'Pieza';
+}
+
+function getPieceSymbol(piece) {
+    const symbols = {
+        'p': '♟', 'n': '♞', 'b': '♝',
+        'r': '♜', 'q': '♛', 'k': '♚',
+        'P': '♙', 'N': '♘', 'B': '♗',
+        'R': '♖', 'Q': '♕', 'K': '♔'
+    };
+    return symbols[piece] || '●';
+}
+
+function updateCapturedPiecesDisplay() {
+    const redContainer = $('#captured-red-pieces');
+    redContainer.empty();
+    
+    capturedPiecesRed.forEach(piece => {
+        const pieceHtml = `<div class="captured-piece" style="color: #ff6b6b;">
+                            <span class="piece-icon">${getPieceSymbol(piece)}</span>
+                           </div>`;
+        redContainer.append(pieceHtml);
+    });
+    
+    if (capturedPiecesRed.length === 0) {
+        redContainer.html('<span style="color: #666; font-size: 12px;">Ninguna</span>');
+    }
+    
+    const greenContainer = $('#captured-green-pieces');
+    greenContainer.empty();
+    
+    capturedPiecesGreen.forEach(piece => {
+        const pieceHtml = `<div class="captured-piece" style="color: #6bff6b;">
+                            <span class="piece-icon">${getPieceSymbol(piece)}</span>
+                           </div>`;
+        greenContainer.append(pieceHtml);
+    });
+    
+    if (capturedPiecesGreen.length === 0) {
+        greenContainer.html('<span style="color: #666; font-size: 12px;">Ninguna</span>');
+    }
+    
+    $('#captured-red-section h4').html(`<i class="fas fa-skull"></i> Piezas perdidas: ${capturedPiecesRed.length}`);
+    $('#captured-green-section h4').html(`<i class="fas fa-trophy"></i> Piezas capturadas: ${capturedPiecesGreen.length}`);
+}
+
+function animateFlyingPiece(square, piece, isLoss) {
+    const squareElement = $(`.square-${square}`);
+    if (!squareElement.length) return;
+    
+    const rect = squareElement[0].getBoundingClientRect();
+    const flyingPiece = $(`<div class="captured-piece" style="position: fixed; left: ${rect.left}px; top: ${rect.top}px; font-size: 40px; z-index: 10001; pointer-events: none; transition: all 0.4s ease-out;">
+                            ${getPieceSymbol(piece)}
+                          </div>`);
+    
+    $('body').append(flyingPiece);
+    
+    let targetX, targetY;
+    if (isLoss) {
+        const redSection = $('#captured-red-section').offset();
+        if (redSection) {
+            targetX = redSection.left + 50;
+            targetY = redSection.top + 20;
+        }
+        flyingPiece.css('color', '#ff0000');
+    } else {
+        const greenSection = $('#captured-green-section').offset();
+        if (greenSection) {
+            targetX = greenSection.left + 50;
+            targetY = greenSection.top + 20;
+        }
+        flyingPiece.css('color', '#00ff00');
+    }
+    
+    setTimeout(() => {
+        flyingPiece.css({
+            left: targetX + 'px',
+            top: targetY + 'px',
+            transform: 'scale(0.3)',
+            opacity: '0'
+        });
+    }, 50);
+    
+    setTimeout(() => {
+        flyingPiece.remove();
+    }, 450);
+}
+
+function resetCapturedPieces() {
+    capturedPiecesRed = [];
+    capturedPiecesGreen = [];
+    updateCapturedPiecesDisplay();
+}
+
+function leaveGame() {
+    if (roomRef && currentRoomId) {
+        get(roomRef).then((snapshot) => {
+            const roomData = snapshot.val();
+            if (roomData && !roomData.gameOver && roomData.player1 && roomData.player2) {
+                const abandonedByName = currentPlayer === 'player1' ? roomData.player1?.name : roomData.player2?.name;
+                update(roomRef, { 
+                    gameOver: true, 
+                    winner: 'abandoned', 
+                    winnerName: `${abandonedByName} abandonó`,
+                    gameOverHandled: true
+                });
+            }
+            
+            setTimeout(() => {
+                remove(ref(database, `rooms/${currentRoomId}`)).then(() => {
+                    resetGame();
+                    $('#overlay').fadeIn();
+                    $('#search-status').html('');
+                    $('#search-btn').prop('disabled', false);
+                    $('#leave-btn').hide();
+                }).catch(() => {
+                    resetGame();
+                    $('#overlay').fadeIn();
+                    $('#search-btn').prop('disabled', false);
+                    $('#leave-btn').hide();
+                });
+            }, 500);
+        });
+    } else {
+        resetGame();
+        $('#overlay').fadeIn();
+        $('#search-btn').prop('disabled', false);
+        $('#leave-btn').hide();
+    }
+}
+
+function resetGame() {
+    if (roomListener) {
+        roomListener();
+        roomListener = null;
+    }
+    
+    if (board) {
+        board.destroy();
+        board = null;
+    }
+    
+    game = null;
+    currentRoomId = null;
+    currentPlayer = null;
+    playerColor = null;
+    roomRef = null;
+    isGameActive = false;
+    isMyTurn = false;
+    roomDataCache = null;
+    isProcessingMove = false;
+    lastProcessedTimestamp = 0;
+    isTurnOverlayActive = false;
+    clearHighlights();
+    resetCapturedPieces();
+    
+    $('#board-container').empty();
+    $('#player1-name').text('Esperando jugador...');
+    $('#player2-name').text('Esperando jugador...');
+    $('#turn-text').text('Esperando partida...');
+    $('#game-status').html('');
+    $('#turn-indicator').css('background', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+}
+
+function setupRoomCleanup(roomReference) {
+    if (roomReference) {
+        onDisconnect(roomReference).remove();
+    }
+}

@@ -2,155 +2,171 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Llamadas Fáciles - Para Adultos Mayores</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ajedrez Multijugador Online</title>
     <link rel="stylesheet" href="style.css">
-    <base target="_blank">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <style>
+        /* Prevenir pull-to-refresh en móviles */
+        body {
+            overscroll-behavior-y: contain;
+            touch-action: pan-x pan-y; /* Permitir scroll solo en ejes, pero evitar pull-to-refresh */
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+        
+        /* Prevenir selección de texto durante arrastre */
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Botón de megáfono */
+        .mute-btn {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .mute-btn:hover {
+            transform: translateX(-50%) scale(1.05);
+            background: rgba(0,0,0,0.9);
+        }
+        
+        .mute-btn.muted {
+            opacity: 0.8;
+        }
+        
+        /* Overlay de TU TURNO */
+        .turn-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 255, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+            animation: fadeOut 2s ease-in-out forwards;
+            pointer-events: none;
+        }
+        
+        .turn-overlay span {
+            font-size: 64px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Mejoras táctiles para el tablero */
+        .chessboard-container {
+            touch-action: none;
+        }
+        
+        .square-55d63 {
+            touch-action: none;
+        }
+    </style>
 </head>
 <body>
-
-    <!-- ===== PANTALLA DE INGRESO ===== -->
-    <div id="pantalla-ingreso">
-        <div class="logo-grande">
-            <div class="icono-telefono">📞</div>
-            <div>Llamadas Fáciles</div>
-        </div>
-        <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-            <label class="etiqueta-campo">¿Cómo te llamas?</label>
-            <input type="text" id="input-username" class="campo-texto" placeholder="Escribe tu nombre" maxlength="20">
-        </div>
-        <button class="boton-principal boton-amarillo" onclick="ingresar()">
-            ENTRAR 🚪
-        </button>
-    </div>
-
-    <!-- ===== PANTALLA DE DIRECTORIO ===== -->
-    <div id="pantalla-directorio">
-        <div class="barra-superior">
-            <div class="titulo-seccion" 
-                 onmousedown="iniciarHoldDiv()" 
-                 onmouseup="cancelarHoldDiv()" 
-                 onmouseleave="cancelarHoldDiv()" 
-                 ontouchstart="iniciarHoldDiv()" 
-                 ontouchend="cancelarHoldDiv()">
-                📒 PINCHA A ALGUIEN PARA LLAMARLO
-            </div>
-            <button class="boton-cerrar-sesion" id="btn-salir-app">SALIR</button>
-        </div>
-
-        <!-- Modal -->
-        <div id="modal-volver" class="modal" onclick="cerrarModalVolver()">
-            <div class="modal-contenido">
-                <h2>¿Seguro que quieres salir?</h2>
-                <button class="boton-volver"
-                        onmousedown="iniciarHoldVolver()" 
-                        onmouseup="cancelarHoldVolver()" 
-                        onmouseleave="cancelarHoldVolver()" 
-                        ontouchstart="iniciarHoldVolver()" 
-                        ontouchend="cancelarHoldVolver()">
-                    VOLVER
+    <!-- Botón de megáfono -->
+    <button id="mute-btn" class="mute-btn muted">
+        🔇
+    </button>
+    
+    <div class="container">
+        <div id="game-container">
+            <div id="board-container" style="width: 500px;"></div>
+            <div id="game-info">
+                <div id="player-info">
+                    <div class="player-card" id="player1-card">
+                        <i class="fas fa-user"></i>
+                        <span id="player1-name">Esperando jugador...</span>
+                        <span class="piece-color">♔ Blancas</span>
+                    </div>
+                    <div class="vs-text">VS</div>
+                    <div class="player-card" id="player2-card">
+                        <i class="fas fa-user"></i>
+                        <span id="player2-name">Esperando jugador...</span>
+                        <span class="piece-color">♚ Negras</span>
+                    </div>
+                </div>
+                <div id="turn-indicator">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span id="turn-text">Esperando partida...</span>
+                </div>
+                <div id="game-status"></div>
+                
+                <!-- Sección de piezas capturadas -->
+                <div id="captured-pieces-section" style="margin-top: 20px;">
+                    <div class="captured-section red" id="captured-red-section">
+                        <h4><i class="fas fa-skull"></i> Piezas perdidas: 0</h4>
+                        <div id="captured-red-pieces" class="captured-pieces-container"></div>
+                    </div>
+                    <div class="captured-section green" id="captured-green-section">
+                        <h4><i class="fas fa-trophy"></i> Piezas capturadas: 0</h4>
+                        <div id="captured-green-pieces" class="captured-pieces-container"></div>
+                    </div>
+                </div>
+                
+                <button id="leave-btn" class="btn btn-secondary" style="display: none;">
+                    <i class="fas fa-sign-out-alt"></i> Abandonar partida
                 </button>
             </div>
         </div>
-
-        <div id="info-palmitas-container"></div>
-        <div style="display:flex; justify-content:center; padding: 15px 20px 5px 20px;">
-    <button id="btn-bluetooth"  
-        style="
-        display: none !important;
-            width: 100%;
-            max-width: 500px;
-            height: 70px;
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #0077ff, #0044bb);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            box-shadow: 0 6px 0 #002299;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            letter-spacing: 1px;
-        ">
-        <span id="estado-bt">CONECTAR</span> MUSICA
-    </button>
-</div>
-        <!-- ===== BOTÓN ENAC — solo visible para Maria ===== -->
-        <div id="btn-enac-container" style="display:none; justify-content:center; padding: 8px 20px 5px 20px;">
-            <button id="btn-enac"
-                onclick="abrirEnac()"
-                style="
-                    width: 100%;
-                    max-width: 500px;
-                    height: 70px;
-                    font-size: 26px;
-                    font-weight: bold;
-                    background: linear-gradient(135deg, #ff6a00, #cc4400);
-                    color: white;
-                    border: none;
-                    border-radius: 20px;
-                    cursor: pointer;
-                    box-shadow: 0 6px 0 #992200;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 14px;
-                    letter-spacing: 1px;
-                ">
-                <span style="
-                    background: white;
-                    color: #cc4400;
-                    font-size: 26px;
-                    font-weight: 900;
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 10px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                ">E</span>
-                Horarios ENAC
-            </button>
-        </div>
-
-        <div class="lista-contactos" id="lista-contactos"></div>
     </div>
 
-    <!-- ===== PANTALLA DE LLAMADA ===== -->
-    <div id="pantalla-llamada">
-        <div class="contenedor-llamada">
-            <div class="avatar-llamada" id="avatar-llamada">?</div>
-            <div class="nombre-llamada" id="nombre-llamada">Nombre</div>
-            <div class="estado-llamada" id="estado-llamada">Conectando...</div>
-            <div class="timer-llamada" id="timer-llamada">00:00</div>
-            <div class="controles-llamada" id="controles-llamada">
-                <button class="btn-colgar" onclick="colgarLlamada()">📵 COLGAR</button>
+    <div id="overlay" class="overlay">
+        <div class="overlay-content">
+            <h1><i class="fas fa-chess"></i> Ajedrez Online</h1>
+            <div class="form-group">
+                <label for="player-name">Ingresa tu nombre:</label>
+                <input type="text" id="player-name" placeholder="Ej: Gandalf" maxlength="20" required>
             </div>
+            <button id="search-btn" class="btn btn-primary">
+                <i class="fas fa-search"></i> Buscar partida
+            </button>
+            <div id="search-status" class="search-status"></div>
         </div>
     </div>
 
-    <!-- ===== NOTIFICACIÓN LLAMADA ENTRANTE (única, limpia) ===== -->
-    <div id="notificacion-entrante">
-        <div class="foto-entrante-wrapper">
-            <div class="anillo-pulso"></div>
-            <div class="foto-entrante" id="icono-entrante-contenido">📞</div>
-        </div>
-        <div class="nombre-entrante" id="nombre-entrante">Alguien</div>
-        <div class="texto-entrante">Te está llamando...</div>
-        <div class="controles-entrante">
-            <button class="btn-aceptar" onclick="aceptarLlamadaEntrante()">📞 ACEPTAR</button>
-            <button class="btn-colgar" onclick="rechazarLlamada()">📵 COLGAR</button>
-        </div>
-    </div>
-
-    <script>
-       
-    </script>
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
