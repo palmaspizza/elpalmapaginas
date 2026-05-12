@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, remove, update, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, remove, update, get, onDisconnect } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCSqgJA6uL8SkY-kphhuaR9TuGPulucPic",
@@ -26,6 +26,7 @@ let isGameActive = false;
 let roomListener = null;
 let isMyTurn = false;
 let playerUniqueId = null;
+let roomDataCache = null;
 
 // Variables para piezas capturadas
 let capturedPiecesRed = [];
@@ -71,7 +72,7 @@ function findOrCreateRoom() {
         
         if (rooms) {
             for (const [roomId, roomData] of Object.entries(rooms)) {
-                // No unirse a salas creadas por uno mismo
+                // No unirse a salas creadas por uno mismo y que tengan espacio
                 if (roomData.player1 && roomData.player1.id !== playerUniqueId && !roomData.player2 && !roomData.gameOver) {
                     availableRoom = { id: roomId, ...roomData };
                     break;
@@ -111,6 +112,7 @@ function createNewRoom() {
         turn: 'w',
         gameOver: false,
         winner: null,
+        winnerName: null,
         createdAt: Date.now()
     };
     
@@ -119,7 +121,7 @@ function createNewRoom() {
         playerColor = 'w';
         isMyTurn = true;
         setupGame(newRoomRef, 'player1', 'w');
-        setupRoomCleanup();
+        setupRoomCleanup(newRoomRef);
         $('#search-status').html('Esperando oponente... <i class="fas fa-hourglass-half"></i>');
     }).catch((error) => {
         console.error('Error al crear sala:', error);
@@ -183,6 +185,8 @@ function setupGame(roomReference, playerPosition, color) {
         const roomData = snapshot.val();
         if (!roomData) return;
         
+        roomDataCache = roomData;
+        
         // Verificar si el oponente es uno mismo (mismo ID)
         if (roomData.player2 && roomData.player2.id === playerUniqueId && currentPlayer === 'player1') {
             leaveGame();
@@ -218,10 +222,14 @@ function setupGame(roomReference, playerPosition, color) {
         updateUI(roomData);
         
         // Verificar fin del juego
-        if (roomData.gameOver) {
+        if (roomData.gameOver && !roomData.gameOverHandled) {
             isGameActive = false;
             const statusMsg = roomData.winner === 'draw' ? 'Tablas!' : 
-                            `Ganador: ${roomData.winnerName}`;
+                            `Ganador: ${roomData.winnerName || (roomData.winner === 'w' ? roomData.player1?.name : roomData.player2?.name)}`;
+            
+            // Marcar como manejado para no mostrar múltiples veces
+            update(roomRef, { gameOverHandled: true }).catch(() => {});
+            
             setTimeout(() => {
                 if (confirm(`Partida finalizada. ${statusMsg} ¿Desea jugar otra?`)) {
                     leaveGame();
@@ -271,13 +279,20 @@ function initBoard() {
         $('#board-container').empty();
     }
     
-    // Configuración del tablero - Usando imágenes locales o CDN
+    // Configuración del tablero - Usando imágenes locales
     const config = {
         draggable: true,
         position: 'start',
         orientation: orientation,
-        showNotation: false,
-        pieceTheme: 'https://cdn.jsdelivr.net/npm/chessboard-element@1.0.0/lib/assets/pieces/{piece}.png',
+        showNotation: true,
+        pieceTheme: function(piece) {
+            // Mapeo de piezas a nombres de archivo
+            const pieceMap = {
+                'wp': 'wp.png', 'wn': 'wn.png', 'wb': 'wb.png', 'wr': 'wr.png', 'wq': 'wq.png', 'wk': 'wk.png',
+                'bp': 'bp.png', 'bn': 'bn.png', 'bb': 'bb.png', 'br': 'br.png', 'bq': 'bq.png', 'bk': 'bk.png'
+            };
+            return `pieces/${pieceMap[piece]}`;
+        },
         onDragStart: onDragStart,
         onDrop: onDrop,
         onSnapEnd: onSnapEnd
@@ -350,7 +365,7 @@ function onDrop(source, target) {
         if (game.in_checkmate()) {
             const winner = newTurn === 'w' ? 'b' : 'w';
             updates.winner = winner;
-            updates.winnerName = winner === 'w' ? roomData?.player1?.name : roomData?.player2?.name;
+            updates.winnerName = winner === 'w' ? roomDataCache?.player1?.name : roomDataCache?.player2?.name;
         } else if (game.in_stalemate() || game.in_threefold_repetition()) {
             updates.winner = 'draw';
             updates.winnerName = 'Tablas';
@@ -363,6 +378,8 @@ function onDrop(source, target) {
         isMyTurn = false;
     }).catch((error) => {
         console.error('Error al actualizar Firebase:', error);
+        // Revertir movimiento local si falla la actualización
+        game.undo();
         if (board) board.position(game.fen(), false);
     });
     
@@ -408,7 +425,7 @@ function updateUI(roomData) {
     if (!roomData.gameOver && game && game.in_check()) {
         const checkedColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
         $('#game-status').html(`⚠️ ¡${checkedColor} en jaque! ⚠️`);
-    } else if (!roomData.gameOver) {
+    } else if (!roomData.gameOver && $('#game-status').html().includes('jaque')) {
         $('#game-status').html('');
     }
 }
@@ -523,6 +540,7 @@ function detectAndRegisterCapture(oldFEN, newFEN, currentPlayerColor) {
                 break;
             }
         }
+        if (capturedPiece) break;
     }
     
     if (capturedPiece) {
@@ -621,7 +639,8 @@ function leaveGame() {
                 update(roomRef, { 
                     gameOver: true, 
                     winner: 'abandoned', 
-                    winnerName: `${abandonedByName} abandonó` 
+                    winnerName: `${abandonedByName} abandonó`,
+                    gameOverHandled: true
                 });
             }
             
@@ -630,6 +649,11 @@ function leaveGame() {
                     resetGame();
                     $('#overlay').fadeIn();
                     $('#search-status').html('');
+                    $('#search-btn').prop('disabled', false);
+                    $('#leave-btn').hide();
+                }).catch(() => {
+                    resetGame();
+                    $('#overlay').fadeIn();
                     $('#search-btn').prop('disabled', false);
                     $('#leave-btn').hide();
                 });
@@ -661,6 +685,7 @@ function resetGame() {
     roomRef = null;
     isGameActive = false;
     isMyTurn = false;
+    roomDataCache = null;
     resetCapturedPieces();
     
     $('#board-container').empty();
@@ -669,11 +694,10 @@ function resetGame() {
     $('#turn-text').text('Esperando partida...');
     $('#game-status').html('');
     $('#turn-indicator').css('background', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
-    $('#leave-btn').text('Abandonar partida');
 }
 
-function setupRoomCleanup() {
-    if (roomRef) {
-        onDisconnect(roomRef).remove();
+function setupRoomCleanup(roomReference) {
+    if (roomReference) {
+        onDisconnect(roomReference).remove();
     }
 }
