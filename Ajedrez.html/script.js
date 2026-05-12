@@ -25,6 +25,11 @@ let roomRef = null;
 let isGameActive = false;
 let roomListener = null;
 let isMyTurn = false;
+let playerUniqueId = null;
+
+// Variables para piezas capturadas
+let capturedPiecesRed = [];
+let capturedPiecesGreen = [];
 
 $(document).ready(() => {
     const savedName = localStorage.getItem('chessPlayerName');
@@ -34,6 +39,13 @@ $(document).ready(() => {
     
     $('#search-btn').click(startMatchmaking);
     $('#leave-btn').click(leaveGame);
+    
+    // Generar ID único para este dispositivo/sesión
+    playerUniqueId = localStorage.getItem('playerUniqueId');
+    if (!playerUniqueId) {
+        playerUniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('playerUniqueId', playerUniqueId);
+    }
 });
 
 function startMatchmaking() {
@@ -59,7 +71,8 @@ function findOrCreateRoom() {
         
         if (rooms) {
             for (const [roomId, roomData] of Object.entries(rooms)) {
-                if (roomData.player1 && !roomData.player2 && !roomData.gameOver) {
+                // No unirse a salas creadas por uno mismo
+                if (roomData.player1 && roomData.player1.id !== playerUniqueId && !roomData.player2 && !roomData.gameOver) {
                     availableRoom = { id: roomId, ...roomData };
                     break;
                 }
@@ -91,7 +104,7 @@ function createNewRoom() {
     const roomData = {
         player1: {
             name: playerName,
-            id: Date.now().toString()
+            id: playerUniqueId
         },
         player2: null,
         fen: initialFEN,
@@ -104,6 +117,7 @@ function createNewRoom() {
     set(newRoomRef, roomData).then(() => {
         currentPlayer = 'player1';
         playerColor = 'w';
+        isMyTurn = true;
         setupGame(newRoomRef, 'player1', 'w');
         setupRoomCleanup();
         $('#search-status').html('Esperando oponente... <i class="fas fa-hourglass-half"></i>');
@@ -124,13 +138,14 @@ function joinRoom(roomId, roomData) {
     const updatedData = {
         player2: {
             name: playerName,
-            id: Date.now().toString()
+            id: playerUniqueId
         }
     };
     
     update(roomRef_full, updatedData).then(() => {
         currentPlayer = 'player2';
         playerColor = 'b';
+        isMyTurn = false;
         setupGame(roomRef_full, 'player2', 'b');
         $('#search-status').html('¡Partida encontrada! <i class="fas fa-check"></i>');
         setTimeout(() => {
@@ -160,14 +175,34 @@ function setupGame(roomReference, playerPosition, color) {
         roomListener = null;
     }
     
+    // Resetear piezas capturadas
+    resetCapturedPieces();
+    
     // Configurar listener de Firebase
     roomListener = onValue(roomRef, (snapshot) => {
         const roomData = snapshot.val();
         if (!roomData) return;
         
+        // Verificar si el oponente es uno mismo (mismo ID)
+        if (roomData.player2 && roomData.player2.id === playerUniqueId && currentPlayer === 'player1') {
+            leaveGame();
+            alert('No puedes jugar contra ti mismo. Buscando otra partida...');
+            setTimeout(() => startMatchmaking(), 1000);
+            return;
+        }
+        
+        // Guardar FEN anterior para detectar capturas
+        const oldFEN = game ? game.fen() : null;
+        
         // Actualizar el tablero si hay un nuevo FEN
         if (roomData.fen && game && game.fen() !== roomData.fen) {
             game.load(roomData.fen);
+            
+            // Detectar captura remota
+            if (oldFEN && oldFEN !== roomData.fen) {
+                detectAndRegisterCapture(oldFEN, roomData.fen, playerColor);
+            }
+            
             if (board) {
                 board.position(roomData.fen, false);
             }
@@ -176,7 +211,7 @@ function setupGame(roomReference, playerPosition, color) {
         // Actualizar el turno local
         if (roomData.turn) {
             const myColorCode = playerColor === 'w' ? 'w' : 'b';
-            isMyTurn = (roomData.turn === myColorCode);
+            isMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
         }
         
         // Actualizar UI con nombres
@@ -218,7 +253,7 @@ function setupGame(roomReference, playerPosition, color) {
         // Establecer turno inicial
         if (roomData && roomData.turn) {
             const myColorCode = playerColor === 'w' ? 'w' : 'b';
-            isMyTurn = (roomData.turn === myColorCode);
+            isMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
         }
     });
     
@@ -236,13 +271,13 @@ function initBoard() {
         $('#board-container').empty();
     }
     
-    // Configuración del tablero - SIN notación y con CDN de piezas
+    // Configuración del tablero - Usando imágenes locales o CDN
     const config = {
         draggable: true,
         position: 'start',
         orientation: orientation,
-        showNotation: false, // Elimina letras y números del borde
-        pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png',
+        showNotation: false,
+        pieceTheme: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/{piece}.png',
         onDragStart: onDragStart,
         onDrop: onDrop,
         onSnapEnd: onSnapEnd
@@ -283,11 +318,13 @@ function onDrop(source, target) {
         return 'snapback';
     }
     
+    const oldFEN = game.fen();
+    
     // Intentar realizar el movimiento usando chess.js
     const move = game.move({
         from: source,
         to: target,
-        promotion: 'q' // Siempre promover a reina
+        promotion: 'q'
     });
     
     // Si el movimiento es ilegal, hacer snapback (rebote)
@@ -296,8 +333,10 @@ function onDrop(source, target) {
         return 'snapback';
     }
     
-    // Movimiento válido - actualizar Firebase
+    // Detectar captura
     const newFEN = game.fen();
+    const wasCapture = detectAndRegisterCapture(oldFEN, newFEN, playerColor);
+    
     const newTurn = game.turn();
     
     const updates = {
@@ -311,7 +350,7 @@ function onDrop(source, target) {
         if (game.in_checkmate()) {
             const winner = newTurn === 'w' ? 'b' : 'w';
             updates.winner = winner;
-            updates.winnerName = winner === 'w' ? 'Blancas' : 'Negras';
+            updates.winnerName = winner === 'w' ? roomData?.player1?.name : roomData?.player2?.name;
         } else if (game.in_stalemate() || game.in_threefold_repetition()) {
             updates.winner = 'draw';
             updates.winnerName = 'Tablas';
@@ -321,14 +360,13 @@ function onDrop(source, target) {
     // Actualizar Firebase
     update(roomRef, updates).then(() => {
         if (board) board.position(newFEN, false);
-        // Actualizar turno local
         isMyTurn = false;
     }).catch((error) => {
         console.error('Error al actualizar Firebase:', error);
         if (board) board.position(game.fen(), false);
     });
     
-    return; // Movimiento exitoso
+    return;
 }
 
 function onSnapEnd() {
@@ -375,11 +413,210 @@ function updateUI(roomData) {
     }
 }
 
+// ========== FUNCIONES DE CAPTURA Y ANIMACIONES ==========
+
+function showCaptureAnimation(isAttacker, pieceName, position) {
+    const overlay = $('<div class="capture-overlay"></div>');
+    
+    if (isAttacker) {
+        overlay.addClass('capture-overlay-green');
+        const message = $('<div class="capture-message">🎯 ¡CAPTURA EXITOSA! 🎯</div>');
+        overlay.append(message);
+        
+        $('#board-container').addClass('victory-shake');
+        setTimeout(() => {
+            $('#board-container').removeClass('victory-shake');
+        }, 500);
+    } else {
+        overlay.addClass('capture-overlay-red');
+        const pieceNameSpanish = getPieceNameSpanish(pieceName);
+        const message = $(`<div class="capture-message">💀 ¡TE COMIERON LA ${pieceNameSpanish}! 💀</div>`);
+        overlay.append(message);
+        
+        $('body').addClass('screen-shake');
+        setTimeout(() => {
+            $('body').removeClass('screen-shake');
+        }, 500);
+    }
+    
+    $('body').append(overlay);
+    
+    setTimeout(() => {
+        overlay.remove();
+    }, 500);
+    
+    if (position) {
+        const square = $(`.square-${position}`);
+        square.css('animation', 'captureFlash 0.3s ease-out');
+        setTimeout(() => {
+            square.css('animation', '');
+        }, 300);
+    }
+}
+
+function getPieceNameSpanish(piece) {
+    const pieceNames = {
+        'p': 'Peón', 'n': 'Caballo', 'b': 'Alfil',
+        'r': 'Torre', 'q': 'Reina', 'k': 'Rey'
+    };
+    return pieceNames[piece.toLowerCase()] || 'Pieza';
+}
+
+function getPieceSymbol(piece) {
+    const symbols = {
+        'p': '♟', 'n': '♞', 'b': '♝',
+        'r': '♜', 'q': '♛', 'k': '♚',
+        'P': '♙', 'N': '♘', 'B': '♗',
+        'R': '♖', 'Q': '♕', 'K': '♔'
+    };
+    return symbols[piece] || '●';
+}
+
+function updateCapturedPiecesDisplay() {
+    const redContainer = $('#captured-red-pieces');
+    redContainer.empty();
+    
+    capturedPiecesRed.forEach(piece => {
+        const pieceHtml = `<div class="captured-piece" style="color: #ff6b6b;">
+                            <span class="piece-icon">${getPieceSymbol(piece)}</span>
+                           </div>`;
+        redContainer.append(pieceHtml);
+    });
+    
+    if (capturedPiecesRed.length === 0) {
+        redContainer.html('<span style="color: #666; font-size: 12px;">Ninguna</span>');
+    }
+    
+    const greenContainer = $('#captured-green-pieces');
+    greenContainer.empty();
+    
+    capturedPiecesGreen.forEach(piece => {
+        const pieceHtml = `<div class="captured-piece" style="color: #6bff6b;">
+                            <span class="piece-icon">${getPieceSymbol(piece)}</span>
+                           </div>`;
+        greenContainer.append(pieceHtml);
+    });
+    
+    if (capturedPiecesGreen.length === 0) {
+        greenContainer.html('<span style="color: #666; font-size: 12px;">Ninguna</span>');
+    }
+    
+    $('#captured-red-section h4').html(`<i class="fas fa-skull"></i> Piezas perdidas: ${capturedPiecesRed.length}`);
+    $('#captured-green-section h4').html(`<i class="fas fa-trophy"></i> Piezas capturadas: ${capturedPiecesGreen.length}`);
+}
+
+function detectAndRegisterCapture(oldFEN, newFEN, currentPlayerColor) {
+    const oldBoard = fenToBoard(oldFEN);
+    const newBoard = fenToBoard(newFEN);
+    
+    let capturedPiece = null;
+    let captureSquare = null;
+    
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const oldPiece = oldBoard[i][j];
+            const newPiece = newBoard[i][j];
+            
+            if (oldPiece && !newPiece) {
+                capturedPiece = oldPiece;
+                captureSquare = `${String.fromCharCode(97 + j)}${8 - i}`;
+                break;
+            }
+        }
+    }
+    
+    if (capturedPiece) {
+        const isWhitePiece = capturedPiece === capturedPiece.toUpperCase() && capturedPiece !== capturedPiece.toLowerCase();
+        const lostPieceColor = isWhitePiece ? 'w' : 'b';
+        
+        if (lostPieceColor === currentPlayerColor) {
+            capturedPiecesRed.push(capturedPiece);
+            showCaptureAnimation(false, capturedPiece, captureSquare);
+        } else {
+            capturedPiecesGreen.push(capturedPiece);
+            showCaptureAnimation(true, capturedPiece, captureSquare);
+        }
+        
+        updateCapturedPiecesDisplay();
+        animateFlyingPiece(captureSquare, capturedPiece, lostPieceColor === currentPlayerColor);
+        return true;
+    }
+    
+    return false;
+}
+
+function fenToBoard(fen) {
+    const board = Array(8).fill().map(() => Array(8).fill(null));
+    const rows = fen.split(' ')[0].split('/');
+    
+    for (let i = 0; i < 8; i++) {
+        let col = 0;
+        for (let j = 0; j < rows[i].length; j++) {
+            const char = rows[i][j];
+            if (isNaN(char)) {
+                board[i][col] = char;
+                col++;
+            } else {
+                col += parseInt(char);
+            }
+        }
+    }
+    return board;
+}
+
+function animateFlyingPiece(square, piece, isLoss) {
+    const squareElement = $(`.square-${square}`);
+    if (!squareElement.length) return;
+    
+    const rect = squareElement[0].getBoundingClientRect();
+    const flyingPiece = $(`<div class="captured-piece" style="position: fixed; left: ${rect.left}px; top: ${rect.top}px; font-size: 40px; z-index: 10001; pointer-events: none; transition: all 0.4s ease-out;">
+                            ${getPieceSymbol(piece)}
+                          </div>`);
+    
+    $('body').append(flyingPiece);
+    
+    let targetX, targetY;
+    if (isLoss) {
+        const redSection = $('#captured-red-section').offset();
+        if (redSection) {
+            targetX = redSection.left + 50;
+            targetY = redSection.top + 20;
+        }
+        flyingPiece.css('color', '#ff0000');
+    } else {
+        const greenSection = $('#captured-green-section').offset();
+        if (greenSection) {
+            targetX = greenSection.left + 50;
+            targetY = greenSection.top + 20;
+        }
+        flyingPiece.css('color', '#00ff00');
+    }
+    
+    setTimeout(() => {
+        flyingPiece.css({
+            left: targetX + 'px',
+            top: targetY + 'px',
+            transform: 'scale(0.3)',
+            opacity: '0'
+        });
+    }, 50);
+    
+    setTimeout(() => {
+        flyingPiece.remove();
+    }, 450);
+}
+
+function resetCapturedPieces() {
+    capturedPiecesRed = [];
+    capturedPiecesGreen = [];
+    updateCapturedPiecesDisplay();
+}
+
 function leaveGame() {
     if (roomRef && currentRoomId) {
         get(roomRef).then((snapshot) => {
             const roomData = snapshot.val();
-            if (roomData && !roomData.gameOver) {
+            if (roomData && !roomData.gameOver && roomData.player1 && roomData.player2) {
                 const abandonedByName = currentPlayer === 'player1' ? roomData.player1?.name : roomData.player2?.name;
                 update(roomRef, { 
                     gameOver: true, 
@@ -424,6 +661,7 @@ function resetGame() {
     roomRef = null;
     isGameActive = false;
     isMyTurn = false;
+    resetCapturedPieces();
     
     $('#board-container').empty();
     $('#player1-name').text('Esperando jugador...');
@@ -439,369 +677,3 @@ function setupRoomCleanup() {
         onDisconnect(roomRef).remove();
     }
 }
-// ========== VARIABLES PARA PIEZAS CAPTURADAS ==========
-let capturedPiecesRed = []; // Piezas perdidas por el jugador local
-let capturedPiecesGreen = []; // Piezas capturadas por el jugador local
-let lastMoveWasCapture = false;
-let lastCapturedPiece = null;
-
-// ========== FUNCIONES DE ANIMACIÓN ==========
-function showCaptureAnimation(isAttacker, pieceName, position) {
-    // Crear overlay
-    const overlay = $('<div class="capture-overlay"></div>');
-    
-    if (isAttacker) {
-        // El atacante (quien comió) ve verde
-        overlay.addClass('capture-overlay-green');
-        const message = $('<div class="capture-message">🎯 ¡CAPTURA EXITOSA! 🎯</div>');
-        overlay.append(message);
-        
-        // Efecto de vibración en el tablero del atacante
-        $('#board-container').addClass('victory-shake');
-        setTimeout(() => {
-            $('#board-container').removeClass('victory-shake');
-        }, 500);
-    } else {
-        // El oponente (a quien le comen) ve rojo
-        overlay.addClass('capture-overlay-red');
-        const pieceNameSpanish = getPieceNameSpanish(pieceName);
-        const message = $('<div class="capture-message">💀 ¡TE COMIERON LA ' + pieceNameSpanish + '! 💀</div>');
-        overlay.append(message);
-        
-        // Efecto de temblor en toda la pantalla
-        $('body').addClass('screen-shake');
-        setTimeout(() => {
-            $('body').removeClass('screen-shake');
-        }, 500);
-    }
-    
-    $('body').append(overlay);
-    
-    // Remover overlay después de la animación
-    setTimeout(() => {
-        overlay.remove();
-    }, 500);
-    
-    // Animación en la casilla donde se capturó
-    if (position) {
-        const square = $(`.square-${position}`);
-        square.css('animation', 'captureFlash 0.3s ease-out');
-        setTimeout(() => {
-            square.css('animation', '');
-        }, 300);
-    }
-}
-
-function getPieceNameSpanish(piece) {
-    const pieceNames = {
-        'p': 'Peón', 'n': 'Caballo', 'b': 'Alfil',
-        'r': 'Torre', 'q': 'Reina', 'k': 'Rey'
-    };
-    return pieceNames[piece.toLowerCase()] || 'Pieza';
-}
-
-function getPieceSymbol(piece) {
-    const symbols = {
-        'p': '♟', 'n': '♞', 'b': '♝',
-        'r': '♜', 'q': '♛', 'k': '♚',
-        'P': '♙', 'N': '♘', 'B': '♗',
-        'R': '♖', 'Q': '♕', 'K': '♔'
-    };
-    return symbols[piece] || '●';
-}
-
-// ========== FUNCIONES PARA PIEZAS CAPTURADAS ==========
-function updateCapturedPiecesDisplay() {
-    // Mostrar piezas perdidas (rojo)
-    const redContainer = $('#captured-red-pieces');
-    redContainer.empty();
-    
-    capturedPiecesRed.forEach(piece => {
-        const pieceHtml = `<div class="captured-piece" style="color: #ff6b6b;">
-                            <span class="piece-icon">${getPieceSymbol(piece)}</span>
-                           </div>`;
-        redContainer.append(pieceHtml);
-    });
-    
-    if (capturedPiecesRed.length === 0) {
-        redContainer.html('<span style="color: #666; font-size: 12px;">Ninguna</span>');
-    }
-    
-    // Mostrar piezas capturadas (verde)
-    const greenContainer = $('#captured-green-pieces');
-    greenContainer.empty();
-    
-    capturedPiecesGreen.forEach(piece => {
-        const pieceHtml = `<div class="captured-piece" style="color: #6bff6b;">
-                            <span class="piece-icon">${getPieceSymbol(piece)}</span>
-                           </div>`;
-        greenContainer.append(pieceHtml);
-    });
-    
-    if (capturedPiecesGreen.length === 0) {
-        greenContainer.html('<span style="color: #666; font-size: 12px;">Ninguna</span>');
-    }
-    
-    // Actualizar contadores
-    $('#captured-red-section h4').html(`<i class="fas fa-skull"></i> Piezas perdidas: ${capturedPiecesRed.length}`);
-    $('#captured-green-section h4').html(`<i class="fas fa-trophy"></i> Piezas capturadas: ${capturedPiecesGreen.length}`);
-}
-
-function detectAndRegisterCapture(oldFEN, newFEN, currentPlayerColor) {
-    // Parsear FENs para detectar qué pieza se capturó
-    const oldBoard = fenToBoard(oldFEN);
-    const newBoard = fenToBoard(newFEN);
-    
-    let capturedPiece = null;
-    let captureSquare = null;
-    
-    // Buscar qué pieza desapareció
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-            const oldPiece = oldBoard[i][j];
-            const newPiece = newBoard[i][j];
-            
-            if (oldPiece && !newPiece) {
-                capturedPiece = oldPiece;
-                captureSquare = `${String.fromCharCode(97 + j)}${8 - i}`;
-                break;
-            }
-        }
-    }
-    
-    if (capturedPiece) {
-        lastMoveWasCapture = true;
-        lastCapturedPiece = capturedPiece;
-        
-        // Determinar quién capturó y quién perdió
-        // capturedPiece: pieza que fue capturada (color: mayúscula=blanca, minúscula=negra)
-        const isWhitePiece = capturedPiece === capturedPiece.toUpperCase() && capturedPiece !== capturedPiece.toLowerCase();
-        
-        // El color del jugador que perdió la pieza
-        const lostPieceColor = isWhitePiece ? 'w' : 'b';
-        
-        // Registrar la pieza capturada
-        if (lostPieceColor === playerColor) {
-            // El jugador local perdió una pieza
-            capturedPiecesRed.push(capturedPiece);
-            // Mostrar animación ROJA para el que perdió la pieza
-            showCaptureAnimation(false, capturedPiece, captureSquare);
-        } else {
-            // El jugador local capturó una pieza
-            capturedPiecesGreen.push(capturedPiece);
-            // Mostrar animación VERDE para el que capturó
-            showCaptureAnimation(true, capturedPiece, captureSquare);
-        }
-        
-        updateCapturedPiecesDisplay();
-        
-        // Animación adicional: pieza voladora
-        animateFlyingPiece(captureSquare, capturedPiece, lostPieceColor === playerColor);
-        
-        return true;
-    }
-    
-    lastMoveWasCapture = false;
-    return false;
-}
-
-function fenToBoard(fen) {
-    const board = Array(8).fill().map(() => Array(8).fill(null));
-    const rows = fen.split(' ')[0].split('/');
-    
-    for (let i = 0; i < 8; i++) {
-        let col = 0;
-        for (let j = 0; j < rows[i].length; j++) {
-            const char = rows[i][j];
-            if (isNaN(char)) {
-                board[i][col] = char;
-                col++;
-            } else {
-                col += parseInt(char);
-            }
-        }
-    }
-    return board;
-}
-
-function animateFlyingPiece(square, piece, isLoss) {
-    // Crear elemento volador de la pieza
-    const squareElement = $(`.square-${square}`);
-    if (!squareElement.length) return;
-    
-    const rect = squareElement[0].getBoundingClientRect();
-    const flyingPiece = $(`<div class="captured-piece" style="position: fixed; left: ${rect.left}px; top: ${rect.top}px; font-size: 40px; z-index: 10001; pointer-events: none; transition: all 0.4s ease-out;">
-                            ${getPieceSymbol(piece)}
-                          </div>`);
-    
-    $('body').append(flyingPiece);
-    
-    let targetX, targetY;
-    if (isLoss) {
-        // Volar hacia la sección roja
-        const redSection = $('#captured-red-section').offset();
-        targetX = redSection.left + 50;
-        targetY = redSection.top + 20;
-        flyingPiece.css('color', '#ff0000');
-    } else {
-        // Volar hacia la sección verde
-        const greenSection = $('#captured-green-section').offset();
-        targetX = greenSection.left + 50;
-        targetY = greenSection.top + 20;
-        flyingPiece.css('color', '#00ff00');
-    }
-    
-    setTimeout(() => {
-        flyingPiece.css({
-            left: targetX + 'px',
-            top: targetY + 'px',
-            transform: 'scale(0.3)',
-            opacity: '0'
-        });
-    }, 50);
-    
-    setTimeout(() => {
-        flyingPiece.remove();
-    }, 450);
-}
-
-// ========== RESET DE PIEZAS CAPTURADAS ==========
-function resetCapturedPieces() {
-    capturedPiecesRed = [];
-    capturedPiecesGreen = [];
-    lastMoveWasCapture = false;
-    lastCapturedPiece = null;
-    updateCapturedPiecesDisplay();
-}
-
-// ========== MODIFICAR LA FUNCIÓN onDrop ==========
-// Reemplazar la función onDrop existente con esta versión modificada
-
-// NOTA: La función onDrop original debe ser REEMPLAZADA por esta:
-/*
-function onDrop(source, target) {
-    if (game.game_over()) {
-        if (board) board.position(game.fen(), false);
-        return 'snapback';
-    }
-    
-    if (!isMyTurn) {
-        if (board) board.position(game.fen(), false);
-        return 'snapback';
-    }
-    
-    const oldFEN = game.fen();
-    
-    const move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q'
-    });
-    
-    if (move === null) {
-        if (board) board.position(game.fen(), false);
-        return 'snapback';
-    }
-    
-    // DETECTAR CAPTURA
-    const newFEN = game.fen();
-    const wasCapture = detectAndRegisterCapture(oldFEN, newFEN, playerColor);
-    
-    const newTurn = game.turn();
-    
-    const updates = {
-        fen: newFEN,
-        turn: newTurn
-    };
-    
-    if (game.game_over()) {
-        updates.gameOver = true;
-        if (game.in_checkmate()) {
-            const winner = newTurn === 'w' ? 'b' : 'w';
-            updates.winner = winner;
-            updates.winnerName = winner === 'w' ? 'Blancas' : 'Negras';
-        } else if (game.in_stalemate() || game.in_threefold_repetition()) {
-            updates.winner = 'draw';
-            updates.winnerName = 'Tablas';
-        }
-    }
-    
-    update(roomRef, updates).then(() => {
-        if (board) board.position(newFEN, false);
-        isMyTurn = false;
-    }).catch((error) => {
-        console.error('Error al actualizar Firebase:', error);
-        if (board) board.position(game.fen(), false);
-    });
-    
-    return;
-}
-*/
-
-// ========== MODIFICAR LA FUNCIÓN setupGame ==========
-// Dentro de setupGame, en el listener de Firebase, agregar la detección de captura remota
-
-// Buscar esta parte en el listener:
-/*
-if (roomData.fen && game && game.fen() !== roomData.fen) {
-    const oldFEN = game.fen();
-    game.load(roomData.fen);
-    
-    // DETECTAR CAPTURA REMOTA y mostrar animación correspondiente
-    if (oldFEN !== roomData.fen) {
-        detectAndRegisterCapture(oldFEN, roomData.fen, playerColor);
-    }
-    
-    if (board) {
-        board.position(roomData.fen, false);
-    }
-}
-*/
-
-// ========== MODIFICAR LA FUNCIÓN resetGame ==========
-// Agregar resetCapturedPieces() dentro de resetGame()
-
-// Agregar esta línea en resetGame():
-// resetCapturedPieces();
-
-// ========== CSS ADICIONAL PARA ANIMACIONES ==========
-// Agregar estas clases al style.css
-
-const additionalCSS = `
-.victory-shake {
-    animation: screenShake 0.5s ease-in-out;
-}
-
-.screen-shake {
-    animation: screenShake 0.3s ease-in-out;
-}
-
-.square-${''} {
-    transition: all 0.1s ease;
-}
-
-/* Efecto hover en piezas capturadas */
-.captured-piece:hover {
-    transform: scale(1.2);
-    transition: transform 0.2s ease;
-}
-
-/* Animación de entrada para las secciones */
-.captured-section {
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-`;
-
-// Injectar CSS adicional
-$('head').append(`<style>${additionalCSS}</style>`);

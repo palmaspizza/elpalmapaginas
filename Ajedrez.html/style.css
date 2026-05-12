@@ -203,10 +203,6 @@ body {
     display: none !important;
 }
 
-.chessboard-container {
-    margin: 0 auto;
-}
-
 @media (max-width: 768px) {
     #game-container {
         flex-direction: column;
@@ -226,7 +222,9 @@ body {
         padding: 20px;
     }
 }
-/* Animaciones de captura de piezas */
+
+/* ========== ANIMACIONES Y ESTILOS DE CAPTURA ========== */
+
 @keyframes captureExplosion {
     0% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.3); background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, rgba(255,0,0,0) 70%); }
@@ -237,12 +235,6 @@ body {
     0% { background-color: transparent; }
     50% { background-color: rgba(255, 0, 0, 0.5); }
     100% { background-color: transparent; }
-}
-
-@keyframes captureGlow {
-    0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
-    70% { box-shadow: 0 0 0 20px rgba(255, 0, 0, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
 }
 
 @keyframes screenShake {
@@ -271,13 +263,6 @@ body {
     100% { background-color: rgba(255, 0, 0, 0); }
 }
 
-@keyframes pieceFly {
-    0% { transform: translate(0, 0) scale(1); opacity: 1; }
-    50% { transform: translate(50px, -50px) scale(1.5); opacity: 0.8; }
-    100% { transform: translate(100px, -100px) scale(0); opacity: 0; }
-}
-
-/* Overlay de animación de captura */
 .capture-overlay {
     position: fixed;
     top: 0;
@@ -312,7 +297,6 @@ body {
     z-index: 10000;
 }
 
-/* Estilos para piezas capturadas */
 .captured-pieces {
     background: rgba(0,0,0,0.8);
     border-radius: 10px;
@@ -368,15 +352,25 @@ body {
     display: inline-block;
 }
 
-/* Animación de movimiento de piezas */
-@keyframes pieceMove {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(var(--move-x, 0), var(--move-y, 0)); }
+.victory-shake {
+    animation: screenShake 0.5s ease-in-out;
 }
 
-.move-animation {
-    animation: pieceFly 0.4s ease-out;
-    position: absolute;
-    z-index: 10000;
-    pointer-events: none;
+.screen-shake {
+    animation: screenShake 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.captured-section {
+    animation: slideIn 0.3s ease-out;
 }

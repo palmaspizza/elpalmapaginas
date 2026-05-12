@@ -11,19 +11,8 @@
 <body>
     <div class="container">
         <div id="game-container">
-            <div id="board-container" style="width: 400px;"></div>
+            <div id="board-container" style="width: 500px;"></div>
             <div id="game-info">
-                <!-- Agregar esto dentro de <div id="game-info"> -->
-<div id="captured-pieces-section" style="margin-top: 20px;">
-    <div class="captured-section red" id="captured-red-section">
-        <h4><i class="fas fa-skull"></i> Piezas perdidas:</h4>
-        <div id="captured-red-pieces" class="captured-pieces-container"></div>
-    </div>
-    <div class="captured-section green" id="captured-green-section">
-        <h4><i class="fas fa-trophy"></i> Piezas capturadas:</h4>
-        <div id="captured-green-pieces" class="captured-pieces-container"></div>
-    </div>
-</div>
                 <div id="player-info">
                     <div class="player-card" id="player1-card">
                         <i class="fas fa-user"></i>
@@ -42,6 +31,19 @@
                     <span id="turn-text">Esperando partida...</span>
                 </div>
                 <div id="game-status"></div>
+                
+                <!-- Sección de piezas capturadas -->
+                <div id="captured-pieces-section" style="margin-top: 20px;">
+                    <div class="captured-section red" id="captured-red-section">
+                        <h4><i class="fas fa-skull"></i> Piezas perdidas: 0</h4>
+                        <div id="captured-red-pieces" class="captured-pieces-container"></div>
+                    </div>
+                    <div class="captured-section green" id="captured-green-section">
+                        <h4><i class="fas fa-trophy"></i> Piezas capturadas: 0</h4>
+                        <div id="captured-green-pieces" class="captured-pieces-container"></div>
+                    </div>
+                </div>
+                
                 <button id="leave-btn" class="btn btn-secondary" style="display: none;">
                     <i class="fas fa-sign-out-alt"></i> Abandonar partida
                 </button>
