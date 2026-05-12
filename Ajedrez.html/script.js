@@ -17,6 +17,7 @@ const database = getDatabase(app);
 
 let game = null;
 let board = null;
+let preloadedJaqueAudio = null;
 let currentRoomId = null;
 let currentPlayer = null;
 let playerName = null;
@@ -68,8 +69,17 @@ function preloadAudios() {
         audioElement.preload = 'auto';
         preloadedAttackerAudios.push(audioElement);
     });
+    const jaqueAudio = new Audio('audios/enjaque.mp3');
+jaqueAudio.preload = 'auto';
+preloadedJaqueAudio = jaqueAudio;
 }
-
+function playJaqueAudio() {
+    if (isMuted) return;
+    if (preloadedJaqueAudio) {
+        preloadedJaqueAudio.currentTime = 0;
+        preloadedJaqueAudio.play().catch(e => console.log('Error en audio de jaque:', e));
+    }
+}
 function playRandomVictimAudio() {
     if (isMuted) return;
     const randomIndex = Math.floor(Math.random() * preloadedVictimAudios.length);
@@ -801,6 +811,7 @@ function updateUI(roomData) {
     if (!roomData.gameOver && game && game.in_check()) {
         const checkedColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
         $('#game-status').html(`⚠️ ¡${checkedColor} en jaque! ⚠️`);
+        playJaqueAudio();
     } else if (!roomData.gameOver && $('#game-status').html().includes('jaque')) {
         $('#game-status').html('');
     }
