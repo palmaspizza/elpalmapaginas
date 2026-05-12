@@ -27,27 +27,25 @@ let roomListener = null;
 let isMyTurn = false;
 let playerUniqueId = null;
 let roomDataCache = null;
+let isProcessingMove = false; // Evita procesamiento duplicado
 
 // Variables para piezas capturadas
 let capturedPiecesRed = [];
 let capturedPiecesGreen = [];
 
 // Audios de captura
-// Audios cuando TE COMEN una pieza (victima)
 const victimAudios = [
     { src: 'audios/aweonao.mp3', name: 'aweonao' },
     { src: 'audios/conesta.mp3', name: 'conesta' },
     { src: 'audios/veggeta.mp3', name: 'veggeta' }
 ];
 
-// Audios cuando CAPTURAS una pieza (atacante)
 const attackerAudios = [
     { src: 'audios/uena.mp3', name: 'uena' },
     { src: 'audios/bonk.mp3', name: 'bonk' },
     { src: 'audios/choche.mp3', name: 'choche' }
 ];
 
-// Pre-cargar audios para evitar delays
 const preloadedVictimAudios = [];
 const preloadedAttackerAudios = [];
 
@@ -90,7 +88,6 @@ $(document).ready(() => {
     $('#search-btn').click(startMatchmaking);
     $('#leave-btn').click(leaveGame);
     
-    // Generar ID único para este dispositivo/sesión
     playerUniqueId = localStorage.getItem('playerUniqueId');
     if (!playerUniqueId) {
         playerUniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -226,6 +223,8 @@ function setupGame(roomReference, playerPosition, color) {
     resetCapturedPieces();
     
     roomListener = onValue(roomRef, (snapshot) => {
+        if (isProcessingMove) return; // Evita procesar mientras se mueve
+        
         const roomData = snapshot.val();
         if (!roomData) return;
         
@@ -238,15 +237,31 @@ function setupGame(roomReference, playerPosition, color) {
             return;
         }
         
-        const oldFEN = game ? game.fen() : null;
+        // Procesar efecto de captura remota
+        if (roomData.lastCapture && roomData.lastCapture.processed !== true && roomData.lastCapture.timestamp) {
+            const capture = roomData.lastCapture;
+            
+            // Solo procesar si no fui yo quien hizo la captura (para no duplicar)
+            if (capture.attackerId !== playerUniqueId) {
+                // Marcar como procesado inmediatamente para evitar bucles
+                update(roomRef, { 'lastCapture.processed': true }).catch(() => {});
+                
+                const isCaptureOnMe = (capture.victimId === playerUniqueId);
+                
+                if (isCaptureOnMe) {
+                    // ME capturaron (víctima) - Pantalla ROJA
+                    showCaptureAnimation(false, capture.piece, capture.square);
+                    playRandomVictimAudio();
+                    capturedPiecesRed.push(capture.piece);
+                    updateCapturedPiecesDisplay();
+                    animateFlyingPiece(capture.square, capture.piece, true);
+                }
+            }
+        }
         
+        // Actualizar el tablero si hay cambios
         if (roomData.fen && game && game.fen() !== roomData.fen) {
             game.load(roomData.fen);
-            
-            if (oldFEN && oldFEN !== roomData.fen) {
-                detectAndRegisterCapture(oldFEN, roomData.fen, playerColor);
-            }
-            
             if (board) {
                 board.position(roomData.fen, false);
             }
@@ -345,6 +360,7 @@ function onDragStart(source, piece, position, orientation) {
     if (!game) return false;
     if (!isMyTurn) return false;
     if (game.game_over()) return false;
+    if (isProcessingMove) return false;
     
     const pieceColor = piece.charAt(0);
     if (playerColor !== pieceColor) return false;
@@ -363,8 +379,17 @@ function onDrop(source, target) {
         return 'snapback';
     }
     
-    const oldFEN = game.fen();
+    if (isProcessingMove) {
+        return 'snapback';
+    }
     
+    isProcessingMove = true;
+    
+    // Guardar estado previo por si hay que revertir
+    const oldFEN = game.fen();
+    const oldTurn = game.turn();
+    
+    // Intentar realizar el movimiento
     const move = game.move({
         from: source,
         to: target,
@@ -372,39 +397,82 @@ function onDrop(source, target) {
     });
     
     if (move === null) {
+        isProcessingMove = false;
         if (board) board.position(game.fen(), false);
         return 'snapback';
     }
     
     const newFEN = game.fen();
-    const wasCapture = detectAndRegisterCapture(oldFEN, newFEN, playerColor);
+    const wasCapture = (move.captured !== undefined);
+    const capturedPiece = move.captured;
+    const captureSquare = target;
     
-    const newTurn = game.turn();
-    
-    const updates = {
-        fen: newFEN,
-        turn: newTurn
+    // Función para actualizar Firebase
+    const updateFirebase = () => {
+        const updates = {
+            fen: newFEN,
+            turn: game.turn()
+        };
+        
+        if (wasCapture) {
+            // Determinar IDs para la captura
+            const roomData = roomDataCache;
+            const player1Id = roomData?.player1?.id;
+            const player2Id = roomData?.player2?.id;
+            
+            const isWhiteCaptured = (capturedPiece === capturedPiece.toUpperCase() && capturedPiece !== capturedPiece.toLowerCase());
+            const victimColor = isWhiteCaptured ? 'w' : 'b';
+            let victimId = (victimColor === 'w') ? player1Id : player2Id;
+            
+            const captureInfo = {
+                piece: capturedPiece,
+                square: captureSquare,
+                attackerId: playerUniqueId,
+                victimId: victimId,
+                timestamp: Date.now(),
+                processed: false
+            };
+            
+            updates.lastCapture = captureInfo;
+        }
+        
+        if (game.game_over()) {
+            updates.gameOver = true;
+            if (game.in_checkmate()) {
+                const winner = game.turn() === 'w' ? 'b' : 'w';
+                updates.winner = winner;
+                updates.winnerName = winner === 'w' ? roomDataCache?.player1?.name : roomDataCache?.player2?.name;
+            } else if (game.in_stalemate() || game.in_threefold_repetition()) {
+                updates.winner = 'draw';
+                updates.winnerName = 'Tablas';
+            }
+        }
+        
+        return update(roomRef, updates);
     };
     
-    if (game.game_over()) {
-        updates.gameOver = true;
-        if (game.in_checkmate()) {
-            const winner = newTurn === 'w' ? 'b' : 'w';
-            updates.winner = winner;
-            updates.winnerName = winner === 'w' ? roomDataCache?.player1?.name : roomDataCache?.player2?.name;
-        } else if (game.in_stalemate() || game.in_threefold_repetition()) {
-            updates.winner = 'draw';
-            updates.winnerName = 'Tablas';
-        }
-    }
-    
-    update(roomRef, updates).then(() => {
+    // Actualizar Firebase
+    updateFirebase().then(() => {
+        // Éxito: actualizar UI local
         if (board) board.position(newFEN, false);
         isMyTurn = false;
+        
+        // Si hubo captura, mostrar efectos locales (SOLO para el atacante)
+        if (wasCapture) {
+            showCaptureAnimation(true, capturedPiece, captureSquare);
+            playRandomAttackerAudio();
+            capturedPiecesGreen.push(capturedPiece);
+            updateCapturedPiecesDisplay();
+            animateFlyingPiece(captureSquare, capturedPiece, false);
+        }
+        
+        isProcessingMove = false;
     }).catch((error) => {
         console.error('Error al actualizar Firebase:', error);
+        // Revertir movimiento local
         game.undo();
         if (board) board.position(game.fen(), false);
+        isProcessingMove = false;
     });
     
     return;
@@ -457,7 +525,6 @@ function showCaptureAnimation(isAttacker, pieceName, position) {
     const overlay = $('<div class="capture-overlay"></div>');
     
     if (isAttacker) {
-        // El que CAPTURA ve pantalla VERDE
         overlay.addClass('capture-overlay-green');
         const message = $('<div class="capture-message">🎯 ¡CAPTURA EXITOSA! 🎯</div>');
         overlay.append(message);
@@ -466,11 +533,7 @@ function showCaptureAnimation(isAttacker, pieceName, position) {
         setTimeout(() => {
             $('#board-container').removeClass('victory-shake');
         }, 500);
-        
-        // Reproducir audio de atacante (uena, bonk o choche)
-        playRandomAttackerAudio();
     } else {
-        // El que es VÍCTIMA ve pantalla ROJA
         overlay.addClass('capture-overlay-red');
         const pieceNameSpanish = getPieceNameSpanish(pieceName);
         const message = $(`<div class="capture-message">💀 ¡TE COMIERON LA ${pieceNameSpanish}! 💀</div>`);
@@ -480,9 +543,6 @@ function showCaptureAnimation(isAttacker, pieceName, position) {
         setTimeout(() => {
             $('body').removeClass('screen-shake');
         }, 500);
-        
-        // Reproducir audio de víctima (aweonao, conesta o veggeta)
-        playRandomVictimAudio();
     }
     
     $('body').append(overlay);
@@ -549,49 +609,6 @@ function updateCapturedPiecesDisplay() {
     
     $('#captured-red-section h4').html(`<i class="fas fa-skull"></i> Piezas perdidas: ${capturedPiecesRed.length}`);
     $('#captured-green-section h4').html(`<i class="fas fa-trophy"></i> Piezas capturadas: ${capturedPiecesGreen.length}`);
-}
-
-function detectAndRegisterCapture(oldFEN, newFEN, currentPlayerColor) {
-    const oldBoard = fenToBoard(oldFEN);
-    const newBoard = fenToBoard(newFEN);
-    
-    let capturedPiece = null;
-    let captureSquare = null;
-    
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-            const oldPiece = oldBoard[i][j];
-            const newPiece = newBoard[i][j];
-            
-            if (oldPiece && !newPiece) {
-                capturedPiece = oldPiece;
-                captureSquare = `${String.fromCharCode(97 + j)}${8 - i}`;
-                break;
-            }
-        }
-        if (capturedPiece) break;
-    }
-    
-    if (capturedPiece) {
-        const isWhitePiece = capturedPiece === capturedPiece.toUpperCase() && capturedPiece !== capturedPiece.toLowerCase();
-        const lostPieceColor = isWhitePiece ? 'w' : 'b';
-        
-        if (lostPieceColor === currentPlayerColor) {
-            // A MI me comieron una pieza (soy víctima)
-            capturedPiecesRed.push(capturedPiece);
-            showCaptureAnimation(false, capturedPiece, captureSquare);
-        } else {
-            // YO le comí una pieza al oponente (soy atacante)
-            capturedPiecesGreen.push(capturedPiece);
-            showCaptureAnimation(true, capturedPiece, captureSquare);
-        }
-        
-        updateCapturedPiecesDisplay();
-        animateFlyingPiece(captureSquare, capturedPiece, lostPieceColor === currentPlayerColor);
-        return true;
-    }
-    
-    return false;
 }
 
 function fenToBoard(fen) {
@@ -717,6 +734,7 @@ function resetGame() {
     isGameActive = false;
     isMyTurn = false;
     roomDataCache = null;
+    isProcessingMove = false;
     resetCapturedPieces();
     
     $('#board-container').empty();
