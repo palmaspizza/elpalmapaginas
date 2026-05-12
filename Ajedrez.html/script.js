@@ -27,7 +27,11 @@ let roomListener = null;
 let isMyTurn = false;
 let playerUniqueId = null;
 let roomDataCache = null;
-let isProcessingMove = false; // Evita procesamiento duplicado
+let isProcessingMove = false;
+let lastProcessedTimestamp = 0;
+
+// Variables para resaltado de movimientos legales
+let currentHighlightedSquares = [];
 
 // Variables para piezas capturadas
 let capturedPiecesRed = [];
@@ -158,7 +162,9 @@ function createNewRoom() {
         gameOver: false,
         winner: null,
         winnerName: null,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        lastMoveTimestamp: Date.now(),
+        lastCapturePending: null
     };
     
     set(newRoomRef, roomData).then(() => {
@@ -223,7 +229,7 @@ function setupGame(roomReference, playerPosition, color) {
     resetCapturedPieces();
     
     roomListener = onValue(roomRef, (snapshot) => {
-        if (isProcessingMove) return; // Evita procesar mientras se mueve
+        if (isProcessingMove) return;
         
         const roomData = snapshot.val();
         if (!roomData) return;
@@ -237,19 +243,21 @@ function setupGame(roomReference, playerPosition, color) {
             return;
         }
         
-        // Procesar efecto de captura remota
-        if (roomData.lastCapture && roomData.lastCapture.processed !== true && roomData.lastCapture.timestamp) {
-            const capture = roomData.lastCapture;
+        // Procesar captura pendiente
+        if (roomData.lastCapturePending && !roomData.lastCapturePending.processed && 
+            roomData.lastCapturePending.timestamp && roomData.lastCapturePending.timestamp > lastProcessedTimestamp) {
             
-            // Solo procesar si no fui yo quien hizo la captura (para no duplicar)
+            const capture = roomData.lastCapturePending;
+            
             if (capture.attackerId !== playerUniqueId) {
-                // Marcar como procesado inmediatamente para evitar bucles
-                update(roomRef, { 'lastCapture.processed': true }).catch(() => {});
+                lastProcessedTimestamp = capture.timestamp;
+                
+                const captureRef = ref(database, `rooms/${currentRoomId}/lastCapturePending/processed`);
+                set(captureRef, true).catch(() => {});
                 
                 const isCaptureOnMe = (capture.victimId === playerUniqueId);
                 
                 if (isCaptureOnMe) {
-                    // ME capturaron (víctima) - Pantalla ROJA
                     showCaptureAnimation(false, capture.piece, capture.square);
                     playRandomVictimAudio();
                     capturedPiecesRed.push(capture.piece);
@@ -259,11 +267,12 @@ function setupGame(roomReference, playerPosition, color) {
             }
         }
         
-        // Actualizar el tablero si hay cambios
+        // Actualizar tablero si hay cambios
         if (roomData.fen && game && game.fen() !== roomData.fen) {
             game.load(roomData.fen);
             if (board) {
                 board.position(roomData.fen, false);
+                clearHighlights();
             }
         }
         
@@ -349,10 +358,67 @@ function initBoard() {
         },
         onDragStart: onDragStart,
         onDrop: onDrop,
-        onSnapEnd: onSnapEnd
+        onSnapEnd: onSnapEnd,
+        onMouseoverSquare: onMouseoverSquare,
+        onMouseoutSquare: onMouseoutSquare
     };
     
     board = Chessboard('board-container', config);
+}
+
+function onMouseoverSquare(square) {
+    if (!isGameActive) return;
+    if (!isMyTurn) return;
+    if (game.game_over()) return;
+    
+    const piece = game.get(square);
+    if (!piece) return;
+    
+    const pieceColor = piece.color;
+    if (playerColor !== pieceColor) return;
+    
+    highlightLegalMoves(square);
+}
+
+function onMouseoutSquare(square) {
+    clearHighlights();
+}
+
+function highlightLegalMoves(square) {
+    clearHighlights();
+    
+    // Usar chess.js para obtener movimientos legales VERIFICADOS
+    const moves = game.moves({
+        square: square,
+        verbose: true
+    });
+    
+    if (moves.length === 0) return;
+    
+    moves.forEach(move => {
+        // Solo resaltar movimientos que sean LEGALES según chess.js
+        // chess.js ya valida todas las reglas incluyendo las del peón
+        const targetSquare = move.to;
+        highlightSquare(targetSquare, 'legal-move');
+        currentHighlightedSquares.push(targetSquare);
+    });
+}
+
+function highlightSquare(square, className) {
+    const squareElement = $(`.square-${square}`);
+    if (squareElement.length) {
+        squareElement.addClass(className);
+    }
+}
+
+function clearHighlights() {
+    currentHighlightedSquares.forEach(square => {
+        const squareElement = $(`.square-${square}`);
+        if (squareElement.length) {
+            squareElement.removeClass('legal-move');
+        }
+    });
+    currentHighlightedSquares = [];
 }
 
 function onDragStart(source, piece, position, orientation) {
@@ -369,6 +435,8 @@ function onDragStart(source, piece, position, orientation) {
 }
 
 function onDrop(source, target) {
+    clearHighlights();
+    
     if (game.game_over()) {
         if (board) board.position(game.fen(), false);
         return 'snapback';
@@ -385,11 +453,18 @@ function onDrop(source, target) {
     
     isProcessingMove = true;
     
-    // Guardar estado previo por si hay que revertir
-    const oldFEN = game.fen();
-    const oldTurn = game.turn();
+    // VALIDACIÓN ESTRICTA: Verificar si el movimiento es legal ANTES de ejecutarlo
+    const moves = game.moves({ verbose: true });
+    const isValidMove = moves.some(move => move.from === source && move.to === target);
     
-    // Intentar realizar el movimiento
+    if (!isValidMove) {
+        console.log('Movimiento ilegal rechazado:', source, '->', target);
+        isProcessingMove = false;
+        if (board) board.position(game.fen(), false);
+        return 'snapback';
+    }
+    
+    // Ejecutar el movimiento solo si es legal
     const move = game.move({
         from: source,
         to: target,
@@ -407,57 +482,49 @@ function onDrop(source, target) {
     const capturedPiece = move.captured;
     const captureSquare = target;
     
-    // Función para actualizar Firebase
-    const updateFirebase = () => {
-        const updates = {
-            fen: newFEN,
-            turn: game.turn()
-        };
-        
-        if (wasCapture) {
-            // Determinar IDs para la captura
-            const roomData = roomDataCache;
-            const player1Id = roomData?.player1?.id;
-            const player2Id = roomData?.player2?.id;
-            
-            const isWhiteCaptured = (capturedPiece === capturedPiece.toUpperCase() && capturedPiece !== capturedPiece.toLowerCase());
-            const victimColor = isWhiteCaptured ? 'w' : 'b';
-            let victimId = (victimColor === 'w') ? player1Id : player2Id;
-            
-            const captureInfo = {
-                piece: capturedPiece,
-                square: captureSquare,
-                attackerId: playerUniqueId,
-                victimId: victimId,
-                timestamp: Date.now(),
-                processed: false
-            };
-            
-            updates.lastCapture = captureInfo;
-        }
-        
-        if (game.game_over()) {
-            updates.gameOver = true;
-            if (game.in_checkmate()) {
-                const winner = game.turn() === 'w' ? 'b' : 'w';
-                updates.winner = winner;
-                updates.winnerName = winner === 'w' ? roomDataCache?.player1?.name : roomDataCache?.player2?.name;
-            } else if (game.in_stalemate() || game.in_threefold_repetition()) {
-                updates.winner = 'draw';
-                updates.winnerName = 'Tablas';
-            }
-        }
-        
-        return update(roomRef, updates);
+    const updates = {
+        fen: newFEN,
+        turn: game.turn(),
+        lastMoveTimestamp: Date.now()
     };
     
-    // Actualizar Firebase
-    updateFirebase().then(() => {
-        // Éxito: actualizar UI local
+    if (wasCapture) {
+        const roomData = roomDataCache;
+        const player1Id = roomData?.player1?.id;
+        const player2Id = roomData?.player2?.id;
+        
+        const isWhiteCaptured = (capturedPiece === capturedPiece.toUpperCase() && capturedPiece !== capturedPiece.toLowerCase());
+        const victimColor = isWhiteCaptured ? 'w' : 'b';
+        let victimId = (victimColor === 'w') ? player1Id : player2Id;
+        
+        const captureInfo = {
+            piece: capturedPiece,
+            square: captureSquare,
+            attackerId: playerUniqueId,
+            victimId: victimId,
+            timestamp: Date.now(),
+            processed: false
+        };
+        
+        updates.lastCapturePending = captureInfo;
+    }
+    
+    if (game.game_over()) {
+        updates.gameOver = true;
+        if (game.in_checkmate()) {
+            const winner = game.turn() === 'w' ? 'b' : 'w';
+            updates.winner = winner;
+            updates.winnerName = winner === 'w' ? roomDataCache?.player1?.name : roomDataCache?.player2?.name;
+        } else if (game.in_stalemate() || game.in_threefold_repetition()) {
+            updates.winner = 'draw';
+            updates.winnerName = 'Tablas';
+        }
+    }
+    
+    update(roomRef, updates).then(() => {
         if (board) board.position(newFEN, false);
         isMyTurn = false;
         
-        // Si hubo captura, mostrar efectos locales (SOLO para el atacante)
         if (wasCapture) {
             showCaptureAnimation(true, capturedPiece, captureSquare);
             playRandomAttackerAudio();
@@ -469,7 +536,6 @@ function onDrop(source, target) {
         isProcessingMove = false;
     }).catch((error) => {
         console.error('Error al actualizar Firebase:', error);
-        // Revertir movimiento local
         game.undo();
         if (board) board.position(game.fen(), false);
         isProcessingMove = false;
@@ -611,25 +677,6 @@ function updateCapturedPiecesDisplay() {
     $('#captured-green-section h4').html(`<i class="fas fa-trophy"></i> Piezas capturadas: ${capturedPiecesGreen.length}`);
 }
 
-function fenToBoard(fen) {
-    const board = Array(8).fill().map(() => Array(8).fill(null));
-    const rows = fen.split(' ')[0].split('/');
-    
-    for (let i = 0; i < 8; i++) {
-        let col = 0;
-        for (let j = 0; j < rows[i].length; j++) {
-            const char = rows[i][j];
-            if (isNaN(char)) {
-                board[i][col] = char;
-                col++;
-            } else {
-                col += parseInt(char);
-            }
-        }
-    }
-    return board;
-}
-
 function animateFlyingPiece(square, piece, isLoss) {
     const squareElement = $(`.square-${square}`);
     if (!squareElement.length) return;
@@ -735,6 +782,8 @@ function resetGame() {
     isMyTurn = false;
     roomDataCache = null;
     isProcessingMove = false;
+    lastProcessedTimestamp = 0;
+    clearHighlights();
     resetCapturedPieces();
     
     $('#board-container').empty();
