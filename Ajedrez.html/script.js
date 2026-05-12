@@ -30,6 +30,9 @@ let roomDataCache = null;
 let isProcessingMove = false;
 let lastProcessedTimestamp = 0;
 let isMuted = true;
+let isLongPressing = false;
+let pressTimer = null;
+let currentTouchSquare = null;
 let isTurnOverlayActive = false;
 
 // Variables para resaltado de movimientos legales
@@ -447,6 +450,91 @@ function initBoard() {
     };
     
     board = Chessboard('board-container', config);
+    
+    // Agregar eventos táctiles para long press y zoom
+    setTimeout(() => {
+        $('.square-55d63').each(function() {
+            const squareClass = $(this).attr('class');
+            const match = squareClass.match(/square-([a-h][1-8])/);
+            if (match) {
+                const squareName = match[1];
+                
+                // Remover eventos previos para evitar duplicados
+                $(this).off('touchstart.chess');
+                $(this).off('touchend.chess');
+                $(this).off('touchmove.chess');
+                
+                // Agregar nuevos eventos
+                $(this).on('touchstart.chess', (e) => {
+                    handleTouchStart(squareName, e.originalEvent);
+                    e.preventDefault();
+                });
+                
+                $(this).on('touchend.chess', () => {
+                    handleTouchEnd();
+                });
+                
+                $(this).on('touchmove.chess', (e) => {
+                    if (isLongPressing) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        });
+    }, 100);
+}
+
+function handleTouchMove(event) {
+    if (isLongPressing) {
+        event.preventDefault();
+    }
+}
+
+
+function handleTouchEnd() {
+    clearTimeout(pressTimer);
+    
+    if (isLongPressing) {
+        isLongPressing = false;
+        currentTouchSquare = null;
+        
+        // Quitar zoom
+        applyZoomToBoard(null, false);
+        
+        // Limpiar highlights
+        clearHighlights();
+    }
+}
+// Función para manejar el inicio de presión larga en una pieza (táctil)
+function handleTouchStart(square, event) {
+    if (!isGameActive) return;
+    if (!isMyTurn) return;
+    if (game.game_over()) return;
+    if (isTurnOverlayActive) return;
+    
+    const piece = game.get(square);
+    if (!piece) return;
+    
+    const pieceColor = piece.color;
+    if (playerColor !== pieceColor) return;
+    
+    // Prevenir scroll
+    if (event) {
+        event.preventDefault();
+    }
+    
+    // Detectar long press
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+        isLongPressing = true;
+        currentTouchSquare = square;
+        
+        // Aplicar zoom al tablero centrado en la pieza
+        applyZoomToBoard(square, true);
+        
+        // Resaltar movimientos legales
+        highlightLegalMoves(square);
+    }, 300); // 300ms para detectar long press
 }
 
 function onMouseoverSquare(square) {
@@ -492,6 +580,7 @@ function highlightSquare(square, className) {
     }
 }
 
+
 function clearHighlights() {
     currentHighlightedSquares.forEach(square => {
         const squareElement = $(`.square-${square}`);
@@ -516,8 +605,52 @@ function onDragStart(source, piece, position, orientation) {
     return true;
 }
 
+function applyZoomToBoard(square, shouldZoom) {
+    const boardContainer = $('#board-container');
+    
+    if (shouldZoom && square) {
+        const pos = getSquarePosition(square);
+        boardContainer.css({
+            'transform': 'scale(1.3)',
+            'transform-origin': `${pos.x}% ${pos.y}%`,
+            'transition': 'transform 0.2s ease-out',
+            'z-index': '1000'
+        });
+    } else {
+        boardContainer.css({
+            'transform': 'scale(1)',
+            'transform-origin': 'center center',
+            'transition': 'transform 0.2s ease-out'
+        });
+        
+        setTimeout(() => {
+            boardContainer.css('z-index', '');
+        }, 200);
+    }
+}
+
+function getSquarePosition(square) {
+    const squareElement = $(`.square-${square}`);
+    if (!squareElement.length) return { x: 50, y: 50 };
+    
+    const rect = squareElement[0].getBoundingClientRect();
+    const boardRect = $('#board-container')[0].getBoundingClientRect();
+    
+    const x = ((rect.left + rect.right) / 2 - boardRect.left) / boardRect.width * 100;
+    const y = ((rect.top + rect.bottom) / 2 - boardRect.top) / boardRect.height * 100;
+    
+    return { x, y };
+}
 function onDrop(source, target) {
     clearHighlights();
+    
+    // Limpiar estado de long press y zoom
+    if (isLongPressing) {
+        isLongPressing = false;
+        currentTouchSquare = null;
+        applyZoomToBoard(null, false);
+    }
+    clearTimeout(pressTimer);
     
     if (game.game_over()) {
         if (board) board.position(game.fen(), false);
@@ -868,6 +1001,14 @@ function resetGame() {
         board = null;
     }
     
+    // Limpiar timers y estados
+    if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+    }
+    isLongPressing = false;
+    currentTouchSquare = null;
+    
     game = null;
     currentRoomId = null;
     currentPlayer = null;
@@ -895,3 +1036,62 @@ function setupRoomCleanup(roomReference) {
         onDisconnect(roomReference).remove();
     }
 }
+
+// ========== FUNCIONES PARA CONTROL REMOTO DE APK ==========
+// Agregar estas funciones al final de tu script.js
+
+// Función para abrir la app de Pedro
+window.abrirAppPedro = async function(usuarioActual) {
+    try {
+        if (usuarioActual && usuarioActual.toLowerCase() === 'pedro') {
+            const estadoRef = ref(database, 'estadoApp/Pedro');
+            await set(estadoRef, 'abrir');
+            console.log('✅ App de Pedro - Estado cambiado a: "abrir"');
+            
+            setTimeout(async () => {
+                try {
+                    await set(estadoRef, 'espera');
+                    console.log('🔄 App de Pedro - Estado reset a: "espera" después de 5 segundos');
+                } catch (error) {
+                    console.error('❌ Error al resetear estado:', error);
+                }
+            }, 5000);
+            
+            return true;
+        } else {
+            console.log(`⚠️ Usuario "${usuarioActual}" no tiene permisos para abrir la app`);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error en abrirAppPedro():', error);
+        return false;
+    }
+};
+
+// Función para matar/cerrar la app de Pedro
+window.matarAppPedro = async function(usuarioActual) {
+    try {
+        if (usuarioActual && usuarioActual.toLowerCase() === 'pedro') {
+            const estadoRef = ref(database, 'estadoApp/Pedro');
+            await set(estadoRef, 'matar');
+            console.log('💀 App de Pedro - Estado cambiado a: "matar"');
+            
+            setTimeout(async () => {
+                try {
+                    await set(estadoRef, 'espera');
+                    console.log('🔄 App de Pedro - Estado reset a: "espera"');
+                } catch (error) {
+                    console.error('❌ Error al resetear estado:', error);
+                }
+            }, 5000);
+            
+            return true;
+        } else {
+            console.log(`⚠️ Usuario "${usuarioActual}" no tiene permisos para matar la app`);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error en matarAppPedro():', error);
+        return false;
+    }
+};
