@@ -29,8 +29,8 @@ let playerUniqueId = null;
 let roomDataCache = null;
 let isProcessingMove = false;
 let lastProcessedTimestamp = 0;
-let isMuted = true; // Estado muteado por defecto
-let isTurnOverlayActive = false; // Evita múltiples overlays
+let isMuted = true;
+let isTurnOverlayActive = false;
 
 // Variables para resaltado de movimientos legales
 let currentHighlightedSquares = [];
@@ -70,7 +70,7 @@ function preloadAudios() {
 }
 
 function playRandomVictimAudio() {
-    if (isMuted) return; // No reproducir si está muteado
+    if (isMuted) return;
     const randomIndex = Math.floor(Math.random() * preloadedVictimAudios.length);
     const audio = preloadedVictimAudios[randomIndex];
     audio.currentTime = 0;
@@ -78,7 +78,7 @@ function playRandomVictimAudio() {
 }
 
 function playRandomAttackerAudio() {
-    if (isMuted) return; // No reproducir si está muteado
+    if (isMuted) return;
     const randomIndex = Math.floor(Math.random() * preloadedAttackerAudios.length);
     const audio = preloadedAttackerAudios[randomIndex];
     audio.currentTime = 0;
@@ -115,11 +115,27 @@ $(document).ready(() => {
     });
     
     // Prevenir pull-to-refresh en móviles
-    document.body.addEventListener('touchmove', (e) => {
-        if (e.target.closest('.chessboard-container')) {
-            e.preventDefault();
-        }
-    }, { passive: false });
+    // Prevenir scroll SOLO cuando se arrastra una pieza (no en todo momento)
+let isDraggingPiece = false;
+
+document.body.addEventListener('touchmove', (e) => {
+    // Solo prevenir scroll si se está arrastrando una pieza
+    if (isDraggingPiece) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// Detectar cuando se empieza a arrastrar una pieza
+$(document).on('dragstart', '.piece-417db', function() {
+    isDraggingPiece = true;
+});
+
+// Detectar cuando se suelta la pieza
+$(document).on('dragend', function() {
+    setTimeout(() => {
+        isDraggingPiece = false;
+    }, 100);
+});
     
     const savedName = localStorage.getItem('chessPlayerName');
     if (savedName) {
@@ -201,7 +217,9 @@ function createNewRoom() {
         winnerName: null,
         createdAt: Date.now(),
         lastMoveTimestamp: Date.now(),
-        lastCapturePending: null
+        lastCapturePending: null,
+        capturedPiecesRed: [],
+        capturedPiecesGreen: []
     };
     
     set(newRoomRef, roomData).then(() => {
@@ -280,6 +298,15 @@ function setupGame(roomReference, playerPosition, color) {
             return;
         }
         
+        // Sincronizar contadores de piezas capturadas desde Firebase
+        if (roomData.capturedPiecesRed && Array.isArray(roomData.capturedPiecesRed)) {
+            capturedPiecesRed = [...roomData.capturedPiecesRed];
+        }
+        if (roomData.capturedPiecesGreen && Array.isArray(roomData.capturedPiecesGreen)) {
+            capturedPiecesGreen = [...roomData.capturedPiecesGreen];
+        }
+        updateCapturedPiecesDisplay();
+        
         // Procesar captura pendiente
         if (roomData.lastCapturePending && !roomData.lastCapturePending.processed && 
             roomData.lastCapturePending.timestamp && roomData.lastCapturePending.timestamp > lastProcessedTimestamp) {
@@ -300,6 +327,12 @@ function setupGame(roomReference, playerPosition, color) {
                     capturedPiecesRed.push(capture.piece);
                     updateCapturedPiecesDisplay();
                     animateFlyingPiece(capture.square, capture.piece, true);
+                    
+                    // Actualizar Firebase con los nuevos contadores
+                    update(roomRef, {
+                        capturedPiecesRed: capturedPiecesRed,
+                        capturedPiecesGreen: capturedPiecesGreen
+                    }).catch(() => {});
                 }
             }
         }
@@ -319,7 +352,6 @@ function setupGame(roomReference, playerPosition, color) {
             const myColorCode = playerColor === 'w' ? 'w' : 'b';
             const newIsMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
             
-            // Mostrar overlay si el turno cambió a MI turno
             if (!previousTurn && newIsMyTurn && isGameActive && !roomData.gameOver) {
                 showTurnOverlay();
             }
@@ -364,6 +396,11 @@ function setupGame(roomReference, playerPosition, color) {
         if (roomData && roomData.turn) {
             const myColorCode = playerColor === 'w' ? 'w' : 'b';
             isMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
+        }
+        if (roomData && roomData.capturedPiecesRed) {
+            capturedPiecesRed = [...roomData.capturedPiecesRed];
+            capturedPiecesGreen = [...roomData.capturedPiecesGreen];
+            updateCapturedPiecesDisplay();
         }
     });
     
@@ -578,6 +615,12 @@ function onDrop(source, target) {
             capturedPiecesGreen.push(capturedPiece);
             updateCapturedPiecesDisplay();
             animateFlyingPiece(captureSquare, capturedPiece, false);
+            
+            // Actualizar Firebase con los nuevos contadores
+            update(roomRef, {
+                capturedPiecesRed: capturedPiecesRed,
+                capturedPiecesGreen: capturedPiecesGreen
+            }).catch(() => {});
         }
         
         isProcessingMove = false;
@@ -773,6 +816,11 @@ function resetCapturedPieces() {
 }
 
 function leaveGame() {
+    if (isTurnOverlayActive) {
+        $('.turn-overlay').remove();
+        isTurnOverlayActive = false;
+    }
+    
     if (roomRef && currentRoomId) {
         get(roomRef).then((snapshot) => {
             const roomData = snapshot.val();
