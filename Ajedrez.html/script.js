@@ -45,14 +45,12 @@ let capturedPiecesGreen = [];
 // Audios de captura
 const victimAudios = [
     { src: 'audios/aweonao.mp3', name: 'aweonao' },
-    { src: 'audios/conesta.mp3', name: 'conesta' },
-    { src: 'audios/veggeta.mp3', name: 'veggeta' }
+    { src: 'audios/bonk.mp3', name: 'bonk' }
 ];
 
 const attackerAudios = [
     { src: 'audios/uena.mp3', name: 'uena' },
     { src: 'audios/bonk.mp3', name: 'bonk' },
-    { src: 'audios/choche.mp3', name: 'choche' }
 ];
 
 const preloadedVictimAudios = [];
