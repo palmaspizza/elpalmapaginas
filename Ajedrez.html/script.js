@@ -29,6 +29,8 @@ let playerUniqueId = null;
 let roomDataCache = null;
 let isProcessingMove = false;
 let lastProcessedTimestamp = 0;
+let isMuted = true;
+let isTurnOverlayActive = false;
 
 // Variables para resaltado de movimientos legales
 let currentHighlightedSquares = [];
@@ -68,6 +70,7 @@ function preloadAudios() {
 }
 
 function playRandomVictimAudio() {
+    if (isMuted) return;
     const randomIndex = Math.floor(Math.random() * preloadedVictimAudios.length);
     const audio = preloadedVictimAudios[randomIndex];
     audio.currentTime = 0;
@@ -75,14 +78,64 @@ function playRandomVictimAudio() {
 }
 
 function playRandomAttackerAudio() {
+    if (isMuted) return;
     const randomIndex = Math.floor(Math.random() * preloadedAttackerAudios.length);
     const audio = preloadedAttackerAudios[randomIndex];
     audio.currentTime = 0;
     audio.play().catch(e => console.log('Error reproduciendo audio:', e));
 }
 
+function showTurnOverlay() {
+    if (isTurnOverlayActive) return;
+    isTurnOverlayActive = true;
+    
+    const overlay = $('<div class="turn-overlay"><span>🎯 TU TURNO 🎯</span></div>');
+    $('body').append(overlay);
+    
+    setTimeout(() => {
+        overlay.remove();
+        isTurnOverlayActive = false;
+    }, 2000);
+}
+
 $(document).ready(() => {
     preloadAudios();
+    
+    // Configurar botón de mute
+    const muteBtn = $('#mute-btn');
+    muteBtn.click(() => {
+        isMuted = !isMuted;
+        if (isMuted) {
+            muteBtn.html('🔇');
+            muteBtn.addClass('muted');
+        } else {
+            muteBtn.html('🔊');
+            muteBtn.removeClass('muted');
+        }
+    });
+    
+    // Prevenir pull-to-refresh en móviles
+    // Prevenir scroll SOLO cuando se arrastra una pieza (no en todo momento)
+let isDraggingPiece = false;
+
+document.body.addEventListener('touchmove', (e) => {
+    // Solo prevenir scroll si se está arrastrando una pieza
+    if (isDraggingPiece) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// Detectar cuando se empieza a arrastrar una pieza
+$(document).on('dragstart', '.piece-417db', function() {
+    isDraggingPiece = true;
+});
+
+// Detectar cuando se suelta la pieza
+$(document).on('dragend', function() {
+    setTimeout(() => {
+        isDraggingPiece = false;
+    }, 100);
+});
     
     const savedName = localStorage.getItem('chessPlayerName');
     if (savedName) {
@@ -164,7 +217,9 @@ function createNewRoom() {
         winnerName: null,
         createdAt: Date.now(),
         lastMoveTimestamp: Date.now(),
-        lastCapturePending: null
+        lastCapturePending: null,
+        capturedPiecesRed: [],
+        capturedPiecesGreen: []
     };
     
     set(newRoomRef, roomData).then(() => {
@@ -243,6 +298,15 @@ function setupGame(roomReference, playerPosition, color) {
             return;
         }
         
+        // Sincronizar contadores de piezas capturadas desde Firebase
+        if (roomData.capturedPiecesRed && Array.isArray(roomData.capturedPiecesRed)) {
+            capturedPiecesRed = [...roomData.capturedPiecesRed];
+        }
+        if (roomData.capturedPiecesGreen && Array.isArray(roomData.capturedPiecesGreen)) {
+            capturedPiecesGreen = [...roomData.capturedPiecesGreen];
+        }
+        updateCapturedPiecesDisplay();
+        
         // Procesar captura pendiente
         if (roomData.lastCapturePending && !roomData.lastCapturePending.processed && 
             roomData.lastCapturePending.timestamp && roomData.lastCapturePending.timestamp > lastProcessedTimestamp) {
@@ -263,6 +327,12 @@ function setupGame(roomReference, playerPosition, color) {
                     capturedPiecesRed.push(capture.piece);
                     updateCapturedPiecesDisplay();
                     animateFlyingPiece(capture.square, capture.piece, true);
+                    
+                    // Actualizar Firebase con los nuevos contadores
+                    update(roomRef, {
+                        capturedPiecesRed: capturedPiecesRed,
+                        capturedPiecesGreen: capturedPiecesGreen
+                    }).catch(() => {});
                 }
             }
         }
@@ -276,9 +346,17 @@ function setupGame(roomReference, playerPosition, color) {
             }
         }
         
+        const previousTurn = isMyTurn;
+        
         if (roomData.turn) {
             const myColorCode = playerColor === 'w' ? 'w' : 'b';
-            isMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
+            const newIsMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
+            
+            if (!previousTurn && newIsMyTurn && isGameActive && !roomData.gameOver) {
+                showTurnOverlay();
+            }
+            
+            isMyTurn = newIsMyTurn;
         }
         
         updateUI(roomData);
@@ -318,6 +396,11 @@ function setupGame(roomReference, playerPosition, color) {
         if (roomData && roomData.turn) {
             const myColorCode = playerColor === 'w' ? 'w' : 'b';
             isMyTurn = (roomData.turn === myColorCode && !roomData.gameOver);
+        }
+        if (roomData && roomData.capturedPiecesRed) {
+            capturedPiecesRed = [...roomData.capturedPiecesRed];
+            capturedPiecesGreen = [...roomData.capturedPiecesGreen];
+            updateCapturedPiecesDisplay();
         }
     });
     
@@ -370,6 +453,7 @@ function onMouseoverSquare(square) {
     if (!isGameActive) return;
     if (!isMyTurn) return;
     if (game.game_over()) return;
+    if (isTurnOverlayActive) return;
     
     const piece = game.get(square);
     if (!piece) return;
@@ -387,7 +471,6 @@ function onMouseoutSquare(square) {
 function highlightLegalMoves(square) {
     clearHighlights();
     
-    // Usar chess.js para obtener movimientos legales VERIFICADOS
     const moves = game.moves({
         square: square,
         verbose: true
@@ -396,8 +479,6 @@ function highlightLegalMoves(square) {
     if (moves.length === 0) return;
     
     moves.forEach(move => {
-        // Solo resaltar movimientos que sean LEGALES según chess.js
-        // chess.js ya valida todas las reglas incluyendo las del peón
         const targetSquare = move.to;
         highlightSquare(targetSquare, 'legal-move');
         currentHighlightedSquares.push(targetSquare);
@@ -427,6 +508,7 @@ function onDragStart(source, piece, position, orientation) {
     if (!isMyTurn) return false;
     if (game.game_over()) return false;
     if (isProcessingMove) return false;
+    if (isTurnOverlayActive) return false;
     
     const pieceColor = piece.charAt(0);
     if (playerColor !== pieceColor) return false;
@@ -451,9 +533,12 @@ function onDrop(source, target) {
         return 'snapback';
     }
     
+    if (isTurnOverlayActive) {
+        return 'snapback';
+    }
+    
     isProcessingMove = true;
     
-    // VALIDACIÓN ESTRICTA: Verificar si el movimiento es legal ANTES de ejecutarlo
     const moves = game.moves({ verbose: true });
     const isValidMove = moves.some(move => move.from === source && move.to === target);
     
@@ -464,7 +549,6 @@ function onDrop(source, target) {
         return 'snapback';
     }
     
-    // Ejecutar el movimiento solo si es legal
     const move = game.move({
         from: source,
         to: target,
@@ -531,6 +615,12 @@ function onDrop(source, target) {
             capturedPiecesGreen.push(capturedPiece);
             updateCapturedPiecesDisplay();
             animateFlyingPiece(captureSquare, capturedPiece, false);
+            
+            // Actualizar Firebase con los nuevos contadores
+            update(roomRef, {
+                capturedPiecesRed: capturedPiecesRed,
+                capturedPiecesGreen: capturedPiecesGreen
+            }).catch(() => {});
         }
         
         isProcessingMove = false;
@@ -726,6 +816,11 @@ function resetCapturedPieces() {
 }
 
 function leaveGame() {
+    if (isTurnOverlayActive) {
+        $('.turn-overlay').remove();
+        isTurnOverlayActive = false;
+    }
+    
     if (roomRef && currentRoomId) {
         get(roomRef).then((snapshot) => {
             const roomData = snapshot.val();
@@ -783,6 +878,7 @@ function resetGame() {
     roomDataCache = null;
     isProcessingMove = false;
     lastProcessedTimestamp = 0;
+    isTurnOverlayActive = false;
     clearHighlights();
     resetCapturedPieces();
     
