@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajedrez Multijugador Online</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div id="game-container">
+            <div id="board-container"></div>
+            <div id="game-info">
+                <div id="player-info">
+                    <div class="player-card" id="player1-card">
+                        <i class="fas fa-user"></i>
+                        <span id="player1-name">Esperando jugador...</span>
+                        <span class="piece-color">♔ Blancas</span>
+                    </div>
+                    <div class="vs-text">VS</div>
+                    <div class="player-card" id="player2-card">
+                        <i class="fas fa-user"></i>
+                        <span id="player2-name">Esperando jugador...</span>
+                        <span class="piece-color">♚ Negras</span>
+                    </div>
+                </div>
+                <div id="turn-indicator">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span id="turn-text">Esperando partida...</span>
+                </div>
+                <div id="game-status"></div>
+                <button id="leave-btn" class="btn btn-secondary" style="display: none;">
+                    <i class="fas fa-sign-out-alt"></i> Abandonar partida
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay" class="overlay">
+        <div class="overlay-content">
+            <h1><i class="fas fa-chess"></i> Ajedrez Online</h1>
+            <div class="form-group">
+                <label for="player-name">Ingresa tu nombre:</label>
+                <input type="text" id="player-name" placeholder="Ej: Gandalf" maxlength="20" required>
+            </div>
+            <button id="search-btn" class="btn btn-primary">
+                <i class="fas fa-search"></i> Buscar partida
+            </button>
+            <div id="search-status" class="search-status"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
