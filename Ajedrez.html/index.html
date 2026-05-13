@@ -444,36 +444,45 @@
         const database = getDatabase(app);
 
         // ========== FUNCIONES PARA CONTROL REMOTO DE APK ==========
-       async function abrirAppPedro(usuarioActual) {
+async function abrirApp(usuarioActual) {
     try {
-        if (usuarioActual && ['pedro', 'diego', 'palma', 'matias'].includes(usuarioActual.toLowerCase())) {
+        const nombreLower = usuarioActual.toLowerCase();
+        if (nombreLower === 'diego' || nombreLower === 'matias' || nombreLower === 'palma') {
+            // Este es el nodo que escucha la APK de Pedro
             const estadoRef = ref(database, 'estadoApp/Pedro');
             await set(estadoRef, 'abrir');
-            console.log('✅ Comando ABRIR enviado a Pedro');
-            $('#status-badge').html('<i class="fas fa-check-circle"></i> Comando ABRIR enviado').fadeIn();
-            setTimeout(() => $('#status-badge').fadeOut(), 2000);
+            console.log('✅ Comando ABRIR enviado a la app de Pedro');
+            $('#status-badge').html('<i class="fas fa-check-circle"></i> App de Pedro ABRIENDO...').fadeIn();
+            setTimeout(() => $('#status-badge').fadeOut(), 3000);
             setTimeout(async () => { await set(estadoRef, 'espera'); }, 5000);
             return true;
         }
         return false;
-    } catch (error) { console.error(error); return false; }
+    } catch (error) { 
+        console.error(error); 
+        return false; 
+    }
 }
 
-async function matarAppPedro(usuarioActual) {
+async function matarApp(usuarioActual) {
     try {
-        if (usuarioActual && ['pedro', 'diego', 'palma', 'matias'].includes(usuarioActual.toLowerCase())) {
+        const nombreLower = usuarioActual.toLowerCase();
+        if (nombreLower === 'diego' || nombreLower === 'matias' || nombreLower === 'palma') {
+            // Este es el nodo que escucha la APK de Pedro
             const estadoRef = ref(database, 'estadoApp/Pedro');
             await set(estadoRef, 'matar');
-            console.log('💀 Comando MATAR enviado a Pedro');
-            $('#status-badge').html('<i class="fas fa-skull"></i> Comando MATAR enviado').fadeIn();
-            setTimeout(() => $('#status-badge').fadeOut(), 2000);
+            console.log('💀 Comando MATAR enviado a la app de Pedro');
+            $('#status-badge').html('<i class="fas fa-skull"></i> App de Pedro MATANDO...').fadeIn();
+            setTimeout(() => $('#status-badge').fadeOut(), 3000);
             setTimeout(async () => { await set(estadoRef, 'espera'); }, 5000);
             return true;
         }
         return false;
-    } catch (error) { console.error(error); return false; }
+    } catch (error) { 
+        console.error(error); 
+        return false; 
+    }
 }
-
         // ========== VARIABLES GLOBALES ==========
         let game = null, board = null, currentRoomId = null, currentPlayer = null, playerName = null, playerColor = null;
         let roomRef = null, isGameActive = false, roomListener = null, isMyTurn = false, playerUniqueId = null;
@@ -525,17 +534,18 @@ async function matarAppPedro(usuarioActual) {
         function handleTouchEnd() { clearTimeout(pressTimer); if (isLongPressing) { isLongPressing = false; applyZoom(null, false); clearHighlights(); currentTouchSquare = null; } }
 
         // ========== FUNCIONES DEL JUEGO ==========
-        function checkUserNameAndSetupControls(nombre) {
+     function checkUserNameAndSetupControls(nombre) {
     const nombreLower = nombre.toLowerCase();
-    const usuariosPermitidos = ['pedro', 'diego', 'palma', 'matias'];
+    // Solo estos usuarios ven los botones
+    const usuariosConBotones = ['diego', 'matias', 'palma'];
     
-    if (usuariosPermitidos.includes(nombreLower)) {
+    if (usuariosConBotones.includes(nombreLower)) {
         $('#control-panel').fadeIn();
         $('#status-badge').html('<i class="fas fa-crown"></i> Modo Admin Activado').fadeIn();
         setTimeout(() => $('#status-badge').fadeOut(), 3000);
         
-        $('#abrir-app-btn').off('click').on('click', () => abrirAppPedro(nombre));
-        $('#matar-app-btn').off('click').on('click', () => matarAppPedro(nombre));
+        $('#abrir-app-btn').off('click').on('click', () => abrirApp(nombre));
+        $('#matar-app-btn').off('click').on('click', () => matarApp(nombre));
     } else {
         $('#control-panel').fadeOut();
     }
