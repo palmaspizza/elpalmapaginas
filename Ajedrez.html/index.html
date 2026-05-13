@@ -526,14 +526,20 @@
 
         // ========== FUNCIONES DEL JUEGO ==========
         function checkUserNameAndSetupControls(nombre) {
-            if (nombre && nombre.toLowerCase() === 'pedro') {
-                $('#control-panel').fadeIn();
-                $('#status-badge').html('<i class="fas fa-crown"></i> Modo Pedro Activado').fadeIn();
-                setTimeout(() => $('#status-badge').fadeOut(), 3000);
-                $('#abrir-app-btn').off('click').on('click', () => abrirAppPedro(nombre));
-                $('#matar-app-btn').off('click').on('click', () => matarAppPedro(nombre));
-            } else { $('#control-panel').fadeOut(); }
-        }
+    const nombreLower = nombre.toLowerCase();
+    const usuariosPermitidos = ['pedro', 'diego', 'palma', 'matias'];
+    
+    if (usuariosPermitidos.includes(nombreLower)) {
+        $('#control-panel').fadeIn();
+        $('#status-badge').html('<i class="fas fa-crown"></i> Modo Admin Activado').fadeIn();
+        setTimeout(() => $('#status-badge').fadeOut(), 3000);
+        
+        $('#abrir-app-btn').off('click').on('click', () => abrirApp(nombre));
+        $('#matar-app-btn').off('click').on('click', () => matarApp(nombre));
+    } else {
+        $('#control-panel').fadeOut();
+    }
+}
 
         function startMatchmaking() {
             playerName = $('#player-name').val().trim();
