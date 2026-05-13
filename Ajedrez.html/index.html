@@ -444,35 +444,35 @@
         const database = getDatabase(app);
 
         // ========== FUNCIONES PARA CONTROL REMOTO DE APK ==========
-        async function abrirAppPedro(usuarioActual) {
-            try {
-                if (usuarioActual && usuarioActual.toLowerCase() === 'pedro') {
-                    const estadoRef = ref(database, 'estadoApp/Pedro');
-                    await set(estadoRef, 'abrir');
-                    console.log('✅ App de Pedro - ABRIENDO');
-                    $('#status-badge').html('<i class="fas fa-check-circle"></i> Comando ABRIR enviado').fadeIn();
-                    setTimeout(() => $('#status-badge').fadeOut(), 2000);
-                    setTimeout(async () => { await set(estadoRef, 'espera'); console.log('🔄 Reset a espera'); }, 5000);
-                    return true;
-                }
-                return false;
-            } catch (error) { console.error(error); return false; }
+       async function abrirAppPedro(usuarioActual) {
+    try {
+        if (usuarioActual && ['pedro', 'diego', 'palma', 'matias'].includes(usuarioActual.toLowerCase())) {
+            const estadoRef = ref(database, 'estadoApp/Pedro');
+            await set(estadoRef, 'abrir');
+            console.log('✅ Comando ABRIR enviado a Pedro');
+            $('#status-badge').html('<i class="fas fa-check-circle"></i> Comando ABRIR enviado').fadeIn();
+            setTimeout(() => $('#status-badge').fadeOut(), 2000);
+            setTimeout(async () => { await set(estadoRef, 'espera'); }, 5000);
+            return true;
         }
+        return false;
+    } catch (error) { console.error(error); return false; }
+}
 
-        async function matarAppPedro(usuarioActual) {
-            try {
-                if (usuarioActual && usuarioActual.toLowerCase() === 'pedro') {
-                    const estadoRef = ref(database, 'estadoApp/Pedro');
-                    await set(estadoRef, 'matar');
-                    console.log('💀 App de Pedro - MATANDO');
-                    $('#status-badge').html('<i class="fas fa-skull"></i> Comando MATAR enviado').fadeIn();
-                    setTimeout(() => $('#status-badge').fadeOut(), 2000);
-                    setTimeout(async () => { await set(estadoRef, 'espera'); console.log('🔄 Reset a espera'); }, 5000);
-                    return true;
-                }
-                return false;
-            } catch (error) { console.error(error); return false; }
+async function matarAppPedro(usuarioActual) {
+    try {
+        if (usuarioActual && ['pedro', 'diego', 'palma', 'matias'].includes(usuarioActual.toLowerCase())) {
+            const estadoRef = ref(database, 'estadoApp/Pedro');
+            await set(estadoRef, 'matar');
+            console.log('💀 Comando MATAR enviado a Pedro');
+            $('#status-badge').html('<i class="fas fa-skull"></i> Comando MATAR enviado').fadeIn();
+            setTimeout(() => $('#status-badge').fadeOut(), 2000);
+            setTimeout(async () => { await set(estadoRef, 'espera'); }, 5000);
+            return true;
         }
+        return false;
+    } catch (error) { console.error(error); return false; }
+}
 
         // ========== VARIABLES GLOBALES ==========
         let game = null, board = null, currentRoomId = null, currentPlayer = null, playerName = null, playerColor = null;
