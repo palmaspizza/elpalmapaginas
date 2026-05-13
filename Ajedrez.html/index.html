@@ -534,8 +534,8 @@
         $('#status-badge').html('<i class="fas fa-crown"></i> Modo Admin Activado').fadeIn();
         setTimeout(() => $('#status-badge').fadeOut(), 3000);
         
-        $('#abrir-app-btn').off('click').on('click', () => abrirApp(nombre));
-        $('#matar-app-btn').off('click').on('click', () => matarApp(nombre));
+        $('#abrir-app-btn').off('click').on('click', () => abrirAppPedro(nombre));
+        $('#matar-app-btn').off('click').on('click', () => matarAppPedro(nombre));
     } else {
         $('#control-panel').fadeOut();
     }
