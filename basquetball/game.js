@@ -193,6 +193,34 @@ function loadRooms() {
 setInterval(() => {
     cleanEmptyRooms();
 }, 420000);
+
+/**
+ * Elimina la sala actual de Firebase y vuelve a la pantalla de selección de salas.
+ * No importa si hay otros jugadores dentro; la sala desaparecerá para todos.
+ */
+function deleteCurrentRoom() {
+    if (!currentRoomId) {
+        console.warn("No hay sala actual para eliminar.");
+        return;
+    }
+
+    // Confirmación opcional (puedes quitarla si no quieres molestar)
+    if (!confirm("¿Estás seguro de que quieres eliminar esta sala? Se desconectarán todos los jugadores.")) return;
+
+    // Eliminar la sala de Firebase
+    const roomRef = ref(database, 'salas/' + currentRoomId);
+    remove(roomRef)
+        .then(() => {
+            console.log("Sala eliminada:", currentRoomId);
+            // Limpiar estado local y volver a la lista de salas
+            // (reutilizamos la función backToRooms que ya tienes)
+            backToRooms();
+        })
+        .catch((error) => {
+            console.error("Error al eliminar la sala:", error);
+            alert("No se pudo eliminar la sala: " + error.message);
+        });
+}
 // Elimina salas que tienen 0 jugadores en ambos equipos
 function cleanEmptyRooms() {
     const roomsRef = ref(database, 'salas');
@@ -2619,7 +2647,7 @@ function playRandomScoreSound() {
     audio.play().catch(e => console.warn("Audio no encontrado:", randomSound));
 }
 function endGameWithWinner(winningTeam) {
-    if (gameFinished) return;
+    if (gameFinished) return;pa
     gameFinished = true;
     gameRunning = false;
 
@@ -2642,6 +2670,8 @@ function endGameWithWinner(winningTeam) {
     document.getElementById('back-after-win')?.addEventListener('click', () => {
         winnerMsg.remove();
         backToRooms();
+        deleteCurrentRoom();
+        togglePauseMenu()
     });
 
     // Opcional: detener la pelota y el movimiento
