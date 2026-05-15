@@ -505,47 +505,76 @@ function setupLights() {
 // ============================================================
 
 function createBeautifulCourt() {
-    // === TEXTURA DE MADERA ===
+    // === TEXTURA DE MADERA DE ALTA FIDELIDAD (Estética 2) ===
     const canvas = document.createElement('canvas');
-    canvas.width = 2048; canvas.height = 2048;
+    canvas.width = 4096; canvas.height = 4096;
     const ctx = canvas.getContext('2d');
 
+    // Fondo base con grano de madera realista
     const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    grad.addColorStop(0, '#c4944a');
-    grad.addColorStop(0.5, '#b8843a');
-    grad.addColorStop(1, '#a8742a');
+    grad.addColorStop(0, '#d2a679');
+    grad.addColorStop(0.5, '#c68c53');
+    grad.addColorStop(1, '#ac7339');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (let i = 0; i < 500; i++) {
+    // Vetas de madera finas
+    for (let i = 0; i < 2000; i++) {
         ctx.beginPath();
         const sx = Math.random() * canvas.width, sy = Math.random() * canvas.height;
         ctx.moveTo(sx, sy);
-        ctx.lineTo(sx + (Math.random() - 0.5) * 80, sy + (Math.random() - 0.5) * 80);
-        ctx.strokeStyle = 'rgba(80,50,20,' + (Math.random() * 0.4) + ')';
-        ctx.lineWidth = Math.random() * 4 + 1;
+        ctx.bezierCurveTo(
+            sx + Math.random() * 200, sy + Math.random() * 50,
+            sx + Math.random() * 200, sy + Math.random() * 50,
+            sx + 400 + Math.random() * 200, sy + (Math.random() - 0.5) * 100
+        );
+        ctx.strokeStyle = 'rgba(60,40,20,' + (Math.random() * 0.15) + ')';
+        ctx.lineWidth = Math.random() * 2 + 0.5;
         ctx.stroke();
     }
-    for (let i = 0; i < 80; i++) {
+
+    // Tablones
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 4;
+    const plankWidth = 120;
+    for (let x = 0; x < canvas.width; x += plankWidth) {
         ctx.beginPath();
-        ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 8 + 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(70,40,15,' + (Math.random() * 0.5) + ')';
-        ctx.fill();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+        
+        // Juntas de tablones aleatorias
+        for (let y = Math.random() * 500; y < canvas.height; y += 800 + Math.random() * 1000) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + plankWidth, y);
+            ctx.stroke();
+        }
     }
 
     const woodTex = new THREE.CanvasTexture(canvas);
+    woodTex.anisotropy = 16;
     woodTex.wrapS = THREE.RepeatWrapping;
     woodTex.wrapT = THREE.RepeatWrapping;
-    woodTex.repeat.set(4, 3);
+    woodTex.repeat.set(2, 2);
 
     const courtPlane = new THREE.Mesh(
         new THREE.PlaneGeometry(courtConfig.length, courtConfig.width),
-        new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.35, metalness: 0.08, color: 0xc4944a })
+        new THREE.MeshStandardMaterial({ 
+            map: woodTex, 
+            roughness: 0.15, 
+            metalness: 0.2, 
+            color: 0xffffff,
+            envMapIntensity: 1.5
+        })
     );
     courtPlane.rotation.x = -Math.PI / 2;
     courtPlane.position.y = -0.05;
     courtPlane.receiveShadow = true;
     scene.add(courtPlane);
+
+    // === ATMÓSFERA DE ESTADIO MASIVO (Estética 2) ===
+    createStadiumAtmosphere();
 
     // === MITADES COLOREADAS POR EQUIPO ===
     // Mitad izquierda (X negativo) = equipo AZUL
@@ -682,179 +711,181 @@ function createBeautifulCourt() {
     scene.add(scoreTable);
 }
 
+function createStadiumAtmosphere() {
+    // === GRADAS MASIVAS CON AUDIENCIA (Estética 2) ===
+    const stadiumRadius = 100;
+    const stadiumGeometry = new THREE.CylinderGeometry(stadiumRadius, stadiumRadius - 20, 40, 64, 10, true);
+    const stadiumMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x111122, 
+        side: THREE.BackSide,
+        roughness: 0.9,
+        metalness: 0.1
+    });
+    const stadium = new THREE.Mesh(stadiumGeometry, stadiumMaterial);
+    stadium.position.y = 15;
+    scene.add(stadium);
+
+    // Luces de estadio masivas
+    const towerGeo = new THREE.BoxGeometry(2, 40, 2);
+    const towerMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    const lightPanelGeo = new THREE.PlaneGeometry(8, 6);
+    const lightPanelMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    const towers = [[-45, 45], [45, 45], [-45, -45], [45, -45]];
+    towers.forEach(([tx, tz]) => {
+        const tower = new THREE.Mesh(towerGeo, towerMat);
+        tower.position.set(tx, 20, tz);
+        scene.add(tower);
+
+        const panel = new THREE.Mesh(lightPanelGeo, lightPanelMat);
+        panel.position.set(tx, 40, tz);
+        panel.lookAt(0, 0, 0);
+        scene.add(panel);
+
+        const spot = new THREE.SpotLight(0xffffff, 2, 150, Math.PI/4, 0.5);
+        spot.position.set(tx, 40, tz);
+        spot.target.position.set(0, 0, 0);
+        scene.add(spot);
+        scene.add(spot.target);
+    });
+
+    // Audiencia densa (representada por miles de puntos brillantes)
+    const audienceCount = 15000;
+    const audienceGeo = new THREE.BufferGeometry();
+    const audiencePos = new Float32Array(audienceCount * 3);
+    const audienceColors = new Float32Array(audienceCount * 3);
+
+    for (let i = 0; i < audienceCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = stadiumRadius - 10 - Math.random() * 15;
+        const height = 5 + Math.random() * 30;
+        
+        audiencePos[i * 3] = Math.cos(angle) * radius;
+        audiencePos[i * 3 + 1] = height;
+        audiencePos[i * 3 + 2] = Math.sin(angle) * radius;
+
+        const color = new THREE.Color().setHSL(Math.random(), 0.7, 0.6);
+        audienceColors[i * 3] = color.r;
+        audienceColors[i * 3 + 1] = color.g;
+        audienceColors[i * 3 + 2] = color.b;
+    }
+
+    audienceGeo.setAttribute('position', new THREE.BufferAttribute(audiencePos, 3));
+    audienceGeo.setAttribute('color', new THREE.BufferAttribute(audienceColors, 3));
+    
+    const audienceMaterial = new THREE.PointsMaterial({ 
+        size: 0.4, 
+        vertexColors: true, 
+        transparent: true, 
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending 
+    });
+    const audience = new THREE.Points(audienceGeo, audienceMaterial);
+    scene.add(audience);
+}
+
 // ============================================================
 // 8. AROS
 // ============================================================
 
 function createGiantHoops() {
-    const hoopMat    = new THREE.MeshStandardMaterial({ color: 0xff4400, metalness: 0.95, roughness: 0.2, emissive: 0x441100, emissiveIntensity: 0.2 });
-    const boardMat   = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, metalness: 0.25, roughness: 0.15, transparent: true, opacity: 0.88 });
-    const rimMat     = new THREE.MeshStandardMaterial({ color: 0xff6600, metalness: 0.92, roughness: 0.28 });
-    const suppMat    = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.72, roughness: 0.38 });
-    const netMat     = new THREE.LineBasicMaterial({ color: 0xeeeeee });
-    const borderMat  = new THREE.MeshStandardMaterial({ color: 0xff2222, metalness: 0.45, roughness: 0.25, emissive: 0x331100, emissiveIntensity: 0.12 });
-    const ledMat     = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff4400, emissiveIntensity: 0.7 });
-    const glassMat   = new THREE.MeshStandardMaterial({ color: 0xaaddff, metalness: 0.85, roughness: 0.08, transparent: true, opacity: 0.28 });
-    const boltMat    = new THREE.MeshStandardMaterial({ color: 0xccaa88, metalness: 0.78, roughness: 0.32 });
-    const detailMat  = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.68, roughness: 0.35 });
-    const redDetMat  = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.4, roughness: 0.3 });
-
-    const hoopRadius = 1.2, hoopTube = 0.14;
-    const bw = 4.2, bh = 2.7, netLen = 1.25;
+    // Colores y materiales mejorados para aros profesionales (Estética 2)
+    const hoopMat    = new THREE.MeshStandardMaterial({ color: 0xff3300, metalness: 0.9, roughness: 0.1, emissive: 0xff0000, emissiveIntensity: 0.3 });
+    const boardMat   = new THREE.MeshPhysicalMaterial({ 
+        color: 0xffffff, 
+        metalness: 0.1, 
+        roughness: 0.05, 
+        transparent: true, 
+        opacity: 0.8,
+        transmission: 0.5,
+        thickness: 0.5
+    });
+    const rimMat     = new THREE.MeshStandardMaterial({ color: 0xff4400, metalness: 0.9, roughness: 0.1 });
+    const suppMat    = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8, roughness: 0.2 });
+    const netMat     = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+    const borderMat  = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5 });
+    
+    const hoopRadius = 1.2, hoopTube = 0.12;
+    const bw = 4.2, bh = 2.7, netLen = 1.5;
     const hh = courtConfig.hoopHeight;
 
     function buildHoop(isRight) {
         const g = new THREE.Group();
-        const hoopX   = isRight ? 0.65 : -0.65;
-        const suppX   = isRight ? -1.2 : 1.2;
-        const armX    = isRight ? -0.3 : 0.3;
+        const hoopX   = isRight ? 0.75 : -0.75;
+        const suppX   = isRight ? -1.5 : 1.5;
+        const armX    = isRight ? -0.4 : 0.4;
 
-        // Poste principal
-        const pole = new THREE.Mesh(new THREE.BoxGeometry(0.45, 5.0, 0.45), suppMat);
-        pole.position.set(suppX, 2.15, 0);
-        pole.castShadow = true;
-        g.add(pole);
-
-        // Placa base
-        const base = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.12, 0.95), detailMat);
-        base.position.set(suppX, 0.1, 0);
+        // Estructura de soporte profesional
+        const base = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 1.5), suppMat);
+        base.position.set(suppX, 0.25, 0);
         g.add(base);
 
-        // Tornillos
-        [-0.4, 0, 0.4].forEach(bx => {
-            [0.32, -0.32].forEach(bz => {
-                const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.06, 8), boltMat);
-                bolt.position.set(suppX + bx, 0.17, bz);
-                bolt.rotation.x = Math.PI / 2;
-                g.add(bolt);
-            });
-        });
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 5, 8), suppMat);
+        pole.position.set(suppX, 2.5, 0);
+        g.add(pole);
 
-        // Brazo
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.22, 0.42), suppMat);
-        arm.position.set(armX, 3.25, 0);
-        arm.castShadow = true;
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.3, 0.3), suppMat);
+        arm.position.set(armX * 1.5, 4.5, 0);
         g.add(arm);
 
-        // Refuerzos diagonales
-        [0.38, -0.38].forEach(bz => {
-            const ds = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.15, 0.18), detailMat);
-            ds.position.set(armX * 1.8, 2.65, bz);
-            g.add(ds);
-        });
-
-        // Tablero
-        const board = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.09), boardMat);
-        board.position.set(0, hh + 0.9, 0);
-        board.rotation.y = Math.PI / 2;
-        board.castShadow = true;
+        // Tablero detallado
+        const board = new THREE.Mesh(new THREE.BoxGeometry(0.1, bh, bw), boardMat);
+        board.position.set(0, hh + 0.5, 0);
         g.add(board);
 
-        // Vidrio
-        const glass = new THREE.Mesh(new THREE.BoxGeometry(bw - 0.35, bh - 0.35, 0.04), glassMat);
-        glass.position.set(0, hh + 0.9, 0.035);
-        glass.rotation.y = Math.PI / 2;
-        g.add(glass);
+        // Marco del tablero con luces LED
+        const frameGeo = new THREE.BoxGeometry(0.12, bh + 0.2, 0.1);
+        const frameL = new THREE.Mesh(frameGeo, borderMat);
+        frameL.position.set(0, hh + 0.5, bw/2);
+        g.add(frameL);
+        const frameR = new THREE.Mesh(frameGeo, borderMat);
+        frameR.position.set(0, hh + 0.5, -bw/2);
+        g.add(frameR);
+        const frameT = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, bw + 0.2), borderMat);
+        frameT.position.set(0, hh + 0.5 + bh/2, 0);
+        g.add(frameT);
+        const frameB = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, bw + 0.2), borderMat);
+        frameB.position.set(0, hh + 0.5 - bh/2, 0);
+        g.add(frameB);
 
-        // Marcos rojos del tablero
-        const ft = 0.13, fd = 0.11;
-        const topBorder = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.12, ft, fd), borderMat);
-        topBorder.position.set(0, hh + 2.22, -0.02);
-        topBorder.rotation.y = Math.PI / 2;
-        g.add(topBorder);
-
-        const botBorder = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.12, ft, fd), borderMat);
-        botBorder.position.set(0, hh - 0.41, -0.02);
-        botBorder.rotation.y = Math.PI / 2;
-        g.add(botBorder);
-
-        const lBorder = new THREE.Mesh(new THREE.BoxGeometry(ft, bh + 0.1, fd), borderMat);
-        lBorder.position.set(-bw / 2 - 0.07, hh + 0.9, -0.02);
-        lBorder.rotation.y = Math.PI / 2;
-        g.add(lBorder);
-
-        const rBorder = new THREE.Mesh(new THREE.BoxGeometry(ft, bh + 0.1, fd), borderMat);
-        rBorder.position.set(bw / 2 + 0.07, hh + 0.9, -0.02);
-        rBorder.rotation.y = Math.PI / 2;
-        g.add(rBorder);
-
-        // Esquinas
-        [[-bw/2-0.04, hh+2.19], [bw/2+0.04, hh+2.19], [-bw/2-0.04, hh-0.38], [bw/2+0.04, hh-0.38]].forEach(([px, py]) => {
-            const c = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), borderMat);
-            c.position.set(px, py, -0.02);
-            g.add(c);
-        });
-
-        // Rayas rojas decorativas
-        [-bw/2+0.25, bw/2-0.25].forEach(sx => {
-            const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, bh - 0.8, 0.05), redDetMat);
-            stripe.position.set(sx, hh + 0.9, 0.045);
-            stripe.rotation.y = Math.PI / 2;
-            g.add(stripe);
-        });
-
-        // Aro
-        const hoop = new THREE.Mesh(new THREE.TorusGeometry(hoopRadius, hoopTube, 96, 256), hoopMat);
+        // El aro
+        const hoop = new THREE.Mesh(new THREE.TorusGeometry(hoopRadius, hoopTube, 32, 100), hoopMat);
         hoop.rotation.x = Math.PI / 2;
-        hoop.position.set(hoopX, hh, -0.42);
-        hoop.castShadow = true;
+        hoop.position.set(hoopX, hh, 0);
         g.add(hoop);
 
-        const innerRing = new THREE.Mesh(new THREE.TorusGeometry(hoopRadius - 0.05, 0.045, 64, 256), rimMat);
-        innerRing.rotation.x = Math.PI / 2;
-        innerRing.position.set(hoopX, hh, -0.42);
-        g.add(innerRing);
+        // Soporte del aro (el "breakaway rim")
+        const breakaway = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.4), rimMat);
+        breakaway.position.set(hoopX * 0.4, hh, 0);
+        g.add(breakaway);
 
-        // Soporte del aro
-        const vs = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, 0.26), rimMat);
-        vs.position.set(hoopX * 0.55, hh - 0.14, -0.38);
-        g.add(vs);
-        const hs = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.14, 0.26), rimMat);
-        hs.position.set(hoopX * 0.28, hh - 0.07, -0.45);
-        g.add(hs);
+        // Red profesional (más detallada)
+        for (let i = 0; i < 24; i++) {
+            const a = (i / 24) * Math.PI * 2;
+            const x1 = hoopX + Math.cos(a) * hoopRadius;
+            const z1 = Math.sin(a) * hoopRadius;
+            const x2 = hoopX + Math.cos(a) * (hoopRadius * 0.6);
+            const z2 = Math.sin(a) * (hoopRadius * 0.6);
+            
+            const points = [
+                new THREE.Vector3(x1, hh, z1),
+                new THREE.Vector3(x2, hh - netLen, z2)
+            ];
+            const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), netMat);
+            g.add(line);
 
-        // LEDs
-        for (let i = 0; i < 28; i++) {
-            const a = (i / 28) * Math.PI * 2;
-            const led = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 12), ledMat);
-            led.position.set(
-                hoopX + Math.cos(a) * (hoopRadius + 0.045),
-                hh + 0.055,
-                Math.sin(a) * (hoopRadius + 0.045) - 0.42
-            );
-            g.add(led);
-        }
-
-        // Red - líneas verticales
-        for (let i = 0; i < 52; i++) {
-            const a = (i / 52) * Math.PI * 2;
-            g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(hoopX + Math.cos(a) * hoopRadius, hh, Math.sin(a) * hoopRadius - 0.42),
-                new THREE.Vector3(hoopX + Math.cos(a) * (hoopRadius * 0.42), hh - netLen, Math.sin(a) * (hoopRadius * 0.42) - 0.42)
-            ]), netMat));
-        }
-
-        // Red - anillos horizontales
-        for (let ry = 0; ry <= 9; ry++) {
-            const rr = hoopRadius - ry * 0.085;
-            const ry2 = hh - ry * 0.14;
-            if (rr > 0.22) {
-                const pts = [];
-                for (let i = 0; i <= 64; i++) {
-                    const a = (i / 64) * Math.PI * 2;
-                    pts.push(new THREE.Vector3(hoopX + Math.cos(a) * rr, ry2, Math.sin(a) * rr - 0.42));
-                }
-                g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xddddcc, opacity: 0.55, transparent: true })));
+            // Nudos de la red
+            if (i % 2 === 0) {
+                const nextA = ((i + 1) / 24) * Math.PI * 2;
+                const nx1 = hoopX + Math.cos(nextA) * hoopRadius;
+                const nz1 = Math.sin(nextA) * hoopRadius;
+                const crossLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(x1, hh - 0.3, z1),
+                    new THREE.Vector3(nx1, hh - 0.3, nz1)
+                ]), netMat);
+                g.add(crossLine);
             }
         }
-
-        // Anillo inferior de red
-        const botPts = [];
-        for (let i = 0; i <= 40; i++) {
-            const a = (i / 40) * Math.PI * 2;
-            botPts.push(new THREE.Vector3(hoopX + Math.cos(a) * (hoopRadius * 0.35), hh - netLen - 0.05, Math.sin(a) * (hoopRadius * 0.35) - 0.42));
-        }
-        g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(botPts), new THREE.LineBasicMaterial({ color: 0xdddddd, opacity: 0.7, transparent: true })));
 
         return g;
     }
@@ -890,11 +921,10 @@ function createGiantHoops() {
         scene.add(l);
     });
 
-    // GUARDAR POSICIONES
-    // hoops[0] = aro derecho, equipo AZUL ataca este aro
-    // hoops[1] = aro izquierdo, equipo ROJO ataca este aro
-    hoops.push({ position: new THREE.Vector3(courtConfig.length / 2 - 0.45, hh, -0.42), attackingTeam: 'blue' });
-    hoops.push({ position: new THREE.Vector3(-courtConfig.length / 2 + 0.45, hh, -0.42), attackingTeam: 'red' });
+    // GUARDAR POSICIONES PARA DETECCIÓN DE CANASTA (Estética 2)
+    // hoops[0] = aro derecho (AZUL ataca aquí), hoops[1] = aro izquierdo (ROJO ataca aquí)
+    hoops.push({ position: new THREE.Vector3(courtConfig.length / 2 - 0.1, hh, 0), attackingTeam: 'blue' });
+    hoops.push({ position: new THREE.Vector3(-courtConfig.length / 2 + 0.1, hh, 0), attackingTeam: 'red' });
 }
 
 // ============================================================
@@ -956,75 +986,92 @@ function createChibiPlayer(color, name, bodyTypeIndex) {
     head.position.y = 1.1 * bt.scaleY;
     g.add(head);
 
-    // Ojos
+    // Ojos (Animación 4 - Diseño facial estúpido)
     const eyeW = new THREE.MeshStandardMaterial({ color: 0xffffff });
     const eyeP = new THREE.MeshStandardMaterial({ color: 0x000000 });
     const eyeH = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    [[-0.3, 1], [0.3, -1]].forEach(([ex]) => {
-        const ew = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), eyeW);
+    [[-0.3, 1], [0.3, -1]].forEach(([ex], i) => {
+        // Ojos de diferentes tamaños y bizcos para efecto gracioso
+        const size = 0.15 + Math.random() * 0.2;
+        const ew = new THREE.Mesh(new THREE.SphereGeometry(size, 32, 32), eyeW);
         ew.position.set(ex, 1.25 * bt.scaleY, 0.7); g.add(ew);
-        const ep = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), eyeP);
-        ep.position.set(ex, 1.22 * bt.scaleY, 0.92); g.add(ep);
-        const eh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 16), eyeH);
-        eh.position.set(ex - 0.07, 1.3 * bt.scaleY, 0.98); g.add(eh);
+        
+        const ep = new THREE.Mesh(new THREE.SphereGeometry(size * 0.6, 32, 32), eyeP);
+        // Posiciones bizcas
+        ep.position.set(ex + (i === 0 ? 0.05 : -0.05), 1.22 * bt.scaleY, 0.7 + size * 0.8); 
+        g.add(ep);
     });
 
-    // Nariz
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff8866 }));
-    nose.position.set(0, 1.05 * bt.scaleY, 0.88); g.add(nose);
+    // Nariz (Más grande y roja - Animación 4)
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff3300 }));
+    nose.position.set(0, 1.05 * bt.scaleY, 0.95); g.add(nose);
 
-    // Sonrisa
-    const smilePts = [];
-    for (let i = -0.55; i <= 0.55; i += 0.05) smilePts.push(new THREE.Vector3(i, 0.92 * bt.scaleY, 0.92));
-    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(smilePts), new THREE.LineBasicMaterial({ color: 0x663322 })));
+    // Sonrisa (Boca abierta y estúpida - Animación 4)
+    const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.05, 16, 32, Math.PI), new THREE.MeshStandardMaterial({ color: 0x660000 }));
+    mouth.position.set(0, 0.85 * bt.scaleY, 0.85);
+    mouth.rotation.x = Math.PI;
+    g.add(mouth);
 
-    // Mejillas
+    // Mejillas exageradas
     [[-0.52, 0.98, 0.68], [0.52, 0.98, 0.68]].forEach(([cx, cy, cz]) => {
-        const ch = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffaaaa }));
+        const ch = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff77aa }));
         ch.position.set(cx, cy * bt.scaleY, cz); g.add(ch);
     });
 
-    // Gorra
-    const hat = new THREE.Mesh(new THREE.SphereGeometry(0.58, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff6600 }));
-    hat.position.y = 1.75 * bt.scaleY; hat.scale.set(1, 0.28, 1); g.add(hat);
-    const lm = new THREE.MeshStandardMaterial({ color: 0x000000 });
-    const hl1 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.9), lm); hl1.position.set(0, 1.75 * bt.scaleY, 0); g.add(hl1);
-    const hl2 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.05), lm); hl2.position.set(0, 1.75 * bt.scaleY, 0); g.add(hl2);
-    const pp = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
-    pp.position.set(0, 1.92 * bt.scaleY, 0); g.add(pp);
+    // Gorra absurda (Animación 4)
+    const hat = new THREE.Mesh(new THREE.SphereGeometry(0.58, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffff00 }));
+    hat.position.y = 1.75 * bt.scaleY; 
+    hat.position.x = 0.2; // Gorra torcida
+    hat.rotation.z = 0.3;
+    hat.scale.set(1, 0.28, 1); 
+    g.add(hat);
 
-    // Brazos
-    const armGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.75, 8);
+    // Hélice en la gorra para más ridiculez
+    const propeller = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.1), new THREE.MeshStandardMaterial({ color: 0xff00ff }));
+    propeller.position.set(0.2, 1.95 * bt.scaleY, 0);
+    g.add(propeller);
+    g.userData.propeller = propeller;
+
+    // Brazos exagerados
+    const armGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.2, 8); // Más largos
     const armMat = new THREE.MeshStandardMaterial({ color });
-    const leftArm = new THREE.Mesh(armGeo, armMat); leftArm.position.set(-0.68, 0.98 * bt.scaleY, 0); leftArm.castShadow = true; g.add(leftArm);
-    const rightArm = new THREE.Mesh(armGeo, armMat); rightArm.position.set(0.68, 0.98 * bt.scaleY, 0); rightArm.castShadow = true; g.add(rightArm);
+    const leftArm = new THREE.Mesh(armGeo, armMat); 
+    leftArm.position.set(-0.7, 0.9 * bt.scaleY, 0); 
+    leftArm.castShadow = true; 
+    g.add(leftArm);
+    
+    const rightArm = new THREE.Mesh(armGeo, armMat); 
+    rightArm.position.set(0.7, 0.9 * bt.scaleY, 0); 
+    rightArm.castShadow = true; 
+    g.add(rightArm);
 
-    // Manos
+    // Manos (Más grandes - Animación 4)
     const handMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
-    const handGeo = new THREE.SphereGeometry(0.17, 16, 16);
-    const lh = new THREE.Mesh(handGeo, handMat); lh.position.set(-0.98, 0.98 * bt.scaleY, 0.22); g.add(lh);
-    const rh = new THREE.Mesh(handGeo, handMat); rh.position.set(0.98, 0.98 * bt.scaleY, 0.22); g.add(rh);
+    const handGeo = new THREE.SphereGeometry(0.25, 16, 16);
+    const lh = new THREE.Mesh(handGeo, handMat); lh.position.set(-0.7, -0.6, 0); leftArm.add(lh);
+    const rh = new THREE.Mesh(handGeo, handMat); rh.position.set(0.7, -0.6, 0); rightArm.add(rh);
 
-    // Piernas
-    const legGeo = new THREE.CylinderGeometry(0.18, 0.16, 0.65, 8);
+    // Piernas (Animación 4)
+    const legGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.8, 8);
     const legMat = new THREE.MeshStandardMaterial({ color });
-    const leftLeg = new THREE.Mesh(legGeo, legMat); leftLeg.position.set(-0.32, 0.35 * bt.scaleY, 0); leftLeg.castShadow = true; g.add(leftLeg);
-    const rightLeg = new THREE.Mesh(legGeo, legMat); rightLeg.position.set(0.32, 0.35 * bt.scaleY, 0); rightLeg.castShadow = true; g.add(rightLeg);
+    const leftLeg = new THREE.Mesh(legGeo, legMat); leftLeg.position.set(-0.35, 0.4 * bt.scaleY, 0); leftLeg.castShadow = true; g.add(leftLeg);
+    const rightLeg = new THREE.Mesh(legGeo, legMat); rightLeg.position.set(0.35, 0.4 * bt.scaleY, 0); rightLeg.castShadow = true; g.add(rightLeg);
 
-    // Zapatos
-    const shoeGeo = new THREE.BoxGeometry(0.48, 0.16, 0.7);
-    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    const ls = new THREE.Mesh(shoeGeo, shoeMat); ls.position.set(-0.32, 0.07 * bt.scaleY, 0.18); g.add(ls);
-    const rs = new THREE.Mesh(shoeGeo, shoeMat); rs.position.set(0.32, 0.07 * bt.scaleY, 0.18); g.add(rs);
+    // Zapatos gigantes (Animación 4)
+    const shoeGeo = new THREE.BoxGeometry(0.6, 0.25, 0.9);
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const ls = new THREE.Mesh(shoeGeo, shoeMat); ls.position.set(0, -0.4, 0.2); leftLeg.add(ls);
+    const rs = new THREE.Mesh(shoeGeo, shoeMat); rs.position.set(0, -0.4, 0.2); rightLeg.add(rs);
 
-    g.userData = { leftArm, rightArm, leftLeg, rightLeg, body, head, color, bodyTypeIndex };
+    g.userData = { leftArm, rightArm, leftLeg, rightLeg, body, head, color, bodyTypeIndex, propeller };
 
-    // Etiqueta de nombre
+    // Etiqueta de nombre (UI 3 - Color por equipo automático)
+    const teamHex = color === teamColors.blue.primary ? teamColors.blue.hex : teamColors.red.hex;
     const div = document.createElement('div');
     div.textContent = name;
-    div.style.cssText = 'color:#FFD700;font-size:16px;font-weight:bold;text-shadow:1px 1px 0 black;background:rgba(0,0,0,0.8);padding:5px 16px;border-radius:40px;border:2px solid #FFD700;white-space:nowrap;font-family:Montserrat,sans-serif;backdrop-filter:blur(6px);';
+    div.style.cssText = `color:white;font-size:16px;font-weight:bold;text-shadow:2px 2px 0 black;background:${teamHex};padding:5px 16px;border-radius:40px;border:3px solid white;white-space:nowrap;font-family:Montserrat,sans-serif;backdrop-filter:blur(6px);box-shadow:0 0 15px ${teamHex};`;
     const label = new CSS2DObject(div);
-    label.position.set(0, 2.1 * bt.scaleY, 0);
+    label.position.set(0, 2.5 * bt.scaleY, 0);
     g.add(label);
 
     return { group: g, label };
@@ -1191,25 +1238,41 @@ function handleMovement(deltaTime) {
 
     myPlayerMesh.position.set(currentPosition.x, currentPosition.y, currentPosition.z);
 
-    // Animación de brazos/piernas
+    // Animación de brazos/piernas (Animación 4 - Movimientos exagerados y cómicos)
     if (isMoving && !isJumping) {
-        animationTime += deltaTime * 12;
-        const swing = Math.sin(animationTime) * 0.7;
+        animationTime += deltaTime * 15; // Más rápido
+        const swing = Math.sin(animationTime) * 1.2; // Swing más amplio
+        const legSwing = Math.sin(animationTime) * 0.8;
+        
         if (myPlayerMesh.userData.leftArm) {
             myPlayerMesh.userData.leftArm.rotation.x = swing;
             myPlayerMesh.userData.rightArm.rotation.x = -swing;
-            myPlayerMesh.userData.leftLeg.rotation.x = Math.sin(animationTime) * 0.3;
-            myPlayerMesh.userData.rightLeg.rotation.x = -Math.sin(animationTime) * 0.3;
+            myPlayerMesh.userData.leftLeg.rotation.x = legSwing;
+            myPlayerMesh.userData.rightLeg.rotation.x = -legSwing;
+            
+            // Movimiento lateral cómico
+            myPlayerMesh.rotation.z = Math.sin(animationTime * 0.5) * 0.15;
         }
-        currentPosition.y = groundY + Math.abs(Math.sin(animationTime * 2)) * 0.02;
+        
+        // Salto pequeño al correr
+        currentPosition.y = groundY + Math.abs(Math.sin(animationTime * 2)) * 0.15;
         myPlayerMesh.position.y = currentPosition.y;
-    } else {
+    } else if (!isJumping) {
         if (myPlayerMesh.userData.leftArm) {
             myPlayerMesh.userData.leftArm.rotation.x = 0;
             myPlayerMesh.userData.rightArm.rotation.x = 0;
             myPlayerMesh.userData.leftLeg.rotation.x = 0;
             myPlayerMesh.userData.rightLeg.rotation.x = 0;
+            myPlayerMesh.rotation.z = 0;
         }
+    }
+
+    // Girar hélice constantemente
+    players.forEach(p => {
+        if (p.mesh.userData.propeller) p.mesh.userData.propeller.rotation.y += deltaTime * 20;
+    });
+    if (myPlayerMesh && myPlayerMesh.userData.propeller) {
+        myPlayerMesh.userData.propeller.rotation.y += deltaTime * 20;
     }
 
     // Mover pelota con jugador si la tiene
@@ -1385,6 +1448,17 @@ function passBall() {
 function updateBallPhysics(deltaTime) {
     if (!ball) return;
 
+    // Escalar balón por posesión (Mecánica 1)
+    const isAnyoneHolding = (possession === 'player' && !ballInAir) || (ballAuthority && ballAuthority !== myPlayerId && !ballInAir);
+    const targetScale = isAnyoneHolding ? 2.0 : 1.0;
+    ball.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+    
+    // Visibilidad/Brillo aumentado al tener posesión
+    if (ball.material) {
+        ball.material.emissiveIntensity = isAnyoneHolding ? 0.8 : 0.1;
+        ball.material.emissive.setHex(isAnyoneHolding ? 0xffaa00 : 0x442200);
+    }
+
     // Rotar pelota visualmente si está en el aire
     if (ballInAir) {
         ball.rotation.x += 0.2;
@@ -1411,7 +1485,9 @@ function updateBallPhysics(deltaTime) {
         const targetIdx = shooterTeam === 'blue' ? 0 : 1;
         const th = hoops[targetIdx];
         const dist = new THREE.Vector3(ball.position.x - th.position.x, 0, ball.position.z - th.position.z).length();
-        const inHoopXZ = dist < 1.35;
+        // Margen de enceste: radio 40px (aprox 0.4 unidades) más grande que el balón (0.6) = 1.0 (Mecánica 1)
+        // Aumentamos el área de detección original de 1.35 a 1.75 para facilitar la anotación
+        const inHoopXZ = dist < 1.75;
         const inHoopY  = ball.position.y < th.position.y + 0.85 && ball.position.y > th.position.y - 0.55;
         const falling  = data.velocity.y < 0;
 
@@ -1511,7 +1587,7 @@ function updateShotClock() {
 
 function updatePowerBar() {
     if (shooting && possession === 'player' && !ballInAir && pointerLockActive && !gamePaused) {
-        shootPower += 0.035;
+        shootPower += 0.035 * 5; // Velocidad de carga 5x más rápida (Mecánica 1)
         if (shootPower > shootMaxPower) shootPower = shootMaxPower;
         const pct = (shootPower / shootMaxPower) * 100;
         const fill = document.getElementById('power-bar-fill');
