@@ -25,11 +25,18 @@ const database = getDatabase(app);
 // 3. VARIABLES GLOBALES
 // ============================================================
 let scene, camera, renderer, labelRenderer;
+let gameFinished = false;      // Para evitar múltiples finalizaciones
+let targetPointsToWin = 10;    // Valor por defecto (se actualizará al crear la sala)
 let myPlayerId = null;
+let soundEventsRef = null;
+let lastShooterTeam = null; // Equipo del último jugador que tiró (blue/red)
 let myPlayerName = "";
 let myPlayerTeam = null;   // 'blue' | 'red'
 let myPlayerMesh = null;
 let myPlayerScore = 0;
+let lastShooterId = null; 
+let lastScoringTeam = null;
+let teamScores = { blue: 0, red: 0 }; // Sincronización de marcador global
 let players = new Map();   // otros jugadores en escena
 let ball = null;
 let ballInAir = false;
@@ -53,7 +60,7 @@ let unsubscribeRoom = null;
 // Cámara
 let cameraAngleX = 0;
 let cameraAngleY = 0.4;
-let cameraDistance = 10;
+let cameraDistance = 14; // Un poco más lejos para ver personajes más grandes
 let targetCameraAngleX = 0;
 let targetCameraAngleY = 0.4;
 let pointerLockActive = false;
@@ -65,7 +72,7 @@ let keysPressed = {};
 let isJumping = false;
 let verticalVelocity = 0;
 const gravity = 20;
-const jumpPower = 7.5;
+const jumpPower = 9.5; // Salto más alto para personajes más grandes
 const groundY = 0;
 let isMoving = false;
 let velocityX = 0, velocityZ = 0;
@@ -75,7 +82,7 @@ const maxSpeed = 11;
 
 // Robo de pelota
 let lastStealTime = 0;
-const stealCooldownMax = 0.9;
+const stealCooldownMax = 0.5; // Reducido para que el robo sea más fluido
 
 // Animación
 let animationTime = 0;
@@ -85,6 +92,22 @@ let lastDeltaTimeFrame = 0;
 let lastBallSyncTime = 0;
 const BALL_SYNC_MS = 60;
 
+// === NUEVAS VARIABLES SPRINT Y VENGANZA ===
+let isSprinting = false;
+let sprintTime = 0;
+const sprintMaxTime = 2.0;
+let sprintCooldown = 0;
+const sprintCooldownMax = 5.5;
+let fireParticles = [];
+
+let hasRevengeWeapon = false;
+let revengeWeaponMesh = null;
+let revengeCountdown = 0;
+let revengeDisappearTimer = 0;
+let missiles = [];
+let isDead = false;
+let respawnTimer = 0;
+
 // Colores por equipo
 const teamColors = {
     blue: { primary: 0x2255ee, hex: "#2255ee", name: "AZUL" },
@@ -92,11 +115,11 @@ const teamColors = {
 };
 
 const bodyTypes = [
-    { scaleX: 0.7,  scaleY: 1.1, scaleZ: 0.7  },
-    { scaleX: 0.9,  scaleY: 0.7, scaleZ: 0.9  },
-    { scaleX: 0.6,  scaleY: 1.3, scaleZ: 0.6  },
-    { scaleX: 1.0,  scaleY: 0.8, scaleZ: 1.0  },
-    { scaleX: 0.8,  scaleY: 0.9, scaleZ: 0.8  }
+    { scaleX: 1.2,  scaleY: 2.2, scaleZ: 1.2  }, // Personajes casi del tamaño del aro
+    { scaleX: 1.4,  scaleY: 1.8, scaleZ: 1.4  },
+    { scaleX: 1.0,  scaleY: 2.4, scaleZ: 1.0  },
+    { scaleX: 1.5,  scaleY: 2.0, scaleZ: 1.5  },
+    { scaleX: 1.3,  scaleY: 2.1, scaleZ: 1.3  }
 ];
 
 const courtConfig = {
@@ -104,7 +127,7 @@ const courtConfig = {
     length: 50,
     limitX: 23,
     limitZ: 14,
-    hoopHeight: 3.1,
+    hoopHeight: 4.5, // Aro más alto para personajes más grandes
     threePointLine: 6.75
 };
 
@@ -116,17 +139,20 @@ function getMaxPerTeam(modo) {
     const map = { '1v1': 1, '2v2': 2, '3v3': 3, '4v4': 4 };
     return map[modo] || 2;
 }
-
 function loadRooms() {
     const roomsRef = ref(database, 'salas');
     onValue(roomsRef, (snapshot) => {
         const rooms = snapshot.val();
         const list = document.getElementById('rooms-list');
         if (!list) return;
+        
+        // Si no hay salas, mostrar mensaje y salir
         if (!rooms || Object.keys(rooms).length === 0) {
             list.innerHTML = '<div class="no-rooms" style="text-align:center;color:rgba(255,255,255,0.5);padding:40px;font-size:18px;">No hay salas disponibles. ¡Crea una!</div>';
             return;
         }
+        
+        // Generar HTML de las salas
         let html = '';
         for (const [roomId, room] of Object.entries(rooms)) {
             const bluePlayers = room.equipos && room.equipos.azul ? Object.keys(room.equipos.azul).length : 0;
@@ -144,6 +170,19 @@ function loadRooms() {
                 </div>`;
         }
         list.innerHTML = html;
+        
+        // Eliminar salas que estén completamente vacías (0 jugadores en ambos equipos)
+//for (const [roomId, room] of Object.entries(rooms)) {
+//    const blueCount = room.equipos && room.equipos.azul ? Object.keys(room.equipos.azul).length : 0;
+//    const redCount = room.equipos && room.equipos.rojo ? Object.keys(room.equipos.rojo).length : 0;
+//    if (blueCount + redCount === 0) {
+//        if (roomId !== currentRoomId) {
+//            remove(ref(database, 'salas/' + roomId));
+//        }
+//    }
+//}
+        
+        // Agregar event listener a cada tarjeta de sala
         list.querySelectorAll('.room-card').forEach(card => {
             card.addEventListener('click', () => joinRoom(card.dataset.roomId));
         });
@@ -154,79 +193,188 @@ function createRoom() {
     const roomName = document.getElementById('room-name-input').value.trim();
     const mode = document.getElementById('room-mode-select').value;
     if (!roomName) { alert("Ingresa un nombre para la sala"); return; }
+    let pointsToWin = parseInt(document.getElementById('room-points-select').value);
+    if (isNaN(pointsToWin)) pointsToWin = 10;
+    
     const newRoomRef = push(ref(database, 'salas'));
     const roomData = {
-        nombre: roomName,
-        modo: mode,
-        max_por_equipo: getMaxPerTeam(mode),
-        equipos: { azul: {}, rojo: {} },
-        creada: Date.now(),
-        bola: { x: 0, y: 0.8, z: 0, vx: 0, vy: 0, vz: 0, inAir: false, authorityId: null, possessorTeam: null }
-    };
-    set(newRoomRef, roomData).then(() => {
-        document.getElementById('create-room-modal').classList.remove('active');
-        joinRoom(newRoomRef.key);
-    });
+    puntos_ganar: pointsToWin,
+    nombre: roomName,
+    modo: mode,
+    max_por_equipo: getMaxPerTeam(mode),
+    equipos: { azul: {}, rojo: {} },
+    creada: Date.now(),
+    gameStarted: false,   // ← NUEVO: indica si la partida ha comenzado
+    bola: { x: 0, y: 0.8, z: 0, vx: 0, vy: 0, vz: 0, inAir: false, authorityId: null, possessorTeam: null }
+};
+    
+    set(newRoomRef, roomData)
+        .then(() => {
+            console.log("Sala creada exitosamente:", newRoomRef.key);
+            document.getElementById('create-room-modal').classList.remove('active');
+            // Esperar medio segundo para asegurar que Firebase indexe la sala
+            setTimeout(() => {
+                joinRoom(newRoomRef.key);
+            }, 300);
+        })
+        .catch((error) => {
+            console.error("Error al crear sala:", error);
+            alert("Error al crear sala: " + error.message);
+        });
 }
 
 function joinRoom(roomId) {
-    currentRoomId = roomId;
-    if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+    if (unsubscribeRoom) {
+        unsubscribeRoom();
+        unsubscribeRoom = null;
+    }
+    
     const roomRef = ref(database, 'salas/' + roomId);
     unsubscribeRoom = onValue(roomRef, (snapshot) => {
         const room = snapshot.val();
-        if (!room) { alert("La sala ya no existe"); backToRooms(); return; }
+        if (!room) {
+            console.error("La sala no existe:", roomId);
+            alert("La sala ya no existe o fue eliminada");
+            backToRooms();
+            return;
+        }
+        
+        currentRoomId = roomId;
         currentRoomData = room;
+        targetPointsToWin = room.puntos_ganar || 10;
         updateRoomUI(room);
+        
+        // *** NUEVO: Si la partida ya empezó y aún no estamos en juego, iniciar ***
+        if (room.gameStarted === true && !gameRunning && myPlayerMesh === null && myPlayerTeam) {
+            // Esto puede ocurrir si el jugador se unió después de que empezó la partida
+            // pero aún no ha llamado a initGameWithRoom. Para simplificar, forzamos inicio.
+            const baseX = myPlayerTeam === 'blue' ? -8 : 8;
+            const startX = baseX + (Math.random() - 0.5) * 4;
+            const startZ = (Math.random() - 0.5) * 8;
+            initGameWithRoom(startX, startZ);
+        }
+        
+        // Cambiar pantalla solo si no ha comenzado el juego
+        if (document.getElementById('rooms-screen').style.display !== 'none') {
+            document.getElementById('rooms-screen').style.display = 'none';
+            document.getElementById('room-screen').style.display = 'block';
+        }
     });
-    document.getElementById('rooms-screen').style.display = 'none';
-    document.getElementById('room-screen').style.display = 'block';
+    
+    // Opcional: eventos de sonido
+    soundEventsRef = ref(database, 'salas/' + roomId + '/soundEvents');
+    onValue(soundEventsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        const latestKey = Object.keys(data).pop();
+        const event = data[latestKey];
+        if (event && event.playerId !== myPlayerId) {
+            let soundFile = '';
+            if (event.type === 'score') soundFile = 'encesta1.mp3';
+            else if (event.type === 'win') soundFile = 'ganar1.mp3';
+            else if (event.type === 'jump') soundFile = 'saltar1.mp3';
+            if (soundFile) {
+                new Audio('assets/sounds/' + soundFile).play().catch(e => console.warn("Audio no encontrado"));
+            }
+        }
+        if (latestKey) remove(ref(database, 'salas/' + currentRoomId + '/soundEvents/' + latestKey));
+    });
 }
 
 function updateRoomUI(room) {
-    const maxPT = getMaxPerTeam(room.modo);
-    const bluePlayers = (room.equipos && room.equipos.azul) ? room.equipos.azul : {};
-    const redPlayers  = (room.equipos && room.equipos.rojo) ? room.equipos.rojo : {};
-    const blueCount = Object.keys(bluePlayers).length;
-    const redCount  = Object.keys(redPlayers).length;
+    // Validar que room existe
+    if (!room) return;
 
-    const nameDisplay = document.getElementById('room-name-display');
-    const modeDisplay = document.getElementById('room-mode-display');
+    // Obtener valores con defaults
+    const modo = room.modo || '1v1';
+    const maxPT = getMaxPerTeam(modo);
+    const bluePlayersObj = (room.equipos && room.equipos.azul) ? room.equipos.azul : {};
+    const redPlayersObj  = (room.equipos && room.equipos.rojo) ? room.equipos.rojo : {};
+    
+    // Calcular conteos
+    const blueCount = Object.keys(bluePlayersObj).length;
+    const redCount  = Object.keys(redPlayersObj).length;
+
+    // Actualizar contadores en UI
     const blueCountEl = document.getElementById('blue-team-count');
-    const redCountEl  = document.getElementById('red-team-count');
-    const blueList    = document.getElementById('blue-team-list');
-    const redList     = document.getElementById('red-team-list');
-    const joinBlue    = document.getElementById('join-blue-btn');
-    const joinRed     = document.getElementById('join-red-btn');
-
-    if (nameDisplay) nameDisplay.textContent = '🏟️ ' + room.nombre;
-    if (modeDisplay) modeDisplay.textContent = 'Modo: ' + room.modo;
+    const redCountEl = document.getElementById('red-team-count');
     if (blueCountEl) blueCountEl.textContent = blueCount + '/' + maxPT;
-    if (redCountEl)  redCountEl.textContent  = redCount  + '/' + maxPT;
+    if (redCountEl) redCountEl.textContent = redCount + '/' + maxPT;
 
+    // Llenar listas de jugadores
+    const blueList = document.getElementById('blue-team-list');
+    const redList = document.getElementById('red-team-list');
     if (blueList) {
         let html = '';
-        Object.values(bluePlayers).forEach(p => { html += '<div class="player-item"><span class="player-name">🔵 ' + p.nombre + '</span></div>'; });
+        Object.values(bluePlayersObj).forEach(p => {
+            html += `<div class="player-item"><span class="player-name">🔵 ${p.nombre}</span></div>`;
+        });
         for (let i = blueCount; i < maxPT; i++) html += '<div class="empty-slot">⬜ Vacante</div>';
         blueList.innerHTML = html || '<div class="empty-slot">Esperando jugadores...</div>';
     }
     if (redList) {
         let html = '';
-        Object.values(redPlayers).forEach(p => { html += '<div class="player-item"><span class="player-name">🔴 ' + p.nombre + '</span></div>'; });
+        Object.values(redPlayersObj).forEach(p => {
+            html += `<div class="player-item"><span class="player-name">🔴 ${p.nombre}</span></div>`;
+        });
         for (let i = redCount; i < maxPT; i++) html += '<div class="empty-slot">⬜ Vacante</div>';
         redList.innerHTML = html || '<div class="empty-slot">Esperando jugadores...</div>';
     }
 
-    const myAlreadyIn = myPlayerId && (bluePlayers[myPlayerId] || redPlayers[myPlayerId]);
-    if (joinBlue) {
-        const disabled = blueCount >= maxPT || !!myAlreadyIn;
-        joinBlue.disabled = disabled;
-        joinBlue.classList.toggle('disabled', disabled);
+    // Botones de unirse
+    const joinBlueBtn = document.getElementById('join-blue-btn');
+    const joinRedBtn = document.getElementById('join-red-btn');
+    const myAlreadyIn = myPlayerId && (bluePlayersObj[myPlayerId] || redPlayersObj[myPlayerId]);
+
+    // ===== NUEVO: Si la partida ya comenzó, deshabilitar botones y salir =====
+    if (room.gameStarted === true) {
+        if (joinBlueBtn) {
+            joinBlueBtn.disabled = true;
+            joinBlueBtn.classList.add('disabled');
+        }
+        if (joinRedBtn) {
+            joinRedBtn.disabled = true;
+            joinRedBtn.classList.add('disabled');
+        }
+        // No permitir unirse ni iniciar de nuevo
+        return;
     }
-    if (joinRed) {
-        const disabled = redCount >= maxPT || !!myAlreadyIn;
-        joinRed.disabled = disabled;
-        joinRed.classList.toggle('disabled', disabled);
+
+    // Configurar botones normalmente (partida no iniciada)
+    if (joinBlueBtn) {
+        const disabled = (blueCount >= maxPT) || !!myAlreadyIn;
+        joinBlueBtn.disabled = disabled;
+        joinBlueBtn.classList.toggle('disabled', disabled);
+    }
+    if (joinRedBtn) {
+        const disabled = (redCount >= maxPT) || !!myAlreadyIn;
+        joinRedBtn.disabled = disabled;
+        joinRedBtn.classList.toggle('disabled', disabled);
+    }
+
+    // Mostrar nombre y modo
+    const nameDisplay = document.getElementById('room-name-display');
+    const modeDisplay = document.getElementById('room-mode-display');
+    if (nameDisplay) nameDisplay.textContent = '🏟️ ' + (room.nombre || 'Sala sin nombre');
+    if (modeDisplay) modeDisplay.textContent = 'Modo: ' + modo;
+
+    // ===== NUEVO: Verificar si ambos equipos están llenos y la partida aún no ha comenzado =====
+    const isFull = (blueCount >= maxPT && redCount >= maxPT);
+    if (isFull && !room.gameStarted && !gameFinished && !gameRunning) {
+        // Marcar la partida como iniciada en Firebase (solo una vez)
+        // Usamos transacción para evitar condiciones de carrera
+        const roomRef = ref(database, 'salas/' + currentRoomId);
+        onValue(roomRef, (snap) => {
+            const current = snap.val();
+            if (current && !current.gameStarted) {
+                set(ref(database, 'salas/' + currentRoomId + '/gameStarted'), true)
+                    .then(() => {
+                        // Iniciar el juego localmente
+                        startGameForAll();
+                    })
+                    .catch(err => console.error("Error al iniciar partida:", err));
+            }
+        }, { onlyOnce: true });
     }
 }
 
@@ -238,9 +386,42 @@ function showNameModal(team) {
     const input = document.getElementById('player-name-input');
     if (input) { input.value = ''; input.focus(); }
 }
-
+function startGameForAll() {
+    // Si el juego ya está corriendo para este jugador, no hacer nada
+    if (gameRunning) return;
+    
+    // Si el jugador ya está en la sala (myPlayerTeam definido) pero aún no se ha iniciado su juego,
+    // entonces llamar a initGameWithRoom con su posición almacenada en Firebase.
+    if (myPlayerTeam && currentRoomId && !myPlayerMesh) {
+        // Obtener la posición guardada en Firebase para este jugador
+        const fbTeam = myPlayerTeam === 'blue' ? 'azul' : 'rojo';
+        const playerRef = ref(database, 'salas/' + currentRoomId + '/equipos/' + fbTeam + '/' + myPlayerId);
+        onValue(playerRef, (snap) => {
+            const data = snap.val();
+            if (data) {
+                const startX = data.x || (myPlayerTeam === 'blue' ? -8 : 8);
+                const startZ = data.z || 0;
+                initGameWithRoom(startX, startZ);
+            } else {
+                // Fallback
+                const baseX = myPlayerTeam === 'blue' ? -8 : 8;
+                const startX = baseX + (Math.random() - 0.5) * 4;
+                const startZ = (Math.random() - 0.5) * 8;
+                initGameWithRoom(startX, startZ);
+            }
+        }, { onlyOnce: true });
+    } else if (!myPlayerTeam) {
+        console.warn("startGameForAll llamado sin myPlayerTeam");
+    }
+}
 function confirmJoinGame() {
-    const input = document.getElementById('player-name-input');
+     console.log("confirmJoinGame llamado. myPlayerTeam =", myPlayerTeam, "currentRoomId =", currentRoomId);
+    if (!myPlayerTeam || !currentRoomId) {
+        console.error("Error: equipo o sala no definidos");
+        alert("Error al unirse, intente de nuevo");
+        return;
+    }
+     const input = document.getElementById('player-name-input');
     const playerName = input ? input.value.trim() : '';
     if (!playerName) { alert("Ingresa tu nombre"); return; }
     myPlayerName = playerName;
@@ -326,6 +507,7 @@ function syncPosition() {
         rotationY: myPlayerMesh.rotation.y,
         score: myPlayerScore,
         team: myPlayerTeam,
+        isSprinting: isSprinting, // Sincronizar sprint para fuego (Mecánica 1)
         lastUpdate: Date.now()
     });
 }
@@ -333,7 +515,8 @@ function syncPosition() {
 function syncBallToFirebase() {
     if (!currentRoomId || !ball) return;
     const now = Date.now();
-    if (now - lastBallSyncTime < BALL_SYNC_MS) return;
+    // Aumentamos la frecuencia de sincronización de 60ms a 30ms para "tiempo real" perfecto
+    if (now - lastBallSyncTime < 30) return;
     lastBallSyncTime = now;
     const vel = ball.userData.velocity;
     set(ref(database, 'salas/' + currentRoomId + '/bola'), {
@@ -345,6 +528,7 @@ function syncBallToFirebase() {
         vz: vel ? vel.z : 0,
         inAir: ballInAir,
         authorityId: myPlayerId,
+        possessorId: possession === 'player' ? myPlayerId : (ballAuthority && ballAuthority !== myPlayerId ? ballAuthority : null),
         possessorTeam: possession === 'player' ? myPlayerTeam : null,
         shooterTeam: (ball.userData && ball.userData.shooterTeam) ? ball.userData.shooterTeam : null,
         isThreePoint: (ball.userData && ball.userData.isThreePoint) ? ball.userData.isThreePoint : false,
@@ -354,14 +538,28 @@ function syncBallToFirebase() {
 
 function applyBallFromFirebase(d) {
     if (!ball || !d) return;
-    if (d.authorityId === myPlayerId) return; // yo soy la autoridad, no sobrescribir
+    
+    // Si soy la autoridad, no sobrescribir mi propia física
+    if (d.authorityId === myPlayerId) return;
 
     ballAuthority = d.authorityId || null;
 
-    // Interpolación suave
-    ball.position.x += (d.x - ball.position.x) * 0.35;
-    ball.position.y += (d.y - ball.position.y) * 0.35;
-    ball.position.z += (d.z - ball.position.z) * 0.35;
+    // Si alguien más tiene la pelota, pegarla a su posición localmente
+    if (!d.inAir && d.possessorId && d.possessorId !== myPlayerId) {
+        const possessor = players.get(d.possessorId);
+        if (possessor && possessor.mesh) {
+            ball.position.set(possessor.mesh.position.x, possessor.mesh.position.y + 1.2, possessor.mesh.position.z);
+            possession = null;
+            ballInAir = false;
+            updatePossessionUI();
+            return;
+        }
+    }
+
+    // Interpolación suave para pelotas libres o en el aire
+    ball.position.x += (d.x - ball.position.x) * 0.45;
+    ball.position.y += (d.y - ball.position.y) * 0.45;
+    ball.position.z += (d.z - ball.position.z) * 0.45;
 
     if (d.inAir) {
         ballInAir = true;
@@ -372,7 +570,8 @@ function applyBallFromFirebase(d) {
         if (possession === 'player') { possession = null; updatePossessionUI(); }
     } else {
         if (ball.userData) ball.userData.inAir = false;
-        if (!d.possessorTeam || d.possessorTeam !== myPlayerTeam) {
+        // Si no hay poseedor o es de otro equipo/jugador
+        if (!d.possessorId || d.possessorId !== myPlayerId) {
             if (possession === 'player') { possession = null; updatePossessionUI(); }
             ballInAir = false;
         }
@@ -395,13 +594,22 @@ function listenRoomPlayers() {
                 if (!players.has(pid)) {
                     const { group } = createChibiPlayer(color, pd.nombre, Math.floor(Math.random() * bodyTypes.length));
                     scene.add(group);
-                    players.set(pid, { mesh: group, name: pd.nombre, team: teamName, score: 0 });
+                    players.set(pid, { 
+                        mesh: group, 
+                        name: pd.nombre, 
+                        team: teamName, 
+                        score: 0, 
+                        isSprinting: false 
+                    });
                 }
+                
+                // Obtener el jugador (ya sea existente o recién creado)
                 const p = players.get(pid);
                 if (p && pd.x !== undefined) {
                     p.mesh.position.set(pd.x, pd.y || 0, pd.z);
                     if (pd.rotationY !== undefined) p.mesh.rotation.y = pd.rotationY;
                     p.score = pd.score || 0;
+                    p.isSprinting = pd.isSprinting || false;
                 }
             });
 
@@ -414,15 +622,23 @@ function listenRoomPlayers() {
             });
 
             const total = players.size + 1;
-            const onlineEl = document.getElementById('online-count');
             const pauseOnline = document.getElementById('pause-online-count');
-            if (onlineEl) onlineEl.textContent = total;
             if (pauseOnline) pauseOnline.textContent = total;
         });
     };
 
     listenTeam('azul', 'blue');
     listenTeam('rojo', 'red');
+
+    // Escuchar puntajes globales
+    onValue(ref(database, 'salas/' + currentRoomId + '/puntajes'), (snap) => {
+        const scores = snap.val() || { blue: 0, red: 0 };
+        teamScores = scores;
+        const blueEl = document.getElementById('blue-score');
+        const redEl = document.getElementById('red-score');
+        if (blueEl) blueEl.textContent = scores.blue;
+        if (redEl) redEl.textContent = scores.red;
+    });
 
     // Escuchar pelota de otros jugadores
     onValue(ref(database, 'salas/' + currentRoomId + '/bola'), (snap) => {
@@ -505,67 +721,44 @@ function setupLights() {
 // ============================================================
 
 function createBeautifulCourt() {
-    // === TEXTURA DE MADERA DE ALTA FIDELIDAD (Estética 2) ===
+    // === TEXTURA DE MADERA PROFESIONAL DE ALTA FIDELIDAD (Estética 2) ===
     const canvas = document.createElement('canvas');
     canvas.width = 4096; canvas.height = 4096;
     const ctx = canvas.getContext('2d');
 
-    // Fondo base con grano de madera realista
-    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    grad.addColorStop(0, '#d2a679');
-    grad.addColorStop(0.5, '#c68c53');
-    grad.addColorStop(1, '#ac7339');
-    ctx.fillStyle = grad;
+    // Madera de roble profesional (color más realista)
+    ctx.fillStyle = '#d2b48c'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Vetas de madera finas
-    for (let i = 0; i < 2000; i++) {
+    // Vetas de madera sutiles y realistas
+    for (let i = 0; i < 3000; i++) {
         ctx.beginPath();
         const sx = Math.random() * canvas.width, sy = Math.random() * canvas.height;
         ctx.moveTo(sx, sy);
         ctx.bezierCurveTo(
-            sx + Math.random() * 200, sy + Math.random() * 50,
-            sx + Math.random() * 200, sy + Math.random() * 50,
-            sx + 400 + Math.random() * 200, sy + (Math.random() - 0.5) * 100
+            sx + 100, sy + 20,
+            sx + 200, sy - 20,
+            sx + 500, sy + (Math.random() - 0.5) * 50
         );
-        ctx.strokeStyle = 'rgba(60,40,20,' + (Math.random() * 0.15) + ')';
-        ctx.lineWidth = Math.random() * 2 + 0.5;
+        ctx.strokeStyle = 'rgba(100,70,40,' + (Math.random() * 0.1) + ')';
+        ctx.lineWidth = 1 + Math.random() * 2;
         ctx.stroke();
     }
 
-    // Tablones
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-    ctx.lineWidth = 4;
-    const plankWidth = 120;
-    for (let x = 0; x < canvas.width; x += plankWidth) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-        
-        // Juntas de tablones aleatorias
-        for (let y = Math.random() * 500; y < canvas.height; y += 800 + Math.random() * 1000) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + plankWidth, y);
-            ctx.stroke();
-        }
-    }
-
+    // Barniz y brillo sutil
     const woodTex = new THREE.CanvasTexture(canvas);
     woodTex.anisotropy = 16;
     woodTex.wrapS = THREE.RepeatWrapping;
     woodTex.wrapT = THREE.RepeatWrapping;
-    woodTex.repeat.set(2, 2);
+    woodTex.repeat.set(1, 1);
 
     const courtPlane = new THREE.Mesh(
         new THREE.PlaneGeometry(courtConfig.length, courtConfig.width),
         new THREE.MeshStandardMaterial({ 
             map: woodTex, 
-            roughness: 0.15, 
-            metalness: 0.2, 
-            color: 0xffffff,
-            envMapIntensity: 1.5
+            roughness: 0.1, 
+            metalness: 0.1,
+            envMapIntensity: 1.0
         })
     );
     courtPlane.rotation.x = -Math.PI / 2;
@@ -573,44 +766,41 @@ function createBeautifulCourt() {
     courtPlane.receiveShadow = true;
     scene.add(courtPlane);
 
-    // === ATMÓSFERA DE ESTADIO MASIVO (Estética 2) ===
-    createStadiumAtmosphere();
+    // === MITADES COLOREADAS POR EQUIPO (Estética Realista - Mayoría de la mitad) ===
+    const sideW = courtConfig.length / 2 - 1.5;
+    const sideH = courtConfig.width - 1.5;
 
-    // === MITADES COLOREADAS POR EQUIPO ===
-    // Mitad izquierda (X negativo) = equipo AZUL
     const blueSide = new THREE.Mesh(
-        new THREE.PlaneGeometry(courtConfig.length / 2 - 1, courtConfig.width - 2),
-        new THREE.MeshStandardMaterial({ color: 0x2255ee, transparent: true, opacity: 0.16, roughness: 0.9 })
+        new THREE.PlaneGeometry(sideW, sideH),
+        new THREE.MeshStandardMaterial({ color: 0x0000ff, transparent: true, opacity: 0.45, roughness: 0.5 })
     );
     blueSide.rotation.x = -Math.PI / 2;
-    blueSide.position.set(-(courtConfig.length / 4 + 0.5), -0.044, 0);
+    blueSide.position.set(-courtConfig.length / 4, -0.04, 0);
     scene.add(blueSide);
 
-    // Mitad derecha (X positivo) = equipo ROJO
     const redSide = new THREE.Mesh(
-        new THREE.PlaneGeometry(courtConfig.length / 2 - 1, courtConfig.width - 2),
-        new THREE.MeshStandardMaterial({ color: 0xee2233, transparent: true, opacity: 0.16, roughness: 0.9 })
+        new THREE.PlaneGeometry(sideW, sideH),
+        new THREE.MeshStandardMaterial({ color: 0xff0000, transparent: true, opacity: 0.45, roughness: 0.5 })
     );
     redSide.rotation.x = -Math.PI / 2;
-    redSide.position.set(courtConfig.length / 4 + 0.5, -0.044, 0);
+    redSide.position.set(courtConfig.length / 4, -0.04, 0);
     scene.add(redSide);
 
-    // === ZONAS PINTADAS ===
-    const paintBlue = new THREE.MeshStandardMaterial({ color: 0x1a3a8a, roughness: 0.5, metalness: 0.05 });
-    const paintRed  = new THREE.MeshStandardMaterial({ color: 0x8B0000, roughness: 0.5, metalness: 0.05 });
+    // === BORDES Y SURROUNDINGS ===
+    createMoreCourtDetails();
 
-    const leftKey = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 5.8), paintBlue);
-    leftKey.position.set(-courtConfig.length / 2 + 4.2, -0.048, 0);
-    leftKey.receiveShadow = true;
-    scene.add(leftKey);
+    // === ZONAS PINTADAS Y BORDES (Realismo Pro) ===
+    const borderMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+    const outerBorder = new THREE.Mesh(
+        new THREE.PlaneGeometry(courtConfig.length + 6, courtConfig.width + 6),
+        borderMat
+    );
+    outerBorder.rotation.x = -Math.PI / 2;
+    outerBorder.position.y = -0.07;
+    scene.add(outerBorder);
 
-    const rightKey = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 5.8), paintRed);
-    rightKey.position.set(courtConfig.length / 2 - 4.2, -0.048, 0);
-    rightKey.receiveShadow = true;
-    scene.add(rightKey);
-
-    // === LÍNEAS ===
-    const white = new THREE.LineBasicMaterial({ color: 0xffffff });
+    // === LÍNEAS (White Pro) ===
+    const white = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
     const orange = new THREE.LineBasicMaterial({ color: 0xffaa44 });
 
     function makeLine(pts, mat) {
@@ -784,6 +974,52 @@ function createStadiumAtmosphere() {
     scene.add(audience);
 }
 
+function createMoreCourtDetails() {
+    // Carritos de pelotas
+    const rackMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.8, roughness: 0.2 });
+    for (const pos of [[-26, 16], [26, 16], [-26, -16], [26, -16]]) {
+        const rack = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 1), rackMat);
+        rack.add(base);
+        // Pelotas en el rack
+        for (let j = 0; j < 6; j++) {
+            const ballSample = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff6600 }));
+            ballSample.position.set(-0.6 + (j % 3) * 0.6, 0.4 + Math.floor(j / 3) * 0.5, 0);
+            rack.add(ballSample);
+        }
+        rack.position.set(pos[0], 0.1, pos[1]);
+        scene.add(rack);
+    }
+
+    // Bancas de suplentes
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+    for (let i = -5; i <= 5; i += 2.5) {
+        if (Math.abs(i) < 1) continue;
+        const bench = new THREE.Mesh(new THREE.BoxGeometry(2, 0.4, 0.8), benchMat);
+        bench.position.set(i, 0.2, -courtConfig.width / 2 - 1.5);
+        scene.add(bench);
+    }
+
+    // Botellas de agua
+    const bottleGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.2, 8);
+    const bottleMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.6 });
+    for (let i = 0; i < 5; i++) {
+        const bottle = new THREE.Mesh(bottleGeo, bottleMat);
+        bottle.position.set(-0.5 + i * 0.2, 0.5, courtConfig.width / 2 - 0.5);
+        scene.add(bottle);
+    }
+
+    // Publicidad LED con nombres chilenos
+    const ads = ["TÍO MANOLO", "COMPLETAZO", "VTR ROBO", "SÚPER CERDO", "ENTEL"];
+    ads.forEach((text, i) => {
+        const adGeo = new THREE.BoxGeometry(8, 2, 0.2);
+        const adMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00ff00, emissiveIntensity: 0.2 });
+        const ad = new THREE.Mesh(adGeo, adMat);
+        ad.position.set(-20 + i * 10, 1, -courtConfig.width / 2 - 3);
+        scene.add(ad);
+    });
+}
+
 // ============================================================
 // 8. AROS
 // ============================================================
@@ -798,7 +1034,6 @@ function createGiantHoops() {
         transparent: true, 
         opacity: 0.8,
         transmission: 0.5,
-        thickness: 0.5
     });
     const rimMat     = new THREE.MeshStandardMaterial({ color: 0xff4400, metalness: 0.9, roughness: 0.1 });
     const suppMat    = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8, roughness: 0.2 });
@@ -1083,6 +1318,8 @@ function createChibiPlayer(color, name, bodyTypeIndex) {
 
 function initGameWithRoom(startX, startZ) {
     // Limpiar sesión anterior
+    console.log("initGameWithRoom ejecutándose con startX=", startX, "startZ=", startZ);
+
     if (myPlayerMesh) { scene.remove(myPlayerMesh); myPlayerMesh = null; }
     players.forEach(p => scene.remove(p.mesh));
     players.clear();
@@ -1096,7 +1333,7 @@ function initGameWithRoom(startX, startZ) {
     myPlayerMesh.userData.color = myColor;
     myPlayerMesh.userData.bodyType = myBodyType;
     myPlayerMesh.userData.team = myPlayerTeam;
-
+myPlayerMesh.hasGun = false; // Inicialmente no tiene pistola
     currentPosition = { x: startX, y: 0, z: startZ };
     myPlayerMesh.position.set(startX, 0, startZ);
     velocityX = 0; velocityZ = 0;
@@ -1114,11 +1351,20 @@ function initGameWithRoom(startX, startZ) {
 
     // Escuchar jugadores de AMBOS equipos y pelota
     listenRoomPlayers();
-
+    listenForDeaths(); // Escuchar muertes (Mecánica 4)
+if (currentRoomData && currentRoomData.puntos_ganar) {
+    targetPointsToWin = currentRoomData.puntos_ganar;
+} else {
+    targetPointsToWin = 10;
+}
     // UI
     document.getElementById('game-ui').style.display = 'block';
     document.getElementById('my-name').textContent = myPlayerName;
-    document.getElementById('my-score').textContent = '0';
+    const blueScoreEl = document.getElementById('blue-score');
+    const redScoreEl = document.getElementById('red-score');
+    if (blueScoreEl) blueScoreEl.textContent = teamScores.blue;
+    if (redScoreEl) redScoreEl.textContent = teamScores.red;
+    
     document.getElementById('shot-clock-value').textContent = '24';
     const badge = document.getElementById('my-team-badge');
     if (badge) {
@@ -1133,7 +1379,7 @@ function initGameWithRoom(startX, startZ) {
     gameRunning = true;
     gamePaused = false;
     updatePossessionUI();
-    showMessage('🎉 ¡Bienvenido ' + myPlayerName + ' (Equipo ' + (myPlayerTeam === 'blue' ? 'AZUL 🔵' : 'ROJO 🔴') + ')! Presiona E para agarrar la pelota');
+    showMessage('🎉 ¡Wena ' + myPlayerName + '! Estái en el equipo ' + (myPlayerTeam === 'blue' ? 'AZUL 🔵' : 'ROJO 🔴') + '. ¡Dale con todo, conchetumare! 🏀');
 }
 
 // ============================================================
@@ -1175,6 +1421,50 @@ function setupPointerLock() {
 // 13. CÁMARA
 // ============================================================
 
+function stopSprinting() {
+    isSprinting = false;
+    sprintTime = 0;
+    sprintCooldown = sprintCooldownMax;
+}
+
+function playRandomSprintSound() {
+    const sounds = ['wuaa.mp3', 'wuoo.mp3', 'wiii.mp3'];
+    const sound = sounds[Math.floor(Math.random() * sounds.length)];
+    const audio = new Audio('assets/sounds/' + sound);
+    audio.play().catch(e => console.warn("Audio no encontrado:", sound));
+}
+
+function updateFireEffect(deltaTime) {
+    if (!myPlayerMesh) return;
+    
+    // Crear partículas de fuego
+    for (let i = 0; i < 3; i++) {
+        const p = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1 + Math.random() * 0.2, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.8 })
+        );
+        p.position.copy(myPlayerMesh.position);
+        p.position.x += (Math.random() - 0.5) * 1.2;
+        p.position.z += (Math.random() - 0.5) * 1.2;
+        p.position.y += Math.random() * 0.5;
+        scene.add(p);
+        fireParticles.push({ mesh: p, life: 1.0, vel: new THREE.Vector3((Math.random()-0.5)*2, 2 + Math.random()*2, (Math.random()-0.5)*2) });
+    }
+
+    // Actualizar partículas
+    for (let i = fireParticles.length - 1; i >= 0; i--) {
+        const fp = fireParticles[i];
+        fp.life -= deltaTime * 2.5;
+        fp.mesh.position.add(fp.vel.clone().multiplyScalar(deltaTime));
+        fp.mesh.material.opacity = fp.life;
+        fp.mesh.scale.multiplyScalar(0.95);
+        if (fp.life <= 0) {
+            scene.remove(fp.mesh);
+            fireParticles.splice(i, 1);
+        }
+    }
+}
+
 function updateCamera() {
     if (!myPlayerMesh) return;
     cameraAngleX += (targetCameraAngleX - cameraAngleX) * 0.15;
@@ -1194,8 +1484,40 @@ function updateCamera() {
 // ============================================================
 
 function handleMovement(deltaTime) {
-    if (!gameRunning || gamePaused || !myPlayerMesh) return;
+    if (!gameRunning || gamePaused || !myPlayerMesh || isDead) return;
 
+    // Gestión de Sprint (Mecánica 1)
+    if (sprintCooldown > 0) {
+        sprintCooldown -= deltaTime;
+        const coolText = document.getElementById('sprint-cooldown-text');
+        if (coolText) coolText.textContent = "ENFRIANDO: " + Math.max(0, sprintCooldown).toFixed(1) + "s";
+        const fill = document.getElementById('sprint-bar-fill');
+        if (fill) fill.style.width = '0%';
+    } else {
+        const coolText = document.getElementById('sprint-cooldown-text');
+        if (coolText) coolText.textContent = "LISTO 🔥";
+        const fill = document.getElementById('sprint-bar-fill');
+        if (fill) fill.style.width = ((sprintMaxTime - sprintTime) / sprintMaxTime * 100) + '%';
+    }
+    
+    const wantsToSprint = (keysPressed['shift'] || keysPressed['capslock']);
+    const canSprint = wantsToSprint && sprintCooldown <= 0 && sprintTime < sprintMaxTime;
+
+    if (canSprint) {
+        if (!isSprinting) {
+            isSprinting = true;
+            playRandomSprintSound();
+        }
+        sprintTime += deltaTime;
+        if (sprintTime >= sprintMaxTime) {
+            stopSprinting();
+        }
+    } else {
+        if (isSprinting) stopSprinting();
+    }
+
+    const currentMaxSpeed = isSprinting ? maxSpeed * 2.0 : maxSpeed;
+    
     let moveX = 0, moveZ = 0;
     if (keysPressed['w'] || keysPressed['arrowup'])    moveZ -= 1;
     if (keysPressed['s'] || keysPressed['arrowdown'])  moveZ += 1;
@@ -1209,8 +1531,8 @@ function handleMovement(deltaTime) {
         moveX /= len; moveZ /= len;
         const fwd = new THREE.Vector3(-Math.sin(cameraAngleX), 0, -Math.cos(cameraAngleX));
         const rgt = new THREE.Vector3(Math.cos(cameraAngleX), 0, -Math.sin(cameraAngleX));
-        const tvX = (fwd.x * moveZ - rgt.x * moveX) * maxSpeed;
-        const tvZ = (fwd.z * moveZ - rgt.z * moveX) * maxSpeed;
+        const tvX = (fwd.x * moveZ - rgt.x * moveX) * currentMaxSpeed;
+        const tvZ = (fwd.z * moveZ - rgt.z * moveX) * currentMaxSpeed;
         velocityX += (tvX - velocityX) * acceleration * deltaTime;
         velocityZ += (tvZ - velocityZ) * acceleration * deltaTime;
     } else {
@@ -1238,23 +1560,18 @@ function handleMovement(deltaTime) {
 
     myPlayerMesh.position.set(currentPosition.x, currentPosition.y, currentPosition.z);
 
-    // Animación de brazos/piernas (Animación 4 - Movimientos exagerados y cómicos)
+    // Animación de brazos/piernas
     if (isMoving && !isJumping) {
-        animationTime += deltaTime * 15; // Más rápido
-        const swing = Math.sin(animationTime) * 1.2; // Swing más amplio
+        animationTime += deltaTime * (isSprinting ? 25 : 15);
+        const swing = Math.sin(animationTime) * 1.2;
         const legSwing = Math.sin(animationTime) * 0.8;
-        
         if (myPlayerMesh.userData.leftArm) {
             myPlayerMesh.userData.leftArm.rotation.x = swing;
             myPlayerMesh.userData.rightArm.rotation.x = -swing;
             myPlayerMesh.userData.leftLeg.rotation.x = legSwing;
             myPlayerMesh.userData.rightLeg.rotation.x = -legSwing;
-            
-            // Movimiento lateral cómico
             myPlayerMesh.rotation.z = Math.sin(animationTime * 0.5) * 0.15;
         }
-        
-        // Salto pequeño al correr
         currentPosition.y = groundY + Math.abs(Math.sin(animationTime * 2)) * 0.15;
         myPlayerMesh.position.y = currentPosition.y;
     } else if (!isJumping) {
@@ -1267,26 +1584,42 @@ function handleMovement(deltaTime) {
         }
     }
 
-    // Girar hélice constantemente
-    players.forEach(p => {
-        if (p.mesh.userData.propeller) p.mesh.userData.propeller.rotation.y += deltaTime * 20;
-    });
-    if (myPlayerMesh && myPlayerMesh.userData.propeller) {
-        myPlayerMesh.userData.propeller.rotation.y += deltaTime * 20;
-    }
+    // Girar hélice
+    if (myPlayerMesh.userData.propeller) myPlayerMesh.userData.propeller.rotation.y += deltaTime * (isSprinting ? 40 : 20);
 
-    // Mover pelota con jugador si la tiene
+    // Mover pelota con jugador
     if (possession === 'player' && !ballInAir && ball) {
-        ball.position.set(currentPosition.x, currentPosition.y + 1.0, currentPosition.z);
+        ball.position.set(currentPosition.x, currentPosition.y + 1.2, currentPosition.z);
         ballAuthority = myPlayerId;
     }
 
     syncPosition();
+    if (ballAuthority === myPlayerId) syncBallToFirebase();
+}
 
-    // Sincronizar pelota si soy la autoridad
-    if (ballAuthority === myPlayerId) {
-        syncBallToFirebase();
+function updateOtherPlayerFire(mesh, deltaTime, team) {
+    if (!mesh) return;
+    const fireColor = team === 'blue' ? 0x0044ff : 0xff4400;
+    for (let i = 0; i < 2; i++) {
+        const p = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1 + Math.random() * 0.2, 8, 8),
+            new THREE.MeshBasicMaterial({ color: fireColor, transparent: true, opacity: 0.8 })
+        );
+        p.position.copy(mesh.position);
+        p.position.x += (Math.random() - 0.5) * 1.5;
+        p.position.z += (Math.random() - 0.5) * 1.5;
+        scene.add(p);
+        fireParticles.push({ mesh: p, life: 1.0, vel: new THREE.Vector3((Math.random()-0.5)*2, 2 + Math.random()*2, (Math.random()-0.5)*2) });
     }
+}
+
+function showGiantMessage(text, duration) {
+    const div = document.createElement('div');
+    div.className = 'global-gun-msg';
+    div.style.cssText = `position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);font-size:70px;font-weight:900;color:white;text-shadow:0 0 30px red;text-align:center;z-index:10000;font-family:Orbitron;width:100%;background:rgba(255,0,0,0.6);padding:40px;`;
+    div.textContent = text;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), duration);
 }
 
 function jump() {
@@ -1294,6 +1627,7 @@ function jump() {
     if (!isJumping) {
         isJumping = true;
         verticalVelocity = jumpPower;
+        playRandomJumpSound();
         if (myPlayerMesh.userData.leftArm) {
             myPlayerMesh.userData.leftArm.rotation.x = -0.8;
             myPlayerMesh.userData.rightArm.rotation.x = -0.8;
@@ -1304,7 +1638,9 @@ function jump() {
                 }
             }, 300);
         }
+        
     }
+    
 }
 
 // ============================================================
@@ -1322,9 +1658,11 @@ function shoot() {
     camera.getWorldDirection(camDir);
     const dir = new THREE.Vector3(camDir.x, camDir.y + 0.5, camDir.z).normalize();
 
-    const minPow = 6, maxPow = 22;
+    // POTENCIA AUMENTADA X5 (Mecánica solicitada)
+    const powerMult = 2.0;
+    const minPow = 6 * powerMult, maxPow = 22 * powerMult;
     const power = minPow + (shootPower / shootMaxPower) * (maxPow - minPow);
-    const heightBonus = (shootPower / shootMaxPower) * 6;
+    const heightBonus = (shootPower / shootMaxPower) * 6 * powerMult;
 
     // ¿Es triple? Calcular distancia al aro objetivo
     const targetHoopIdx = myPlayerTeam === 'blue' ? 0 : 1;
@@ -1336,17 +1674,19 @@ function shoot() {
         inAir: true,
         velocity: new THREE.Vector3(
             dir.x * power,
-            5 + heightBonus + (dir.y * 2),
+            5 * powerMult + heightBonus + (dir.y * 2 * powerMult),
             dir.z * power
         ),
         isThreePoint,
         shooterTeam: myPlayerTeam,
         shooterId: myPlayerId
     };
-
+    
+    lastShooterTeam = myPlayerTeam;
+    lastShooterId = myPlayerId;
     possession = null;
     updatePossessionUI();
-    showMessage('🏀 ¡TIRO! Potencia: ' + Math.floor((shootPower / shootMaxPower) * 100) + '% ' + (isThreePoint ? '(TRIPLE)' : ''));
+    showMessage('🏀 ¡TIRO POTENTE X5! Potencia: ' + Math.floor((shootPower / shootMaxPower) * 100) + '% ' + (isThreePoint ? '(TRIPLE)' : ''));
 
     shootPower = 0;
     const fill = document.getElementById('power-bar-fill');
@@ -1374,54 +1714,57 @@ function shoot() {
 function stealBall() {
     const now = performance.now() / 1000;
     if (now - lastStealTime < stealCooldownMax) {
-        showMessage('⏳ Espera ' + (stealCooldownMax - (now - lastStealTime)).toFixed(1) + 's');
+        showMessage('⏳ Espera un poco, weón: ' + (stealCooldownMax - (now - lastStealTime)).toFixed(1) + 's');
         return false;
     }
     if (!gameRunning || gamePaused) return false;
-    if (possession === 'player') { showMessage('❌ ¡Ya tienes la pelota!'); return false; }
+    if (possession === 'player') { showMessage('❌ ¡Ya tení la pelota, culiao!'); return false; }
     if (!myPlayerMesh) return false;
 
     const dist = myPlayerMesh.position.distanceTo(ball.position);
     if (dist < 5.0) {
+        // Robar exitosamente
         possession = 'player';
         ballInAir = false;
         ball.userData.inAir = false;
         ball.userData.velocity = null;
-        ball.position.set(currentPosition.x, currentPosition.y + 1.0, currentPosition.z);
+        ball.position.set(currentPosition.x, currentPosition.y + 1.2, currentPosition.z);
         ballAuthority = myPlayerId;
         lastStealTime = now;
         updatePossessionUI();
         shotClock = 24;
         const sc = document.getElementById('shot-clock-value');
         if (sc) sc.textContent = shotClock;
-        showMessage(dist > 1.5 ? '🏀 ¡ATRAPASTE LA PELOTA EN EL AIRE!' : '🏀 ¡RECOGISTE LA PELOTA!');
+        
+        showMessage(dist > 1.5 ? '🏀 ¡ROBO MAESTRO! Se la quitaste al otro weón' : '🏀 ¡Recogiste la pelota!');
+        
         if (myPlayerMesh.userData.rightArm) {
             myPlayerMesh.userData.rightArm.rotation.x = -0.8;
             setTimeout(() => {
                 if (myPlayerMesh && myPlayerMesh.userData.rightArm && !isMoving) myPlayerMesh.userData.rightArm.rotation.x = 0;
             }, 300);
         }
+        
+        // Sincronizar inmediatamente con Firebase para que todos vean el cambio de dueño
         syncBallToFirebase();
         return true;
     } else {
-        showMessage('❌ Muy lejos: ' + dist.toFixed(1) + 'm (necesitas < 5m)');
+        showMessage('❌ Estái muy lejos, weón: ' + dist.toFixed(1) + 'm (acércate a < 5m)');
         lastStealTime = now - (stealCooldownMax - 0.8);
         return false;
     }
 }
-
-// ============================================================
-// 17. PASE
-// ============================================================
 
 function passBall() {
     if (possession !== 'player' || ballInAir || gamePaused) return;
     const dir = new THREE.Vector3(-Math.sin(cameraAngleX), 0.3, -Math.cos(cameraAngleX));
     ballInAir = true;
     ballAuthority = myPlayerId;
+    
+    const powerMult = 5.0; // También aumentamos potencia del pase para consistencia
     ball.userData = {
         inAir: true,
-        velocity: new THREE.Vector3(dir.x * 16, 4.5, dir.z * 16),
+        velocity: new THREE.Vector3(dir.x * 20 * powerMult, 4.5 * powerMult, dir.z * 20 * powerMult), // Subimos base de 16 a 20
         isPass: true,
         shooterTeam: myPlayerTeam
     };
@@ -1437,7 +1780,7 @@ function passBall() {
             }
         }, 200);
     }
-    showMessage('🎯 ¡Pase realizado!');
+    showMessage('🎯 ¡Pase POTENTE pal compañero, weón!');
     syncBallToFirebase();
 }
 
@@ -1448,7 +1791,7 @@ function passBall() {
 function updateBallPhysics(deltaTime) {
     if (!ball) return;
 
-    // Escalar balón por posesión (Mecánica 1)
+    // Escalar pelota por posesión (Mecánica 1)
     const isAnyoneHolding = (possession === 'player' && !ballInAir) || (ballAuthority && ballAuthority !== myPlayerId && !ballInAir);
     const targetScale = isAnyoneHolding ? 2.0 : 1.0;
     ball.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
@@ -1466,7 +1809,10 @@ function updateBallPhysics(deltaTime) {
     }
 
     // Solo la autoridad computa la física
-    if (ballAuthority !== myPlayerId) return;
+    if (ballAuthority !== myPlayerId) {
+        return;
+    }
+
     if (!ballInAir || !ball.userData || !ball.userData.inAir || gamePaused) return;
 
     const data = ball.userData;
@@ -1478,32 +1824,73 @@ function updateBallPhysics(deltaTime) {
     ball.position.y += data.velocity.y * deltaTime;
     ball.position.z += data.velocity.z * deltaTime;
 
-    // === DETECCIÓN DE CANASTA ===
-    // Azul ataca aro derecho (hoops[0]), Rojo ataca aro izquierdo (hoops[1])
-    const shooterTeam = data.shooterTeam;
-    if (shooterTeam && hoops.length >= 2) {
-        const targetIdx = shooterTeam === 'blue' ? 0 : 1;
-        const th = hoops[targetIdx];
-        const dist = new THREE.Vector3(ball.position.x - th.position.x, 0, ball.position.z - th.position.z).length();
-        // Margen de enceste: radio 40px (aprox 0.4 unidades) más grande que el balón (0.6) = 1.0 (Mecánica 1)
-        // Aumentamos el área de detección original de 1.35 a 1.75 para facilitar la anotación
-        const inHoopXZ = dist < 1.75;
-        const inHoopY  = ball.position.y < th.position.y + 0.85 && ball.position.y > th.position.y - 0.55;
-        const falling  = data.velocity.y < 0;
-
-        if (inHoopXZ && inHoopY && falling) {
+    // ===== DETECCIÓN DE CANASTA =====
+    // ===== DETECCIÓN DE CANASTA =====
+if (hoops && hoops.length > 0) {
+    // Determinar qué aro corresponde al equipo que ataca
+    let scoringHoop = null;
+    let scoringTeam = null;
+    
+    // Comprobar los dos aros
+    for (let i = 0; i < hoops.length; i++) {
+        const hoop = hoops[i];
+        const distToHoop = ball.position.distanceTo(hoop.position);
+        const isScoring = (distToHoop < 4.5 && 
+                           ball.position.y < hoop.position.y + 0.8 && 
+                           ball.position.y > hoop.position.y - 0.3 &&
+                           Math.abs(data.velocity.y) < 8);
+        if (isScoring) {
+            scoringHoop = hoop;
+            scoringTeam = hoop.attackingTeam; // 'blue' o 'red'
+            break;
+        }
+    }
+    
+    if (scoringTeam) {
+        // Quién anotó? El shooterTeam del balón (quien tiró)
+        const shooterTeam = data.shooterTeam;
+        if (shooterTeam && shooterTeam === scoringTeam) {
+            // Anotación válida: sumar punto al equipo que anotó
             const points = data.isThreePoint ? 3 : 2;
-            myPlayerScore += points;
-            document.getElementById('my-score').textContent = myPlayerScore;
-            const ps = document.getElementById('pause-score');
-            if (ps) ps.textContent = myPlayerScore;
-            syncPosition();
+            // Actualizar marcador global en Firebase
+            const newScores = { ...teamScores };
+            newScores[scoringTeam] += points;
+            teamScores = newScores;
+            set(ref(database, 'salas/' + currentRoomId + '/puntajes'), newScores);
+            
+            // Actualizar UI
+            const blueScoreEl = document.getElementById('blue-score');
+            const redScoreEl = document.getElementById('red-score');
+            if (blueScoreEl) blueScoreEl.textContent = teamScores.blue;
+            if (redScoreEl) redScoreEl.textContent = teamScores.red;
+            // Verificar si se alcanzó el límite de puntos
+if (teamScores.blue >= targetPointsToWin || teamScores.red >= targetPointsToWin) {
+    const winningTeam = teamScores.blue >= targetPointsToWin ? 'blue' : 'red';
+    endGameWithWinner(winningTeam);
+    return; // Salir de updateBallPhysics para no seguir procesando
+}
+            
+            // Si el que anotó soy yo, actualizo mi puntaje personal
+            if (data.shooterId === myPlayerId) {
+                myPlayerScore += points;
+                const myScoreEl = document.getElementById('my-score');
+                if (myScoreEl) myScoreEl.textContent = myPlayerScore;
+                syncPosition();
+            }
+            
             showScorePopup(points);
-            showMessage('🎉 ¡CANASTA ' + (shooterTeam === 'blue' ? '🔵' : '🔴') + '! +' + points + ' puntos 🎉');
+            playRandomScoreSound();
+            showMessage(`🎉 ¡CANASTA de ${scoringTeam.toUpperCase()}! +${points} 🎉`);
+            
+            // === ENTREGAR PISTOLA AL EQUIPO CONTRARIO ===
+            const rivalTeam = scoringTeam === 'blue' ? 'red' : 'blue';
+            giveGunToRandomPlayerOfTeam(rivalTeam);
+            
             resetBallAfterScore();
             return;
         }
     }
+}
 
     // Rebote en el suelo
     if (ball.position.y < 0.6) {
@@ -1517,9 +1904,9 @@ function updateBallPhysics(deltaTime) {
             data.inAir = false;
             possession = null;
             ball.position.y = 0.6;
-            showMessage('💪 ¡Pelota libre! Presiona E para agarrarla');
-            updatePossessionUI();
-            syncBallToFirebase();
+            if (typeof showMessage === 'function') showMessage('¡La pelota quedó botada, agárrala weón! 🏀');
+            if (typeof updatePossessionUI === 'function') updatePossessionUI();
+            if (typeof syncBallToFirebase === 'function') syncBallToFirebase();
         }
     }
 
@@ -1534,20 +1921,27 @@ function updateBallPhysics(deltaTime) {
     }
 
     // Pelota muy alta
-    if (ball.position.y > 9) {
+    if (ball.position.y > 15) {
         ballInAir = false;
         data.inAir = false;
-        ball.position.set(0, 0.8, 0);
+        ball.position.set(0, 1.2, 0);
         possession = null;
-        updatePossessionUI();
-        showMessage('🏀 ¡Pelota fuera! Está libre');
-        syncBallToFirebase();
+        if (typeof updatePossessionUI === 'function') updatePossessionUI();
+        if (typeof showMessage === 'function') showMessage('¡Mandaste la pelota a la chucha! 🏀');
+        if (typeof syncBallToFirebase === 'function') syncBallToFirebase();
     }
 }
 
 function resetBallAfterScore() {
     ballInAir = false;
-    if (ball.userData) { ball.userData.inAir = false; ball.userData.velocity = null; }
+    // Verificar si el equipo que anotó NO es mi equipo (es decir, me anotaron a mí)
+    if (lastScoringTeam && lastScoringTeam !== myPlayerTeam && !hasRevengeWeapon && !isDead && myPlayerMesh) {
+        giveRevengeWeapon();
+    }
+    if (ball.userData) {
+        ball.userData.inAir = false;
+        ball.userData.velocity = null;
+    }
     possession = null;
     shotClock = 24;
     const sc = document.getElementById('shot-clock-value');
@@ -1555,39 +1949,249 @@ function resetBallAfterScore() {
     ball.position.set(0, 0.8, 0);
     updatePossessionUI();
     syncBallToFirebase();
+    // Resetear la variable para la próxima anotación
+    lastScoringTeam = null;
 }
 
-// ============================================================
-// 19. SHOT CLOCK
-// ============================================================
+function giveRevengeWeapon() {
+    if (hasRevengeWeapon || isDead) return;
+    if (!myPlayerMesh) {
+        console.warn("No se pudo crear el arma: myPlayerMesh no existe");
+        return;
+    }
+    hasRevengeWeapon = true;
+    revengeCountdown = 2.5;
+    
+    // Anuncio Global (Mecánica 4)
+    showGiantMessage("¡EL " + myPlayerName.toUpperCase() + " TIENE LA PISTOLA, ARRANQUEN WEONES!", 600);
 
-function updateShotClock() {
-    if (!gameRunning || gamePaused) return;
-    if (possession === 'player' && !ballInAir) {
-        shotClock--;
-        const sc = document.getElementById('shot-clock-value');
-        if (sc) sc.textContent = Math.max(0, shotClock);
-        if (shotClock <= 0) {
-            showMessage('⏰ ¡VIOLACIÓN DE 24 SEGUNDOS! Pelota libre');
-            possession = null;
-            ballInAir = false;
-            if (ball.userData) { ball.userData.inAir = false; ball.userData.velocity = null; }
-            ball.position.set(currentPosition.x, 0.8, currentPosition.z);
-            shotClock = 24;
-            if (sc) sc.textContent = shotClock;
-            updatePossessionUI();
-            syncBallToFirebase();
+    // Audio recarga
+    new Audio('assets/sounds/recarga.mp3').play().catch(e => console.warn("Audio no encontrado: recarga.mp3"));
+
+    // Crear pistola gigante
+    const gunGroup = new THREE.Group();
+    const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.8), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+    const gunBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.5, 16), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    gunBarrel.rotation.x = Math.PI / 2;
+    gunBarrel.position.z = 1.2;
+    gunGroup.add(gunBody);
+    gunGroup.add(gunBarrel);
+    
+    gunGroup.scale.set(1.5, 1.5, 1.5);
+    
+    if (myPlayerMesh) {
+        myPlayerMesh.add(gunGroup);
+        gunGroup.position.set(0.9, 1.2, 0.7);
+        revengeWeaponMesh = gunGroup;
+    }
+
+    // UI Advertencia con Flash Amarillo (Mecánica 4)
+    const flash = document.createElement('div');
+    flash.className = 'yellow-flash';
+    flash.innerHTML = '<div class="dispara-text">DISPARA</div>';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 700);
+
+    const timer = document.createElement('div');
+    timer.id = 'revenge-timer';
+    timer.style.cssText = 'position:fixed;top:60%;left:50%;transform:translate(-50%,-50%);color:white;font-size:36px;font-weight:bold;z-index:999;font-family:Orbitron;text-shadow:0 0 10px red;';
+    document.body.appendChild(timer);
+}
+
+function updateRevengeLogic(deltaTime) {
+    if (!hasRevengeWeapon) return;
+
+    revengeCountdown -= deltaTime;
+    const timerEl = document.getElementById('revenge-timer');
+    if (timerEl) timerEl.textContent = "¡MÁTALO WEÓN!: " + revengeCountdown.toFixed(1) + 's';
+
+    if (revengeCountdown <= 0) {
+        discardWeapon();
+    }
+}
+
+function discardWeapon() {
+    if (!hasRevengeWeapon) return;
+    hasRevengeWeapon = false;
+    const timerEl = document.getElementById('revenge-timer');
+    if (timerEl) timerEl.remove();
+
+    if (revengeWeaponMesh && myPlayerMesh) {
+        const worldPos = new THREE.Vector3();
+        revengeWeaponMesh.getWorldPosition(worldPos);
+        const worldQuat = new THREE.Quaternion();
+        revengeWeaponMesh.getWorldQuaternion(worldQuat);
+        
+        myPlayerMesh.remove(revengeWeaponMesh);
+        scene.add(revengeWeaponMesh);
+        revengeWeaponMesh.position.copy(worldPos);
+        revengeWeaponMesh.quaternion.copy(worldQuat);
+        
+        // Cae al suelo y desaparece en 3s (Mecánica 3)
+        revengeDisappearTimer = 3.0;
+    }
+}
+
+function shootMissile() {
+    if (!hasRevengeWeapon || isDead) return;
+    
+    // Audio disparo (Mecánica 3)
+    const sounds = ['disparo.mp3', 'disparo2.mp3'];
+    new Audio('assets/sounds/' + sounds[Math.floor(Math.random()*2)]).play().catch(e => console.warn("Audio no encontrado"));
+
+    // Detectar si apunta al rival (Mecánica 3)
+    let targetPlayer = null;
+    const raycaster = new THREE.Raycaster();
+    const center = new THREE.Vector2(0, 0); // Centro de la pantalla (crosshair)
+    raycaster.setFromCamera(center, camera);
+    
+    const potentialTargets = [];
+    players.forEach(p => {
+        if (p.team !== myPlayerTeam) potentialTargets.push(p.mesh);
+    });
+    
+    const intersects = raycaster.intersectObjects(potentialTargets, true);
+    if (intersects.length > 0) {
+        // Encontrar el objeto raíz del jugador (el group)
+        let obj = intersects[0].object;
+        while (obj.parent && !obj.userData.team) obj = obj.parent;
+        targetPlayer = obj;
+    }
+
+    // Crear Misil
+    const missileGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.0, 8);
+    const missileMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 });
+    const missile = new THREE.Mesh(missileGeo, missileMat);
+    missile.rotation.x = Math.PI / 2;
+    
+    const startPos = new THREE.Vector3();
+    revengeWeaponMesh.getWorldPosition(startPos);
+    missile.position.copy(startPos);
+    
+    const startQuat = new THREE.Quaternion();
+    revengeWeaponMesh.getWorldQuaternion(startQuat);
+    missile.quaternion.copy(startQuat);
+    
+    scene.add(missile);
+    
+    missiles.push({
+        mesh: missile,
+        target: targetPlayer,
+        timer: 1.2, // Tarda 1.2s en impactar (Mecánica 3)
+        startPos: startPos.clone(),
+        initialDir: new THREE.Vector3(0, 0, 1).applyQuaternion(startQuat).normalize()
+    });
+
+    // Descartar arma inmediatamente tras disparar
+    hasRevengeWeapon = false;
+    const timerEl = document.getElementById('revenge-timer');
+    if (timerEl) timerEl.remove();
+    if (myPlayerMesh && revengeWeaponMesh) myPlayerMesh.remove(revengeWeaponMesh);
+    revengeWeaponMesh = null;
+}
+
+function updateMissiles(deltaTime) {
+    for (let i = missiles.length - 1; i >= 0; i--) {
+        const m = missiles[i];
+        m.timer -= deltaTime;
+        
+        const progress = 1.0 - (m.timer / 1.2);
+        
+        if (m.target) {
+            // Teledirigido (Mecánica 3)
+            const targetPos = m.target.position.clone().add(new THREE.Vector3(0, 1, 0));
+            m.mesh.position.lerpVectors(m.startPos, targetPos, progress);
+            m.mesh.lookAt(targetPos);
+        } else {
+            // Fallo: Se desvía (Mecánica 3)
+            const forward = m.initialDir.clone().multiplyScalar(progress * 30);
+            const deviation = new THREE.Vector3(0, Math.sin(progress * 5) * 2, 0);
+            m.mesh.position.copy(m.startPos).add(forward).add(deviation);
+        }
+
+        if (m.timer <= 0) {
+            if (m.target) {
+                // Impacto (Mecánica 4)
+                handleImpact(m.target);
+            }
+            scene.remove(m.mesh);
+            missiles.splice(i, 1);
         }
     }
 }
 
-// ============================================================
-// 20. BARRA DE POTENCIA
-// ============================================================
+function handleImpact(targetMesh) {
+    // Buscar el ID del jugador impactado
+    let targetId = null;
+    players.forEach((p, id) => {
+        if (p.mesh === targetMesh) targetId = id;
+    });
+
+    if (targetId) {
+        // Enviar evento de muerte a través de Firebase (simulado aquí por ahora, idealmente usar un nodo 'events')
+        const deathRef = ref(database, 'salas/' + currentRoomId + '/muertes/' + targetId);
+        set(deathRef, { killerName: myPlayerName, time: Date.now() });
+    }
+}
+
+function listenForDeaths() {
+    if (!currentRoomId || !myPlayerId) return;
+    onValue(ref(database, 'salas/' + currentRoomId + '/muertes/' + myPlayerId), (snap) => {
+        const data = snap.val();
+        if (data && !isDead) {
+            onKilled(data.killerName);
+            remove(ref(database, 'salas/' + currentRoomId + '/muertes/' + myPlayerId));
+        }
+    });
+}
+
+function onKilled(killerName) {
+    isDead = true;
+    respawnTimer = 2.5;
+    
+    // Mensaje de muerte (Mecánica 5)
+    const msg = document.createElement('div');
+    msg.id = 'death-msg';
+    msg.style.cssText = 'position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);color:red;font-size:48px;font-weight:900;z-index:2000;font-family:Orbitron;text-align:center;';
+    msg.innerHTML = killerName + ' te mató XD<br><span id="respawn-countdown" style="font-size:32px;color:white;">2.5</span>';
+    document.body.appendChild(msg);
+
+    // Ocultar player
+    if (myPlayerMesh) myPlayerMesh.visible = false;
+    if (hasRevengeWeapon) discardWeapon();
+}
+
+function updateRespawn(deltaTime) {
+    if (!isDead) return;
+    respawnTimer -= deltaTime;
+    const countEl = document.getElementById('respawn-countdown');
+    if (countEl) countEl.textContent = "REVIVIENDO EN: " + Math.max(0, respawnTimer).toFixed(1) + "s";
+
+    if (respawnTimer <= 0) {
+        isDead = false;
+        document.getElementById('death-msg')?.remove();
+        if (myPlayerMesh) {
+            myPlayerMesh.visible = true;
+            // Respawn en posición base (Chilean style)
+            const baseX = myPlayerTeam === 'blue' ? -18 : 18;
+            currentPosition.x = baseX + (Math.random() - 0.5) * 4;
+            currentPosition.z = (Math.random() - 0.5) * 10;
+            currentPosition.y = 0;
+            myPlayerMesh.position.set(currentPosition.x, 0, currentPosition.z);
+        }
+    }
+}
+
+function updateShotClock() {
+    if (!gameRunning || gamePaused) return;
+    if (possession === 'player' && !ballInAir) {
+        // Se maneja en handleMovement
+    }
+}
 
 function updatePowerBar() {
     if (shooting && possession === 'player' && !ballInAir && pointerLockActive && !gamePaused) {
-        shootPower += 0.035 * 5; // Velocidad de carga 5x más rápida (Mecánica 1)
+        shootPower += 0.14; 
         if (shootPower > shootMaxPower) shootPower = shootMaxPower;
         const pct = (shootPower / shootMaxPower) * 100;
         const fill = document.getElementById('power-bar-fill');
@@ -1597,22 +2201,16 @@ function updatePowerBar() {
     }
 }
 
-// ============================================================
-// 21. UI
-// ============================================================
-
 function updatePossessionUI() {
     const text = document.getElementById('possession-text');
     const ballDiv = document.querySelector('.possession-ball');
     if (!text || !ballDiv) return;
     if (possession === 'player') {
-        text.textContent = '🏀 TIENES EL BALÓN 🏀';
+        text.textContent = '🏀 TIENES LA PELOTA, WEÓN 🏀';
         ballDiv.style.background = '#4CAF50';
-        ballDiv.style.boxShadow = '0 0 15px #4CAF50';
     } else {
-        text.textContent = '❌ BALÓN LIBRE / OTRO JUGADOR ❌';
+        text.textContent = '❌ PELOTA LIBRE / OTRO CULIAO ❌';
         ballDiv.style.background = '#FF5722';
-        ballDiv.style.boxShadow = '0 0 15px #FF5722';
     }
 }
 
@@ -1662,6 +2260,10 @@ function togglePauseMenu() {
 
 function setupEventListeners() {
     window.addEventListener('keydown', (e) => {
+        if (!e.key) return;
+         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+    }
         const key = e.key.toLowerCase();
 
         if (key === 'escape') {
@@ -1681,7 +2283,14 @@ function setupEventListeners() {
     });
 
     window.addEventListener('mousedown', (e) => {
-        if (gamePaused || !gameRunning || !myPlayerMesh) return;
+        if (gamePaused || !gameRunning || !myPlayerMesh || isDead) return;
+        
+        // Disparar misil si tiene arma (Mecánica 3)
+        if (hasRevengeWeapon) {
+            shootMissile();
+            return;
+        }
+
         if (e.button === 0 && !ballInAir && possession === 'player' && pointerLockActive) {
             shooting = true;
             shootPower = 0;
@@ -1716,9 +2325,12 @@ function setupEventListeners() {
     });
     document.getElementById('confirm-create-room')?.addEventListener('click', createRoom);
     document.getElementById('cancel-create-room')?.addEventListener('click', () => document.getElementById('create-room-modal').classList.remove('active'));
-    document.getElementById('join-blue-btn')?.addEventListener('click', () => showNameModal('blue'));
-    document.getElementById('join-red-btn')?.addEventListener('click', () => showNameModal('red'));
-    document.getElementById('confirm-name-btn')?.addEventListener('click', confirmJoinGame);
+    document.getElementById('join-blue-btn')?.addEventListener('click', () => {
+    if (!document.getElementById('join-blue-btn').disabled) showNameModal('blue');
+});
+document.getElementById('join-red-btn')?.addEventListener('click', () => {
+    if (!document.getElementById('join-red-btn').disabled) showNameModal('red');
+});document.getElementById('confirm-name-btn')?.addEventListener('click', confirmJoinGame);
     document.getElementById('cancel-name-btn')?.addEventListener('click', () => document.getElementById('name-modal').classList.remove('active'));
     document.getElementById('back-to-rooms')?.addEventListener('click', backToRooms);
     document.getElementById('player-name-input')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') confirmJoinGame(); });
@@ -1738,9 +2350,46 @@ function animate() {
     if (dt < 0.001) dt = 0.016;
 
     if (myPlayerMesh && gameRunning && !gamePaused) {
+        // Solo la autoridad computa la física
+        if (ballAuthority !== myPlayerId) {
+            // Si no soy la autoridad, pero alguien la tiene, forzar la posición localmente
+            if (!ballInAir && ballAuthority) {
+                const possessor = players.get(ballAuthority);
+                if (possessor && possessor.mesh) {
+                    ball.position.set(possessor.mesh.position.x, possessor.mesh.position.y + 1.2, possessor.mesh.position.z);
+                }
+            }
+            
+            // Si no soy la autoridad, igual actualizo efectos visuales como el fuego de otros
+            if (typeof players !== 'undefined') {
+                players.forEach(p => {
+                    if (p.isSprinting && typeof updateOtherPlayerFire === 'function') updateOtherPlayerFire(p.mesh, dt, p.team);
+                });
+            }
+        } else {
+            // Si soy la autoridad, actualizar mi propio fuego
+            if (typeof isSprinting !== 'undefined' && isSprinting && typeof updateFireEffect === 'function') {
+                updateFireEffect(dt);
+            }
+        }
+
         handleMovement(dt);
         updateBallPhysics(dt);
         updateCamera();
+        
+        // Actualizar nuevas lógicas
+        updateRevengeLogic(dt);
+        updateMissiles(dt);
+        updateRespawn(dt);
+        
+        // Desaparecer arma descartada
+        if (revengeDisappearTimer > 0) {
+            revengeDisappearTimer -= dt;
+            if (revengeDisappearTimer <= 0 && revengeWeaponMesh && !hasRevengeWeapon) {
+                scene.remove(revengeWeaponMesh);
+                revengeWeaponMesh = null;
+            }
+        }
     }
 
     renderer.render(scene, camera);
@@ -1768,3 +2417,283 @@ window.onload = () => {
         }
     });
 };
+
+
+
+// Entrega una pistola a un jugador aleatorio del equipo rival (que no sea yo)
+function giveGunToRandomPlayerOfTeam(team) {
+    // Buscar jugadores de ese equipo (excluyéndome a mí mismo)
+    const candidates = [];
+    for (let [id, player] of players) {
+        if (player.team === team && id !== myPlayerId) {
+            candidates.push({ id, player });
+        }
+    }
+    if (candidates.length === 0) {
+        showMessage(`No hay jugadores en el equipo ${team} para darles la pistola`);
+        return;
+    }
+    const randomIndex = Math.floor(Math.random() * candidates.length);
+    const { player } = candidates[randomIndex];
+    
+    if (player.hasGun) {
+        showMessage(`${player.name} ya tiene pistola, no se le da otra.`);
+        return;
+    }
+    
+    // Crear modelo de pistola
+    const gunGroup = new THREE.Group();
+    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.4), new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.7 }));
+    barrel.position.z = 0.2;
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.25, 0.1), new THREE.MeshStandardMaterial({ color: 0x884422 }));
+    grip.position.y = -0.1;
+    grip.position.z = -0.05;
+    const trigger = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), new THREE.MeshStandardMaterial({ color: 0xaa8866 }));
+    trigger.position.set(0.05, -0.05, 0.1);
+    gunGroup.add(barrel, grip, trigger);
+    
+    // Posición en la mano del rival
+    gunGroup.position.set(0.55, 0.85, 0.35);
+    gunGroup.rotation.z = -0.2;
+    gunGroup.rotation.x = 0.3;
+    player.mesh.add(gunGroup);
+    
+    player.hasGun = true;
+    player.gunMesh = gunGroup;
+    
+    // Mostrar mensaje (solo al que anotó o global)
+    showMessage(`🔫 ¡${player.name} (${team.toUpperCase()}) ha recibido una pistola! Disparará cada 2 segundos.`);
+    
+    // Configurar intervalo de disparo automático
+    if (player.shootInterval) clearInterval(player.shootInterval);
+    player.shootInterval = setInterval(() => {
+        if (!player.hasGun || gamePaused || !gameRunning) return;
+        // El rival dispara hacia el jugador que anotó (o hacia el más cercano)
+        let target = myPlayerMesh;
+        // Buscar al jugador que anotó (sería el que tiene el balón o el último shooter)
+        if (lastShooterTeam && lastShooterTeam !== team) {
+            // Podríamos buscar al jugador específico, pero por simplicidad dispara a mí
+        }
+        shootFromRival(player, target);
+    }, 2000); // Cada 2 segundos
+    
+    // Temporizador: 5 segundos y luego la pistola cae y explota
+    if (player.gunTimer) clearTimeout(player.gunTimer);
+    player.gunTimer = setTimeout(() => {
+        if (player.hasGun && player.gunMesh) {
+            dropAndExplodeGun(player);
+            if (player.shootInterval) clearInterval(player.shootInterval);
+            delete player.shootInterval;
+        }
+    }, 5000);
+}
+
+// Función para que un rival dispare un proyectil hacia un objetivo
+function shootFromRival(shooter, targetMesh) {
+    if (!shooter.mesh || !targetMesh) return;
+    
+    // Crear proyectil (una esfera roja)
+    const bulletGeo = new THREE.SphereGeometry(0.15, 8, 8);
+    const bulletMat = new THREE.MeshStandardMaterial({ color: 0xff4400, emissive: 0xff2200 });
+    const bullet = new THREE.Mesh(bulletGeo, bulletMat);
+    bullet.position.copy(shooter.mesh.position);
+    bullet.position.y += 1.0;
+    scene.add(bullet);
+    
+    // Dirección hacia el objetivo
+    const direction = new THREE.Vector3().subVectors(targetMesh.position, bullet.position).normalize();
+    const speed = 12;
+    const velocity = direction.multiplyScalar(speed);
+    
+    bullet.userData = { velocity, life: 3.0, target: targetMesh };
+    
+    function animateBullet() {
+        if (!bullet.parent) return;
+        bullet.position.x += bullet.userData.velocity.x * 0.016;
+        bullet.position.y += bullet.userData.velocity.y * 0.016;
+        bullet.position.z += bullet.userData.velocity.z * 0.016;
+        bullet.userData.life -= 0.016;
+        
+        // Colisión con el jugador objetivo
+        if (bullet.position.distanceTo(targetMesh.position) < 0.8) {
+            scene.remove(bullet);
+            // Efecto: robar la pelota si el objetivo la tiene
+            if (possession === 'player' && myPlayerMesh === targetMesh) {
+                possession = null;
+                ballInAir = false;
+                ball.userData.inAir = false;
+                showMessage(`💥 ¡Te dieron con la pistola! Perdiste la pelota.`);
+                updatePossessionUI();
+                syncBallToFirebase();
+            } else {
+                showMessage(`💥 ¡Bala impactada!`);
+            }
+            return;
+        }
+        
+        if (bullet.userData.life <= 0 || bullet.position.y < 0 || Math.abs(bullet.position.x) > 40 || Math.abs(bullet.position.z) > 40) {
+            scene.remove(bullet);
+        } else {
+            requestAnimationFrame(animateBullet);
+        }
+    }
+    requestAnimationFrame(animateBullet);
+}
+
+// Hace que la pistola caiga al suelo y explote
+function dropAndExplodeGun(rival) {
+    if (!rival || !rival.gunMesh) return;
+    const gun = rival.gunMesh;
+    rival.mesh.remove(gun);
+    rival.hasGun = false;
+    delete rival.gunMesh;
+    
+    gun.position.copy(rival.mesh.position);
+    gun.position.y += 0.5;
+    scene.add(gun);
+    
+    let fallY = gun.position.y;
+    const fallInterval = setInterval(() => {
+        if (!gun.parent) { clearInterval(fallInterval); return; }
+        fallY -= 0.1;
+        gun.position.y = fallY;
+        if (fallY <= 0.2) {
+            clearInterval(fallInterval);
+            createExplosion(gun.position.clone());
+            scene.remove(gun);
+            showMessage("💥 ¡La pistola explotó!");
+        }
+    }, 50);
+}
+
+function createExplosion(position) {
+    for (let i = 0; i < 15; i++) {
+        const particle = new THREE.Mesh(new THREE.SphereGeometry(0.08, 4, 4), new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff2200 }));
+        particle.position.copy(position);
+        scene.add(particle);
+        const vx = (Math.random() - 0.5) * 3;
+        const vz = (Math.random() - 0.5) * 3;
+        const vy = Math.random() * 2;
+        let life = 0.6;
+        const animateParticle = () => {
+            if (life <= 0) { scene.remove(particle); return; }
+            particle.position.x += vx * 0.1;
+            particle.position.z += vz * 0.1;
+            particle.position.y += vy * 0.1;
+            life -= 0.05;
+            requestAnimationFrame(animateParticle);
+        };
+        animateParticle();
+    }
+}
+function playRandomScoreSound() {
+    const sounds = ['encesta1.mp3', 'encesta2.mp3', 'encesta3.mp3'];
+    const randomSound = sounds[Math.floor(Math.random() * sounds.length)];
+    const audio = new Audio('assets/sounds/' + randomSound);
+    audio.play().catch(e => console.warn("Audio no encontrado:", randomSound));
+}
+function endGameWithWinner(winningTeam) {
+    if (gameFinished) return;
+    gameFinished = true;
+    gameRunning = false;
+
+    // Reproducir audio de victoria aleatorio
+    const winSounds = ['ganar1.mp3', 'ganar2.mp3', 'ganar3.mp3'];
+    const randomWin = winSounds[Math.floor(Math.random() * winSounds.length)];
+    const audio = new Audio('assets/sounds/' + randomWin);
+    audio.play().catch(e => console.warn("Audio de victoria no encontrado:", randomWin));
+
+    // Mostrar mensaje gigante de ganador
+    const winnerName = winningTeam === 'blue' ? '🔵 EQUIPO AZUL 🔵' : '🔴 EQUIPO ROJO 🔴';
+    showGiantMessage(`🏆 ¡${winnerName} HA GANADO! 🏆`, 5000);
+
+    // Deshabilitar controles adicionales y mostrar opción para volver a salas
+    const winnerMsg = document.createElement('div');
+    winnerMsg.style.cssText = 'position:fixed; top:30%; left:50%; transform:translate(-50%,-50%); background:gold; color:black; font-size:48px; font-weight:900; padding:30px; border-radius:30px; z-index:10000; font-family:Orbitron; text-align:center;';
+    winnerMsg.innerHTML = `¡${winnerName} GANÓ!<br><button id="back-after-win" style="margin-top:20px; padding:10px 30px; font-size:24px; cursor:pointer;">Volver a Salas</button>`;
+    document.body.appendChild(winnerMsg);
+
+    document.getElementById('back-after-win')?.addEventListener('click', () => {
+        winnerMsg.remove();
+        backToRooms();
+    });
+
+    // Opcional: detener la pelota y el movimiento
+    possession = null;
+    ballInAir = false;
+    if (ball.userData) ball.userData.velocity = null;
+}
+function playRandomJumpSound() {
+    const sounds = ['saltar1.mp3', 'saltar2.mp3', 'saltar3.mp3'];
+    const randomSound = sounds[Math.floor(Math.random() * sounds.length)];
+    const audio = new Audio('assets/sounds/' + randomSound);
+    audio.play().catch(e => console.warn("Audio no encontrado:", randomSound));
+}
+
+function playSoundGlobal(soundType) {
+    // 1. Reproducir localmente
+    let soundFile = '';
+    switch(soundType) {
+        case 'score':
+            const scoreSounds = ['encesta1.mp3', 'encesta2.mp3', 'encesta3.mp3'];
+            soundFile = scoreSounds[Math.floor(Math.random() * scoreSounds.length)];
+            break;
+        case 'win':
+            const winSounds = ['ganar1.mp3', 'ganar2.mp3', 'ganar3.mp3'];
+            soundFile = winSounds[Math.floor(Math.random() * winSounds.length)];
+            break;
+        case 'jump':
+            const jumpSounds = ['saltar1.mp3', 'saltar2.mp3', 'saltar3.mp3'];
+            soundFile = jumpSounds[Math.floor(Math.random() * jumpSounds.length)];
+            break;
+        default: return;
+    }
+    const audio = new Audio('assets/sounds/' + soundFile);
+    audio.play().catch(e => console.warn("Audio no encontrado:", soundFile));
+
+    // 2. Enviar evento a Firebase para que otros lo escuchen
+    if (soundEventsRef) {
+        push(soundEventsRef, {
+            type: soundType,
+            playerId: myPlayerId,
+            timestamp: Date.now()
+        });
+    }
+}
+function startRoomCleanupScheduler() {
+    setInterval(() => {
+        const roomsRef = ref(database, 'salas');
+        onValue(roomsRef, (snapshot) => {
+            const rooms = snapshot.val();
+            if (!rooms) return;
+            const now = Date.now();
+            Object.entries(rooms).forEach(([roomId, room]) => {
+                if (room.lastEmptyCheck && (now - room.lastEmptyCheck) > 15000) { // 15 segundos
+                    // Eliminar la sala si no es la actual (para no echar al jugador)
+                    if (roomId !== currentRoomId) {
+                        remove(ref(database, 'salas/' + roomId));
+                        console.log(`Sala ${roomId} eliminada por inactividad (vacía >15s)`);
+                    }
+                }
+            });
+        }, { onlyOnce: true });
+    }, 10000); // cada 10 segundos
+}
+
+function checkAndScheduleRoomCleanup(roomId, roomData) {
+    const blueCount = roomData.equipos?.azul ? Object.keys(roomData.equipos.azul).length : 0;
+    const redCount = roomData.equipos?.rojo ? Object.keys(roomData.equipos.rojo).length : 0;
+    const isEmpty = (blueCount + redCount === 0);
+    
+    if (isEmpty) {
+        // Si está vacía y no hay marca de tiempo, poner la actual
+        if (!roomData.lastEmptyCheck) {
+            set(ref(database, 'salas/' + roomId + '/lastEmptyCheck'), Date.now());
+        }
+    } else {
+        // Si no está vacía, borrar la marca de tiempo (si existe)
+        if (roomData.lastEmptyCheck) {
+            set(ref(database, 'salas/' + roomId + '/lastEmptyCheck'), null);
+        }
+    }
+}

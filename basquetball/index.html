@@ -32,6 +32,14 @@
             <h2>🏟️ Crear Nueva Sala</h2>
             <input type="text" id="room-name-input" placeholder="Nombre de la sala" maxlength="30">
             <div class="mode-selector">
+                <div class="mode-selector">
+    <label>Puntos para ganar:</label>
+    <select id="room-points-select">
+        <option value="5">5 puntos</option>
+        <option value="10" selected>10 puntos</option>
+        <option value="15">15 puntos</option>
+    </select>
+</div>
                 <label>Modo de juego:</label>
                 <select id="room-mode-select">
                     <option value="1v1">1 vs 1 (2 jugadores)</option>
@@ -100,17 +108,25 @@
     <!-- UI DEL JUEGO (se muestra después de unirse) -->
     <div id="game-ui" style="display: none;">
         <div class="top-bar">
-            <div class="players-count">
-                🟢 JUGADORES ONLINE: <span id="online-count">0</span>
+            <div class="team-scores">
+                <div class="score-item blue">🔵 AZUL: <span id="blue-score">0</span></div>
+                <div class="score-item vs">VS</div>
+                <div class="score-item red">ROJO: <span id="red-score">0</span> 🔴</div>
             </div>
             <div class="current-player">
-                👤 TÚ: <span id="my-name">-</span>
+                👤 <span id="my-name">-</span>
                 <span id="my-team-badge" class="team-badge">🔵</span>
             </div>
-            <div class="score-display">
-                🏆 PUNTOS: <span id="my-score">0</span>
-            </div>
         </div>
+        
+        <div class="sprint-ui">
+            <div class="sprint-label">🔥 SPRINT (SHIFT)</div>
+            <div class="sprint-bar-bg">
+                <div id="sprint-bar-fill" class="sprint-bar-fill"></div>
+            </div>
+            <div id="sprint-cooldown-text" class="sprint-cooldown-text">LISTO</div>
+        </div>
+
         <div class="crosshair">
             <div class="crosshair-dot"></div>
             <div class="crosshair-line horizontal"></div>

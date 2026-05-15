@@ -2,7 +2,7 @@
 :root {
     --gold: #FFD700;
     --gold-glow: rgba(255, 215, 0, 0.6);
-    --gold-glow-strong: rgba(255, 215, 0, 0.9);
+    --gold-glow-strong: rgba(231, 206, 62, 0.9);
     --player-color: #4CAF50;
     --player-color-glow: rgba(76, 175, 80, 0.5);
     --ai-color: #FF5722;
@@ -144,22 +144,148 @@ body {
     display: none;
 }
 
-/* Top bar */
+/* Top bar (HUD 3 - Desplazado a la sección superior fija) */
 .top-bar {
-    position: absolute;
+    position: fixed;
     top: 20px;
-    left: 20px;
-    right: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 600px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.7));
-    backdrop-filter: blur(15px);
-    padding: 12px 28px;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 20, 20, 0.8));
+    backdrop-filter: blur(20px);
+    padding: 15px 40px;
     border-radius: 60px;
-    border: 1px solid rgba(255, 215, 0, 0.3);
+    border: 2px solid rgba(255, 215, 0, 0.6);
     pointer-events: auto;
-    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+}
+
+.team-scores {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.score-item {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px 25px;
+    border-radius: 50px;
+    font-size: 28px;
+    font-weight: 900;
+    min-width: 200px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    font-family: 'Orbitron', sans-serif;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.score-item.blue { color: #4488ff; }
+.score-item.red { color: #ff4444; }
+.score-item.vs { color: #FFD700; font-size: 20px; opacity: 0.7; }
+
+/* Sprint UI */
+.sprint-ui {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px 25px;
+    border-radius: 20px;
+    border: 1px solid #ff4400;
+    width: 250px;
+    z-index: 500;
+    pointer-events: auto;
+}
+
+.sprint-label {
+    color: #ff4400;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sprint-bar-bg {
+    background: rgba(255, 68, 0, 0.15);
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 68, 0, 0.3);
+}
+
+.sprint-bar-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff8800, #ff4400);
+    box-shadow: 0 0 15px #ff4400;
+    transition: width 0.1s linear;
+}
+
+.sprint-cooldown-text {
+    color: white;
+    font-size: 11px;
+    margin-top: 5px;
+    text-align: right;
+    font-weight: bold;
+}
+
+/* Yellow Dispara Screen */
+.yellow-flash {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+    pointer-events: none;
+    animation: flashFade 0.7s forwards;
+}
+
+@keyframes flashFade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.dispara-text {
+    font-size: 120px;
+    font-weight: 900;
+    color: black;
+    text-shadow: 0 0 20px white;
+    font-family: 'Orbitron';
+}
+
+/* Global Gun Message */
+.global-gun-msg {
+    position: fixed;
+    top: 25%;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    padding: 30px;
+    text-align: center;
+    font-size: 42px;
+    font-weight: 900;
+    z-index: 6000;
+    font-family: 'Orbitron';
+    text-transform: uppercase;
+    box-shadow: 0 0 50px red;
+    animation: slideInMsg 0.6s forwards;
+}
+
+@keyframes slideInMsg {
+    0% { transform: scaleX(0); opacity: 0; }
+    100% { transform: scaleX(1); opacity: 1; }
 }
 
 .players-count {
@@ -189,17 +315,24 @@ body {
     text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
 }
 
+/* Score display (HUD 3) */
 .score-display {
-    background: rgba(0, 0, 0, 0.6);
-    padding: 6px 18px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px 25px;
     border-radius: 40px;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: bold;
+    position: fixed;
+    bottom: 30px;
+    right: 250px;
+    pointer-events: auto;
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 20px var(--gold-glow);
 }
 
 .score-display span {
     color: var(--gold);
-    font-size: 24px;
+    font-size: 32px;
     font-weight: 900;
     text-shadow: 0 0 10px var(--gold-glow);
 }
@@ -378,36 +511,34 @@ body {
     font-family: 'Orbitron', monospace;
 }
 
-/* Shot clock */
+/* ===== SHOT CLOCK ===== */
 .shot-clock {
-    position: absolute;
-    top: 100px;
-    right: 25px;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.7));
-    backdrop-filter: blur(15px);
-    border-radius: 25px;
-    padding: 12px 22px;
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 3px solid #ff4444;
+    border-radius: 15px;
+    padding: 15px 25px;
     text-align: center;
-    border: 2px solid #FF9800;
-    pointer-events: none;
-    font-family: 'Orbitron', monospace;
-    box-shadow: 0 0 20px rgba(255, 152, 0, 0.3);
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.4);
+    z-index: 100;
 }
 
 .shot-clock-label {
-    font-size: 9px;
-    color: #FF9800;
-    letter-spacing: 3px;
-    font-weight: bold;
-    text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    color: #ff4444;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
 }
 
 .shot-clock-value {
+    font-family: 'Orbitron', sans-serif;
     font-size: 42px;
     font-weight: 900;
-    color: #FF9800;
-    line-height: 1;
-    text-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+    color: white;
+    text-shadow: 0 0 15px #ff4444;
 }
 
 /* Indicador de posesión */
@@ -447,10 +578,10 @@ body {
     font-weight: 600;
 }
 
-/* Score popup */
+/* Score popup (HUD 3 - Desplazado) */
 #score-popup-container {
-    position: absolute;
-    top: 35%;
+    position: fixed;
+    bottom: 250px;
     left: 50%;
     transform: translateX(-50%);
     pointer-events: none;
@@ -459,10 +590,10 @@ body {
 
 .score-popup {
     position: absolute;
-    font-size: 72px;
+    font-size: 84px;
     font-weight: 900;
     font-family: 'Orbitron', monospace;
-    text-shadow: 0 0 30px rgba(255, 215, 0, 0.9);
+    text-shadow: 0 0 30px rgba(255, 215, 0, 1);
     white-space: nowrap;
     animation: floatUp 1s ease-out forwards;
     left: 50%;
@@ -471,35 +602,35 @@ body {
 
 @keyframes floatUp {
     0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(0.8); }
-    100% { opacity: 0; transform: translateX(-50%) translateY(-150px) scale(1.8); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-100px) scale(2.0); }
 }
 
-/* Mensaje flotante */
+/* Mensaje flotante (HUD 3 - Desplazado a sección inferior) */
 .game-message {
-    position: absolute;
-    top: 50%;
+    position: fixed;
+    bottom: 200px;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.85));
     backdrop-filter: blur(20px);
     border-radius: 60px;
-    padding: 18px 40px;
+    padding: 18px 50px;
     text-align: center;
-    border: 2px solid var(--gold);
-    font-size: 24px;
-    font-weight: bold;
+    border: 3px solid var(--gold);
+    font-size: 28px;
+    font-weight: 900;
     color: var(--gold);
     white-space: nowrap;
     z-index: 300;
     animation: messagePop 0.3s ease-out;
     pointer-events: none;
-    box-shadow: 0 0 50px rgba(255, 215, 0, 0.3);
+    box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
     letter-spacing: 2px;
 }
 
 @keyframes messagePop {
-    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
 }
 
 /* Pointer lock info */
