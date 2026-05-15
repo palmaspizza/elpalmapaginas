@@ -1,0 +1,1694 @@
+// ============================================================
+// BASKETBALL MULTIPLAYER - SISTEMA DE SALAS COMPLETO
+// ============================================================
+
+// 1. IMPORTS
+import * as THREE from 'three';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getDatabase, ref, set, onValue, push, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+// 2. FIREBASE CONFIG
+const firebaseConfig = {
+    apiKey: "AIzaSyCSqgJA6uL8SkY-kphhuaR9TuGPulucPic",
+    authDomain: "ajedrez-65b15.firebaseapp.com",
+    databaseURL: "https://ajedrez-65b15-default-rtdb.firebaseio.com",
+    projectId: "ajedrez-65b15",
+    storageBucket: "ajedrez-65b15.firebasestorage.app",
+    messagingSenderId: "501222935015",
+    appId: "1:501222935015:web:bb08aeab5af07a77eb1542"
+};
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// ============================================================
+// 3. VARIABLES GLOBALES
+// ============================================================
+let scene, camera, renderer, labelRenderer;
+let myPlayerId = null;
+let myPlayerName = "";
+let myPlayerTeam = null;   // 'blue' | 'red'
+let myPlayerMesh = null;
+let myPlayerScore = 0;
+let players = new Map();   // otros jugadores en escena
+let ball = null;
+let ballInAir = false;
+let possession = null;     // 'player' = yo tengo la pelota, null = libre/otro
+let ballAuthority = null;  // playerId que controla la física de la pelota
+let shooting = false;
+let shootPower = 0;
+let shootMaxPower = 1.4;
+let shotClock = 24;
+let hoops = [];
+// hoops[0] = aro DERECHO (X positivo) → equipo AZUL ataca aquí
+// hoops[1] = aro IZQUIERDO (X negativo) → equipo ROJO ataca aquí
+let gameRunning = false;
+let gamePaused = false;
+
+// Sistema de salas
+let currentRoomId = null;
+let currentRoomData = null;
+let unsubscribeRoom = null;
+
+// Cámara
+let cameraAngleX = 0;
+let cameraAngleY = 0.4;
+let cameraDistance = 10;
+let targetCameraAngleX = 0;
+let targetCameraAngleY = 0.4;
+let pointerLockActive = false;
+const mouseSensitivity = 0.004;
+
+// Movimiento
+let currentPosition = { x: 0, y: 0, z: 0 };
+let keysPressed = {};
+let isJumping = false;
+let verticalVelocity = 0;
+const gravity = 20;
+const jumpPower = 7.5;
+const groundY = 0;
+let isMoving = false;
+let velocityX = 0, velocityZ = 0;
+const acceleration = 25;
+const deceleration = 20;
+const maxSpeed = 11;
+
+// Robo de pelota
+let lastStealTime = 0;
+const stealCooldownMax = 0.9;
+
+// Animación
+let animationTime = 0;
+let lastDeltaTimeFrame = 0;
+
+// Sincronización de pelota
+let lastBallSyncTime = 0;
+const BALL_SYNC_MS = 60;
+
+// Colores por equipo
+const teamColors = {
+    blue: { primary: 0x2255ee, hex: "#2255ee", name: "AZUL" },
+    red:  { primary: 0xee2233, hex: "#ee2233", name: "ROJO" }
+};
+
+const bodyTypes = [
+    { scaleX: 0.7,  scaleY: 1.1, scaleZ: 0.7  },
+    { scaleX: 0.9,  scaleY: 0.7, scaleZ: 0.9  },
+    { scaleX: 0.6,  scaleY: 1.3, scaleZ: 0.6  },
+    { scaleX: 1.0,  scaleY: 0.8, scaleZ: 1.0  },
+    { scaleX: 0.8,  scaleY: 0.9, scaleZ: 0.8  }
+];
+
+const courtConfig = {
+    width: 30,
+    length: 50,
+    limitX: 23,
+    limitZ: 14,
+    hoopHeight: 3.1,
+    threePointLine: 6.75
+};
+
+// ============================================================
+// 4. SISTEMA DE SALAS
+// ============================================================
+
+function getMaxPerTeam(modo) {
+    const map = { '1v1': 1, '2v2': 2, '3v3': 3, '4v4': 4 };
+    return map[modo] || 2;
+}
+
+function loadRooms() {
+    const roomsRef = ref(database, 'salas');
+    onValue(roomsRef, (snapshot) => {
+        const rooms = snapshot.val();
+        const list = document.getElementById('rooms-list');
+        if (!list) return;
+        if (!rooms || Object.keys(rooms).length === 0) {
+            list.innerHTML = '<div class="no-rooms" style="text-align:center;color:rgba(255,255,255,0.5);padding:40px;font-size:18px;">No hay salas disponibles. ¡Crea una!</div>';
+            return;
+        }
+        let html = '';
+        for (const [roomId, room] of Object.entries(rooms)) {
+            const bluePlayers = room.equipos && room.equipos.azul ? Object.keys(room.equipos.azul).length : 0;
+            const redPlayers  = room.equipos && room.equipos.rojo ? Object.keys(room.equipos.rojo).length : 0;
+            const maxPT = getMaxPerTeam(room.modo);
+            html += `
+                <div class="room-card" data-room-id="${roomId}">
+                    <h3>🏟️ ${room.nombre}</h3>
+                    <span class="room-mode">${room.modo}</span>
+                    <div class="room-players">👥 ${bluePlayers + redPlayers}/${maxPT * 2} jugadores</div>
+                    <div class="room-teams">
+                        <div class="team-blue-info">🔵 Azul: ${bluePlayers}/${maxPT}</div>
+                        <div class="team-red-info">🔴 Rojo: ${redPlayers}/${maxPT}</div>
+                    </div>
+                </div>`;
+        }
+        list.innerHTML = html;
+        list.querySelectorAll('.room-card').forEach(card => {
+            card.addEventListener('click', () => joinRoom(card.dataset.roomId));
+        });
+    });
+}
+
+function createRoom() {
+    const roomName = document.getElementById('room-name-input').value.trim();
+    const mode = document.getElementById('room-mode-select').value;
+    if (!roomName) { alert("Ingresa un nombre para la sala"); return; }
+    const newRoomRef = push(ref(database, 'salas'));
+    const roomData = {
+        nombre: roomName,
+        modo: mode,
+        max_por_equipo: getMaxPerTeam(mode),
+        equipos: { azul: {}, rojo: {} },
+        creada: Date.now(),
+        bola: { x: 0, y: 0.8, z: 0, vx: 0, vy: 0, vz: 0, inAir: false, authorityId: null, possessorTeam: null }
+    };
+    set(newRoomRef, roomData).then(() => {
+        document.getElementById('create-room-modal').classList.remove('active');
+        joinRoom(newRoomRef.key);
+    });
+}
+
+function joinRoom(roomId) {
+    currentRoomId = roomId;
+    if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+    const roomRef = ref(database, 'salas/' + roomId);
+    unsubscribeRoom = onValue(roomRef, (snapshot) => {
+        const room = snapshot.val();
+        if (!room) { alert("La sala ya no existe"); backToRooms(); return; }
+        currentRoomData = room;
+        updateRoomUI(room);
+    });
+    document.getElementById('rooms-screen').style.display = 'none';
+    document.getElementById('room-screen').style.display = 'block';
+}
+
+function updateRoomUI(room) {
+    const maxPT = getMaxPerTeam(room.modo);
+    const bluePlayers = (room.equipos && room.equipos.azul) ? room.equipos.azul : {};
+    const redPlayers  = (room.equipos && room.equipos.rojo) ? room.equipos.rojo : {};
+    const blueCount = Object.keys(bluePlayers).length;
+    const redCount  = Object.keys(redPlayers).length;
+
+    const nameDisplay = document.getElementById('room-name-display');
+    const modeDisplay = document.getElementById('room-mode-display');
+    const blueCountEl = document.getElementById('blue-team-count');
+    const redCountEl  = document.getElementById('red-team-count');
+    const blueList    = document.getElementById('blue-team-list');
+    const redList     = document.getElementById('red-team-list');
+    const joinBlue    = document.getElementById('join-blue-btn');
+    const joinRed     = document.getElementById('join-red-btn');
+
+    if (nameDisplay) nameDisplay.textContent = '🏟️ ' + room.nombre;
+    if (modeDisplay) modeDisplay.textContent = 'Modo: ' + room.modo;
+    if (blueCountEl) blueCountEl.textContent = blueCount + '/' + maxPT;
+    if (redCountEl)  redCountEl.textContent  = redCount  + '/' + maxPT;
+
+    if (blueList) {
+        let html = '';
+        Object.values(bluePlayers).forEach(p => { html += '<div class="player-item"><span class="player-name">🔵 ' + p.nombre + '</span></div>'; });
+        for (let i = blueCount; i < maxPT; i++) html += '<div class="empty-slot">⬜ Vacante</div>';
+        blueList.innerHTML = html || '<div class="empty-slot">Esperando jugadores...</div>';
+    }
+    if (redList) {
+        let html = '';
+        Object.values(redPlayers).forEach(p => { html += '<div class="player-item"><span class="player-name">🔴 ' + p.nombre + '</span></div>'; });
+        for (let i = redCount; i < maxPT; i++) html += '<div class="empty-slot">⬜ Vacante</div>';
+        redList.innerHTML = html || '<div class="empty-slot">Esperando jugadores...</div>';
+    }
+
+    const myAlreadyIn = myPlayerId && (bluePlayers[myPlayerId] || redPlayers[myPlayerId]);
+    if (joinBlue) {
+        const disabled = blueCount >= maxPT || !!myAlreadyIn;
+        joinBlue.disabled = disabled;
+        joinBlue.classList.toggle('disabled', disabled);
+    }
+    if (joinRed) {
+        const disabled = redCount >= maxPT || !!myAlreadyIn;
+        joinRed.disabled = disabled;
+        joinRed.classList.toggle('disabled', disabled);
+    }
+}
+
+function showNameModal(team) {
+    myPlayerTeam = team;
+    const teamNameEl = document.getElementById('selected-team-name');
+    if (teamNameEl) teamNameEl.textContent = team === 'blue' ? 'AZUL 🔵' : 'ROJO 🔴';
+    document.getElementById('name-modal').classList.add('active');
+    const input = document.getElementById('player-name-input');
+    if (input) { input.value = ''; input.focus(); }
+}
+
+function confirmJoinGame() {
+    const input = document.getElementById('player-name-input');
+    const playerName = input ? input.value.trim() : '';
+    if (!playerName) { alert("Ingresa tu nombre"); return; }
+    myPlayerName = playerName;
+    myPlayerId = Date.now().toString() + Math.random().toString(36).substr(2, 6);
+
+    // Posición inicial según equipo
+    // Azul → izquierda (X negativo), ataca aro derecho
+    // Rojo → derecha (X positivo), ataca aro izquierdo
+    const baseX = myPlayerTeam === 'blue' ? -8 : 8;
+    const startX = baseX + (Math.random() - 0.5) * 4;
+    const startZ = (Math.random() - 0.5) * 8;
+
+    const fbTeam = myPlayerTeam === 'blue' ? 'azul' : 'rojo';
+    const playerRef = ref(database, 'salas/' + currentRoomId + '/equipos/' + fbTeam + '/' + myPlayerId);
+    set(playerRef, {
+        nombre: myPlayerName,
+        x: startX, y: 0, z: startZ,
+        rotationY: 0,
+        score: 0,
+        team: myPlayerTeam,
+        lastUpdate: Date.now()
+    });
+    onDisconnect(playerRef).remove();
+
+    // Limpiar sala si queda vacía al desconectar (solo si eres el último)
+    onDisconnect(ref(database, 'salas/' + currentRoomId + '/equipos/' + fbTeam + '/' + myPlayerId)).remove();
+
+    document.getElementById('name-modal').classList.remove('active');
+    document.getElementById('room-screen').style.display = 'none';
+
+    initGameWithRoom(startX, startZ);
+}
+
+function backToRooms() {
+    // Quitar al jugador de la sala
+    if (myPlayerId && currentRoomId && myPlayerTeam) {
+        const fbTeam = myPlayerTeam === 'blue' ? 'azul' : 'rojo';
+        remove(ref(database, 'salas/' + currentRoomId + '/equipos/' + fbTeam + '/' + myPlayerId));
+    }
+    cleanupGame();
+    if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+    currentRoomId = null; currentRoomData = null; myPlayerTeam = null; myPlayerId = null;
+    document.getElementById('room-screen').style.display = 'none';
+    document.getElementById('rooms-screen').style.display = 'block';
+    document.getElementById('game-ui').style.display = 'none';
+    document.getElementById('pause-menu').classList.remove('active');
+    if (pointerLockActive) document.exitPointerLock();
+}
+
+function exitToMenu() {
+    const pauseMenu = document.getElementById('pause-menu');
+    if (pauseMenu) pauseMenu.classList.remove('active');
+    backToRooms();
+}
+
+function cleanupGame() {
+    gameRunning = false;
+    gamePaused = false;
+    if (myPlayerMesh) { scene.remove(myPlayerMesh); myPlayerMesh = null; }
+    players.forEach(p => scene.remove(p.mesh));
+    players.clear();
+    myPlayerScore = 0;
+    possession = null;
+    ballInAir = false;
+    ballAuthority = null;
+    shooting = false;
+    shootPower = 0;
+    if (ball) { ball.position.set(0, 0.8, 0); ball.userData.inAir = false; ball.userData.velocity = null; }
+}
+
+// ============================================================
+// 5. SINCRONIZACIÓN FIREBASE
+// ============================================================
+
+function syncPosition() {
+    if (!myPlayerId || !myPlayerMesh || !currentRoomId || !myPlayerTeam) return;
+    const fbTeam = myPlayerTeam === 'blue' ? 'azul' : 'rojo';
+    set(ref(database, 'salas/' + currentRoomId + '/equipos/' + fbTeam + '/' + myPlayerId), {
+        nombre: myPlayerName,
+        x: currentPosition.x,
+        y: currentPosition.y,
+        z: currentPosition.z,
+        rotationY: myPlayerMesh.rotation.y,
+        score: myPlayerScore,
+        team: myPlayerTeam,
+        lastUpdate: Date.now()
+    });
+}
+
+function syncBallToFirebase() {
+    if (!currentRoomId || !ball) return;
+    const now = Date.now();
+    if (now - lastBallSyncTime < BALL_SYNC_MS) return;
+    lastBallSyncTime = now;
+    const vel = ball.userData.velocity;
+    set(ref(database, 'salas/' + currentRoomId + '/bola'), {
+        x: ball.position.x,
+        y: ball.position.y,
+        z: ball.position.z,
+        vx: vel ? vel.x : 0,
+        vy: vel ? vel.y : 0,
+        vz: vel ? vel.z : 0,
+        inAir: ballInAir,
+        authorityId: myPlayerId,
+        possessorTeam: possession === 'player' ? myPlayerTeam : null,
+        shooterTeam: (ball.userData && ball.userData.shooterTeam) ? ball.userData.shooterTeam : null,
+        isThreePoint: (ball.userData && ball.userData.isThreePoint) ? ball.userData.isThreePoint : false,
+        lastUpdate: now
+    });
+}
+
+function applyBallFromFirebase(d) {
+    if (!ball || !d) return;
+    if (d.authorityId === myPlayerId) return; // yo soy la autoridad, no sobrescribir
+
+    ballAuthority = d.authorityId || null;
+
+    // Interpolación suave
+    ball.position.x += (d.x - ball.position.x) * 0.35;
+    ball.position.y += (d.y - ball.position.y) * 0.35;
+    ball.position.z += (d.z - ball.position.z) * 0.35;
+
+    if (d.inAir) {
+        ballInAir = true;
+        ball.userData.inAir = true;
+        ball.userData.velocity = new THREE.Vector3(d.vx || 0, d.vy || 0, d.vz || 0);
+        ball.userData.shooterTeam = d.shooterTeam || null;
+        ball.userData.isThreePoint = d.isThreePoint || false;
+        if (possession === 'player') { possession = null; updatePossessionUI(); }
+    } else {
+        if (ball.userData) ball.userData.inAir = false;
+        if (!d.possessorTeam || d.possessorTeam !== myPlayerTeam) {
+            if (possession === 'player') { possession = null; updatePossessionUI(); }
+            ballInAir = false;
+        }
+    }
+}
+
+function listenRoomPlayers() {
+    if (!currentRoomId) return;
+
+    const listenTeam = (fbPath, teamName) => {
+        onValue(ref(database, 'salas/' + currentRoomId + '/equipos/' + fbPath), (snap) => {
+            const data = snap.val() || {};
+            const activeIds = new Set(Object.keys(data));
+
+            Object.keys(data).forEach(pid => {
+                if (pid === myPlayerId) return;
+                const pd = data[pid];
+                const color = teamName === 'blue' ? teamColors.blue.primary : teamColors.red.primary;
+
+                if (!players.has(pid)) {
+                    const { group } = createChibiPlayer(color, pd.nombre, Math.floor(Math.random() * bodyTypes.length));
+                    scene.add(group);
+                    players.set(pid, { mesh: group, name: pd.nombre, team: teamName, score: 0 });
+                }
+                const p = players.get(pid);
+                if (p && pd.x !== undefined) {
+                    p.mesh.position.set(pd.x, pd.y || 0, pd.z);
+                    if (pd.rotationY !== undefined) p.mesh.rotation.y = pd.rotationY;
+                    p.score = pd.score || 0;
+                }
+            });
+
+            // Eliminar desconectados de este equipo
+            players.forEach((p, pid) => {
+                if (p.team === teamName && !activeIds.has(pid)) {
+                    scene.remove(p.mesh);
+                    players.delete(pid);
+                }
+            });
+
+            const total = players.size + 1;
+            const onlineEl = document.getElementById('online-count');
+            const pauseOnline = document.getElementById('pause-online-count');
+            if (onlineEl) onlineEl.textContent = total;
+            if (pauseOnline) pauseOnline.textContent = total;
+        });
+    };
+
+    listenTeam('azul', 'blue');
+    listenTeam('rojo', 'red');
+
+    // Escuchar pelota de otros jugadores
+    onValue(ref(database, 'salas/' + currentRoomId + '/bola'), (snap) => {
+        const d = snap.val();
+        if (d && d.authorityId !== myPlayerId) {
+            applyBallFromFirebase(d);
+        }
+    });
+}
+
+// ============================================================
+// 6. THREE.JS INIT
+// ============================================================
+
+function initThree() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a2a);
+    scene.fog = new THREE.FogExp2(0x0a0a2a, 0.005);
+
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0px';
+    labelRenderer.domElement.style.left = '0px';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    document.body.appendChild(labelRenderer.domElement);
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    setupLights();
+    createBeautifulCourt();
+    createGiantHoops();
+    createBigBall();
+    animate();
+}
+
+function setupLights() {
+    scene.add(new THREE.AmbientLight(0x404060));
+
+    const mainLight = new THREE.DirectionalLight(0xfff5e6, 1.4);
+    mainLight.position.set(10, 20, 5);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    scene.add(mainLight);
+
+    const fillLight = new THREE.PointLight(0x4466cc, 0.6);
+    fillLight.position.set(0, 10, 0);
+    scene.add(fillLight);
+
+    const stadiumColors = [0xffaa66, 0xff8855, 0xffaa66, 0xff8855];
+    const spotPositions = [[-15,8,-20],[15,8,-20],[-15,8,20],[15,8,20]];
+    spotPositions.forEach((pos, i) => {
+        const light = new THREE.SpotLight(stadiumColors[i], 0.8);
+        light.position.set(pos[0], pos[1], pos[2]);
+        light.castShadow = true;
+        scene.add(light);
+    });
+
+    const floorLight = new THREE.PointLight(0xcc8844, 0.5);
+    floorLight.position.set(0, 2, 0);
+    scene.add(floorLight);
+}
+
+// ============================================================
+// 7. CANCHA
+// ============================================================
+
+function createBeautifulCourt() {
+    // === TEXTURA DE MADERA ===
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048; canvas.height = 2048;
+    const ctx = canvas.getContext('2d');
+
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, '#c4944a');
+    grad.addColorStop(0.5, '#b8843a');
+    grad.addColorStop(1, '#a8742a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = 0; i < 500; i++) {
+        ctx.beginPath();
+        const sx = Math.random() * canvas.width, sy = Math.random() * canvas.height;
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + (Math.random() - 0.5) * 80, sy + (Math.random() - 0.5) * 80);
+        ctx.strokeStyle = 'rgba(80,50,20,' + (Math.random() * 0.4) + ')';
+        ctx.lineWidth = Math.random() * 4 + 1;
+        ctx.stroke();
+    }
+    for (let i = 0; i < 80; i++) {
+        ctx.beginPath();
+        ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 8 + 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(70,40,15,' + (Math.random() * 0.5) + ')';
+        ctx.fill();
+    }
+
+    const woodTex = new THREE.CanvasTexture(canvas);
+    woodTex.wrapS = THREE.RepeatWrapping;
+    woodTex.wrapT = THREE.RepeatWrapping;
+    woodTex.repeat.set(4, 3);
+
+    const courtPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(courtConfig.length, courtConfig.width),
+        new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.35, metalness: 0.08, color: 0xc4944a })
+    );
+    courtPlane.rotation.x = -Math.PI / 2;
+    courtPlane.position.y = -0.05;
+    courtPlane.receiveShadow = true;
+    scene.add(courtPlane);
+
+    // === MITADES COLOREADAS POR EQUIPO ===
+    // Mitad izquierda (X negativo) = equipo AZUL
+    const blueSide = new THREE.Mesh(
+        new THREE.PlaneGeometry(courtConfig.length / 2 - 1, courtConfig.width - 2),
+        new THREE.MeshStandardMaterial({ color: 0x2255ee, transparent: true, opacity: 0.16, roughness: 0.9 })
+    );
+    blueSide.rotation.x = -Math.PI / 2;
+    blueSide.position.set(-(courtConfig.length / 4 + 0.5), -0.044, 0);
+    scene.add(blueSide);
+
+    // Mitad derecha (X positivo) = equipo ROJO
+    const redSide = new THREE.Mesh(
+        new THREE.PlaneGeometry(courtConfig.length / 2 - 1, courtConfig.width - 2),
+        new THREE.MeshStandardMaterial({ color: 0xee2233, transparent: true, opacity: 0.16, roughness: 0.9 })
+    );
+    redSide.rotation.x = -Math.PI / 2;
+    redSide.position.set(courtConfig.length / 4 + 0.5, -0.044, 0);
+    scene.add(redSide);
+
+    // === ZONAS PINTADAS ===
+    const paintBlue = new THREE.MeshStandardMaterial({ color: 0x1a3a8a, roughness: 0.5, metalness: 0.05 });
+    const paintRed  = new THREE.MeshStandardMaterial({ color: 0x8B0000, roughness: 0.5, metalness: 0.05 });
+
+    const leftKey = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 5.8), paintBlue);
+    leftKey.position.set(-courtConfig.length / 2 + 4.2, -0.048, 0);
+    leftKey.receiveShadow = true;
+    scene.add(leftKey);
+
+    const rightKey = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.02, 5.8), paintRed);
+    rightKey.position.set(courtConfig.length / 2 - 4.2, -0.048, 0);
+    rightKey.receiveShadow = true;
+    scene.add(rightKey);
+
+    // === LÍNEAS ===
+    const white = new THREE.LineBasicMaterial({ color: 0xffffff });
+    const orange = new THREE.LineBasicMaterial({ color: 0xffaa44 });
+
+    function makeLine(pts, mat) {
+        return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat);
+    }
+    function v3(x, z) { return new THREE.Vector3(x, 0.01, z); }
+
+    // Perímetro
+    const hl = courtConfig.length / 2 - 0.8, hw = courtConfig.width / 2 - 0.8;
+    scene.add(makeLine([v3(-hl,-hw), v3(hl,-hw), v3(hl,hw), v3(-hl,hw), v3(-hl,-hw)], white));
+
+    // Media cancha
+    scene.add(makeLine([v3(0,-hw), v3(0,hw)], white));
+
+    // Círculo central
+    const mkArc = (r, segs, cx, cz, a0, a1) => {
+        const pts = [];
+        for (let i = 0; i <= segs; i++) {
+            const a = a0 + (a1 - a0) * (i / segs);
+            pts.push(v3(cx + Math.cos(a) * r, cz + Math.sin(a) * r));
+        }
+        return pts;
+    };
+    scene.add(makeLine(mkArc(2.2, 128, 0, 0, 0, Math.PI * 2), white));
+    scene.add(makeLine(mkArc(1.5, 128, 0, 0, 0, Math.PI * 2), orange));
+
+    // Líneas de tiros libres
+    const ftR = courtConfig.length / 2 - 3.8;
+    const ftL = -courtConfig.length / 2 + 3.8;
+    scene.add(makeLine([v3(ftR, -2.2), v3(ftR, 2.2)], white));
+    scene.add(makeLine([v3(ftL, -2.2), v3(ftL, 2.2)], white));
+
+    // Semicírculos de tiros libres
+    scene.add(makeLine(mkArc(1.8, 60, ftR, 0, -Math.PI / 2, Math.PI / 2).map(p => v3(p.x, p.z)), white));
+    scene.add(makeLine(mkArc(1.8, 60, ftL, 0, Math.PI / 2, 3 * Math.PI / 2).map(p => v3(p.x, p.z)), white));
+
+    // Línea de 3 puntos (arcos)
+    const tp = courtConfig.threePointLine;
+    const tpPtsR = [], tpPtsL = [];
+    for (let i = 0; i <= 120; i++) {
+        const a = -Math.PI / 2 + (Math.PI * i / 120);
+        const x1 = (courtConfig.length / 2 - 1.5) + Math.cos(a) * tp;
+        const z1 = Math.sin(a) * tp;
+        if (Math.abs(z1) <= courtConfig.width / 2 - 1.2) tpPtsR.push(v3(x1, z1));
+
+        const x2 = -(courtConfig.length / 2 - 1.5) + Math.cos(a + Math.PI) * tp;
+        const z2 = Math.sin(a + Math.PI) * tp;
+        if (Math.abs(z2) <= courtConfig.width / 2 - 1.2) tpPtsL.push(v3(x2, z2));
+    }
+    scene.add(makeLine(tpPtsR, orange));
+    scene.add(makeLine(tpPtsL, orange));
+
+    // Líneas corner de 3 puntos
+    const cw = courtConfig.width / 2 - 1.2;
+    scene.add(makeLine([v3(courtConfig.length/2 - 1.5, -cw), v3(courtConfig.length/2 - 1.5, cw)], orange));
+    scene.add(makeLine([v3(-courtConfig.length/2 + 1.5, -cw), v3(-courtConfig.length/2 + 1.5, cw)], orange));
+
+    // Carriles
+    [-1.5, 0, 1.5].forEach(step => {
+        scene.add(makeLine([v3(courtConfig.length/2 - 2.2, step), v3(courtConfig.length/2 - 3.2, step)], white));
+        scene.add(makeLine([v3(-courtConfig.length/2 + 2.2, step), v3(-courtConfig.length/2 + 3.2, step)], white));
+    });
+
+    // Glow de cancha
+    const glowPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(courtConfig.length, courtConfig.width),
+        new THREE.MeshStandardMaterial({ color: 0xffaa66, emissive: 0x442200, emissiveIntensity: 0.08, transparent: true, opacity: 0.2 })
+    );
+    glowPlane.rotation.x = -Math.PI / 2;
+    glowPlane.position.y = -0.048;
+    scene.add(glowPlane);
+
+    // === GRADAS ===
+    const standMat = new THREE.MeshStandardMaterial({ color: 0x553322, roughness: 0.7 });
+    const seatColors = [0x44aa44, 0xaa4444, 0x4444aa, 0xaaaa44];
+    for (let i = -24; i <= 24; i += 2.2) {
+        for (const side of [-1, 1]) {
+            const stand = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 2.5), standMat);
+            stand.position.set(i * 1.3, -0.3, side * (courtConfig.width / 2 + 3.0));
+            scene.add(stand);
+            for (let s = -0.9; s <= 0.9; s += 0.9) {
+                const seatMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.45, 0.1, 0.6),
+                    new THREE.MeshStandardMaterial({ color: seatColors[Math.floor(Math.random() * 4)], roughness: 0.5 })
+                );
+                seatMesh.position.set(i * 1.3 + s, -0.05, side * (courtConfig.width / 2 + 3.3));
+                scene.add(seatMesh);
+            }
+        }
+    }
+
+    // Mesa de anotadores
+    const scoreTable = new THREE.Mesh(
+        new THREE.BoxGeometry(2.0, 0.4, 1.0),
+        new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.5 })
+    );
+    scoreTable.position.set(0, 0.2, courtConfig.width / 2 - 0.5);
+    scene.add(scoreTable);
+}
+
+// ============================================================
+// 8. AROS
+// ============================================================
+
+function createGiantHoops() {
+    const hoopMat    = new THREE.MeshStandardMaterial({ color: 0xff4400, metalness: 0.95, roughness: 0.2, emissive: 0x441100, emissiveIntensity: 0.2 });
+    const boardMat   = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, metalness: 0.25, roughness: 0.15, transparent: true, opacity: 0.88 });
+    const rimMat     = new THREE.MeshStandardMaterial({ color: 0xff6600, metalness: 0.92, roughness: 0.28 });
+    const suppMat    = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.72, roughness: 0.38 });
+    const netMat     = new THREE.LineBasicMaterial({ color: 0xeeeeee });
+    const borderMat  = new THREE.MeshStandardMaterial({ color: 0xff2222, metalness: 0.45, roughness: 0.25, emissive: 0x331100, emissiveIntensity: 0.12 });
+    const ledMat     = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff4400, emissiveIntensity: 0.7 });
+    const glassMat   = new THREE.MeshStandardMaterial({ color: 0xaaddff, metalness: 0.85, roughness: 0.08, transparent: true, opacity: 0.28 });
+    const boltMat    = new THREE.MeshStandardMaterial({ color: 0xccaa88, metalness: 0.78, roughness: 0.32 });
+    const detailMat  = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.68, roughness: 0.35 });
+    const redDetMat  = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.4, roughness: 0.3 });
+
+    const hoopRadius = 1.2, hoopTube = 0.14;
+    const bw = 4.2, bh = 2.7, netLen = 1.25;
+    const hh = courtConfig.hoopHeight;
+
+    function buildHoop(isRight) {
+        const g = new THREE.Group();
+        const hoopX   = isRight ? 0.65 : -0.65;
+        const suppX   = isRight ? -1.2 : 1.2;
+        const armX    = isRight ? -0.3 : 0.3;
+
+        // Poste principal
+        const pole = new THREE.Mesh(new THREE.BoxGeometry(0.45, 5.0, 0.45), suppMat);
+        pole.position.set(suppX, 2.15, 0);
+        pole.castShadow = true;
+        g.add(pole);
+
+        // Placa base
+        const base = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.12, 0.95), detailMat);
+        base.position.set(suppX, 0.1, 0);
+        g.add(base);
+
+        // Tornillos
+        [-0.4, 0, 0.4].forEach(bx => {
+            [0.32, -0.32].forEach(bz => {
+                const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.06, 8), boltMat);
+                bolt.position.set(suppX + bx, 0.17, bz);
+                bolt.rotation.x = Math.PI / 2;
+                g.add(bolt);
+            });
+        });
+
+        // Brazo
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.22, 0.42), suppMat);
+        arm.position.set(armX, 3.25, 0);
+        arm.castShadow = true;
+        g.add(arm);
+
+        // Refuerzos diagonales
+        [0.38, -0.38].forEach(bz => {
+            const ds = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.15, 0.18), detailMat);
+            ds.position.set(armX * 1.8, 2.65, bz);
+            g.add(ds);
+        });
+
+        // Tablero
+        const board = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.09), boardMat);
+        board.position.set(0, hh + 0.9, 0);
+        board.rotation.y = Math.PI / 2;
+        board.castShadow = true;
+        g.add(board);
+
+        // Vidrio
+        const glass = new THREE.Mesh(new THREE.BoxGeometry(bw - 0.35, bh - 0.35, 0.04), glassMat);
+        glass.position.set(0, hh + 0.9, 0.035);
+        glass.rotation.y = Math.PI / 2;
+        g.add(glass);
+
+        // Marcos rojos del tablero
+        const ft = 0.13, fd = 0.11;
+        const topBorder = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.12, ft, fd), borderMat);
+        topBorder.position.set(0, hh + 2.22, -0.02);
+        topBorder.rotation.y = Math.PI / 2;
+        g.add(topBorder);
+
+        const botBorder = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.12, ft, fd), borderMat);
+        botBorder.position.set(0, hh - 0.41, -0.02);
+        botBorder.rotation.y = Math.PI / 2;
+        g.add(botBorder);
+
+        const lBorder = new THREE.Mesh(new THREE.BoxGeometry(ft, bh + 0.1, fd), borderMat);
+        lBorder.position.set(-bw / 2 - 0.07, hh + 0.9, -0.02);
+        lBorder.rotation.y = Math.PI / 2;
+        g.add(lBorder);
+
+        const rBorder = new THREE.Mesh(new THREE.BoxGeometry(ft, bh + 0.1, fd), borderMat);
+        rBorder.position.set(bw / 2 + 0.07, hh + 0.9, -0.02);
+        rBorder.rotation.y = Math.PI / 2;
+        g.add(rBorder);
+
+        // Esquinas
+        [[-bw/2-0.04, hh+2.19], [bw/2+0.04, hh+2.19], [-bw/2-0.04, hh-0.38], [bw/2+0.04, hh-0.38]].forEach(([px, py]) => {
+            const c = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), borderMat);
+            c.position.set(px, py, -0.02);
+            g.add(c);
+        });
+
+        // Rayas rojas decorativas
+        [-bw/2+0.25, bw/2-0.25].forEach(sx => {
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, bh - 0.8, 0.05), redDetMat);
+            stripe.position.set(sx, hh + 0.9, 0.045);
+            stripe.rotation.y = Math.PI / 2;
+            g.add(stripe);
+        });
+
+        // Aro
+        const hoop = new THREE.Mesh(new THREE.TorusGeometry(hoopRadius, hoopTube, 96, 256), hoopMat);
+        hoop.rotation.x = Math.PI / 2;
+        hoop.position.set(hoopX, hh, -0.42);
+        hoop.castShadow = true;
+        g.add(hoop);
+
+        const innerRing = new THREE.Mesh(new THREE.TorusGeometry(hoopRadius - 0.05, 0.045, 64, 256), rimMat);
+        innerRing.rotation.x = Math.PI / 2;
+        innerRing.position.set(hoopX, hh, -0.42);
+        g.add(innerRing);
+
+        // Soporte del aro
+        const vs = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, 0.26), rimMat);
+        vs.position.set(hoopX * 0.55, hh - 0.14, -0.38);
+        g.add(vs);
+        const hs = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.14, 0.26), rimMat);
+        hs.position.set(hoopX * 0.28, hh - 0.07, -0.45);
+        g.add(hs);
+
+        // LEDs
+        for (let i = 0; i < 28; i++) {
+            const a = (i / 28) * Math.PI * 2;
+            const led = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 12), ledMat);
+            led.position.set(
+                hoopX + Math.cos(a) * (hoopRadius + 0.045),
+                hh + 0.055,
+                Math.sin(a) * (hoopRadius + 0.045) - 0.42
+            );
+            g.add(led);
+        }
+
+        // Red - líneas verticales
+        for (let i = 0; i < 52; i++) {
+            const a = (i / 52) * Math.PI * 2;
+            g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(hoopX + Math.cos(a) * hoopRadius, hh, Math.sin(a) * hoopRadius - 0.42),
+                new THREE.Vector3(hoopX + Math.cos(a) * (hoopRadius * 0.42), hh - netLen, Math.sin(a) * (hoopRadius * 0.42) - 0.42)
+            ]), netMat));
+        }
+
+        // Red - anillos horizontales
+        for (let ry = 0; ry <= 9; ry++) {
+            const rr = hoopRadius - ry * 0.085;
+            const ry2 = hh - ry * 0.14;
+            if (rr > 0.22) {
+                const pts = [];
+                for (let i = 0; i <= 64; i++) {
+                    const a = (i / 64) * Math.PI * 2;
+                    pts.push(new THREE.Vector3(hoopX + Math.cos(a) * rr, ry2, Math.sin(a) * rr - 0.42));
+                }
+                g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xddddcc, opacity: 0.55, transparent: true })));
+            }
+        }
+
+        // Anillo inferior de red
+        const botPts = [];
+        for (let i = 0; i <= 40; i++) {
+            const a = (i / 40) * Math.PI * 2;
+            botPts.push(new THREE.Vector3(hoopX + Math.cos(a) * (hoopRadius * 0.35), hh - netLen - 0.05, Math.sin(a) * (hoopRadius * 0.35) - 0.42));
+        }
+        g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(botPts), new THREE.LineBasicMaterial({ color: 0xdddddd, opacity: 0.7, transparent: true })));
+
+        return g;
+    }
+
+    // ARO DERECHO (X positivo) → equipo AZUL ataca aquí
+    const hoopRight = buildHoop(true);
+    hoopRight.position.set(courtConfig.length / 2 - 0.85, 0, 0);
+    hoopRight.rotation.y = Math.PI;
+    scene.add(hoopRight);
+
+    // Luces aro derecho
+    [[courtConfig.length/2-0.85, hh+0.85, -0.65, 0xff6600, 1.3, 28],
+     [courtConfig.length/2-0.85, hh+1.55, -0.9,  0xff4422, 0.55, 18],
+     [courtConfig.length/2-0.85, hh+1.2,  0.5,   0xff8844, 0.4,  15]
+    ].forEach(([x,y,z,c,i,d]) => {
+        const l = new THREE.PointLight(c, i, d);
+        l.position.set(x, y, z);
+        scene.add(l);
+    });
+
+    // ARO IZQUIERDO (X negativo) → equipo ROJO ataca aquí
+    const hoopLeft = buildHoop(false);
+    hoopLeft.position.set(-courtConfig.length / 2 + 0.85, 0, 0);
+    hoopLeft.rotation.y = Math.PI;
+    scene.add(hoopLeft);
+
+    [[-courtConfig.length/2+0.85, hh+0.85, -0.65, 0xff6600, 1.3, 28],
+     [-courtConfig.length/2+0.85, hh+1.55, -0.9,  0xff4422, 0.55, 18],
+     [-courtConfig.length/2+0.85, hh+1.2,  0.5,   0xff8844, 0.4,  15]
+    ].forEach(([x,y,z,c,i,d]) => {
+        const l = new THREE.PointLight(c, i, d);
+        l.position.set(x, y, z);
+        scene.add(l);
+    });
+
+    // GUARDAR POSICIONES
+    // hoops[0] = aro derecho, equipo AZUL ataca este aro
+    // hoops[1] = aro izquierdo, equipo ROJO ataca este aro
+    hoops.push({ position: new THREE.Vector3(courtConfig.length / 2 - 0.45, hh, -0.42), attackingTeam: 'blue' });
+    hoops.push({ position: new THREE.Vector3(-courtConfig.length / 2 + 0.45, hh, -0.42), attackingTeam: 'red' });
+}
+
+// ============================================================
+// 9. PELOTA
+// ============================================================
+
+function createBigBall() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#ff6600';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 15;
+    ctx.beginPath(); ctx.moveTo(canvas.width / 2, 0); ctx.lineTo(canvas.width / 2, canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, canvas.height / 2); ctx.lineTo(canvas.width, canvas.height / 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(canvas.width/2, canvas.height/2, canvas.width/2.5, canvas.height/6, 0, 0, Math.PI*2); ctx.stroke();
+
+    for (let i = 0; i < 300; i++) {
+        ctx.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.3) + ')';
+        ctx.beginPath();
+        ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 3 + 1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ball = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 128, 128),
+        new THREE.MeshStandardMaterial({
+            map: new THREE.CanvasTexture(canvas),
+            roughness: 0.3, metalness: 0.05,
+            color: 0xff6600, emissive: 0x442200, emissiveIntensity: 0.1
+        })
+    );
+    ball.castShadow = true;
+    ball.userData = { inAir: false, velocity: null };
+    ball.position.set(0, 0.8, 0);
+    scene.add(ball);
+}
+
+// ============================================================
+// 10. PERSONAJE CHIBI
+// ============================================================
+
+function createChibiPlayer(color, name, bodyTypeIndex) {
+    const g = new THREE.Group();
+    const bt = bodyTypes[bodyTypeIndex % bodyTypes.length];
+    const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.05 });
+
+    // Cuerpo
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.55 * bt.scaleX, 0.5 * bt.scaleX, 0.95 * bt.scaleY, 12), bodyMat);
+    body.position.y = 0.5 * bt.scaleY;
+    body.castShadow = true;
+    g.add(body);
+
+    // Cabeza
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.7, 64, 64), new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.2 }));
+    head.position.y = 1.1 * bt.scaleY;
+    g.add(head);
+
+    // Ojos
+    const eyeW = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const eyeP = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const eyeH = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    [[-0.3, 1], [0.3, -1]].forEach(([ex]) => {
+        const ew = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), eyeW);
+        ew.position.set(ex, 1.25 * bt.scaleY, 0.7); g.add(ew);
+        const ep = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), eyeP);
+        ep.position.set(ex, 1.22 * bt.scaleY, 0.92); g.add(ep);
+        const eh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 16), eyeH);
+        eh.position.set(ex - 0.07, 1.3 * bt.scaleY, 0.98); g.add(eh);
+    });
+
+    // Nariz
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff8866 }));
+    nose.position.set(0, 1.05 * bt.scaleY, 0.88); g.add(nose);
+
+    // Sonrisa
+    const smilePts = [];
+    for (let i = -0.55; i <= 0.55; i += 0.05) smilePts.push(new THREE.Vector3(i, 0.92 * bt.scaleY, 0.92));
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(smilePts), new THREE.LineBasicMaterial({ color: 0x663322 })));
+
+    // Mejillas
+    [[-0.52, 0.98, 0.68], [0.52, 0.98, 0.68]].forEach(([cx, cy, cz]) => {
+        const ch = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffaaaa }));
+        ch.position.set(cx, cy * bt.scaleY, cz); g.add(ch);
+    });
+
+    // Gorra
+    const hat = new THREE.Mesh(new THREE.SphereGeometry(0.58, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff6600 }));
+    hat.position.y = 1.75 * bt.scaleY; hat.scale.set(1, 0.28, 1); g.add(hat);
+    const lm = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const hl1 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.9), lm); hl1.position.set(0, 1.75 * bt.scaleY, 0); g.add(hl1);
+    const hl2 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.05), lm); hl2.position.set(0, 1.75 * bt.scaleY, 0); g.add(hl2);
+    const pp = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
+    pp.position.set(0, 1.92 * bt.scaleY, 0); g.add(pp);
+
+    // Brazos
+    const armGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.75, 8);
+    const armMat = new THREE.MeshStandardMaterial({ color });
+    const leftArm = new THREE.Mesh(armGeo, armMat); leftArm.position.set(-0.68, 0.98 * bt.scaleY, 0); leftArm.castShadow = true; g.add(leftArm);
+    const rightArm = new THREE.Mesh(armGeo, armMat); rightArm.position.set(0.68, 0.98 * bt.scaleY, 0); rightArm.castShadow = true; g.add(rightArm);
+
+    // Manos
+    const handMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
+    const handGeo = new THREE.SphereGeometry(0.17, 16, 16);
+    const lh = new THREE.Mesh(handGeo, handMat); lh.position.set(-0.98, 0.98 * bt.scaleY, 0.22); g.add(lh);
+    const rh = new THREE.Mesh(handGeo, handMat); rh.position.set(0.98, 0.98 * bt.scaleY, 0.22); g.add(rh);
+
+    // Piernas
+    const legGeo = new THREE.CylinderGeometry(0.18, 0.16, 0.65, 8);
+    const legMat = new THREE.MeshStandardMaterial({ color });
+    const leftLeg = new THREE.Mesh(legGeo, legMat); leftLeg.position.set(-0.32, 0.35 * bt.scaleY, 0); leftLeg.castShadow = true; g.add(leftLeg);
+    const rightLeg = new THREE.Mesh(legGeo, legMat); rightLeg.position.set(0.32, 0.35 * bt.scaleY, 0); rightLeg.castShadow = true; g.add(rightLeg);
+
+    // Zapatos
+    const shoeGeo = new THREE.BoxGeometry(0.48, 0.16, 0.7);
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+    const ls = new THREE.Mesh(shoeGeo, shoeMat); ls.position.set(-0.32, 0.07 * bt.scaleY, 0.18); g.add(ls);
+    const rs = new THREE.Mesh(shoeGeo, shoeMat); rs.position.set(0.32, 0.07 * bt.scaleY, 0.18); g.add(rs);
+
+    g.userData = { leftArm, rightArm, leftLeg, rightLeg, body, head, color, bodyTypeIndex };
+
+    // Etiqueta de nombre
+    const div = document.createElement('div');
+    div.textContent = name;
+    div.style.cssText = 'color:#FFD700;font-size:16px;font-weight:bold;text-shadow:1px 1px 0 black;background:rgba(0,0,0,0.8);padding:5px 16px;border-radius:40px;border:2px solid #FFD700;white-space:nowrap;font-family:Montserrat,sans-serif;backdrop-filter:blur(6px);';
+    const label = new CSS2DObject(div);
+    label.position.set(0, 2.1 * bt.scaleY, 0);
+    g.add(label);
+
+    return { group: g, label };
+}
+
+// ============================================================
+// 11. INICIO DEL JUEGO
+// ============================================================
+
+function initGameWithRoom(startX, startZ) {
+    // Limpiar sesión anterior
+    if (myPlayerMesh) { scene.remove(myPlayerMesh); myPlayerMesh = null; }
+    players.forEach(p => scene.remove(p.mesh));
+    players.clear();
+
+    const myColor = myPlayerTeam === 'blue' ? teamColors.blue.primary : teamColors.red.primary;
+    const myBodyType = Math.floor(Math.random() * bodyTypes.length);
+
+    const { group } = createChibiPlayer(myColor, myPlayerName, myBodyType);
+    scene.add(group);
+    myPlayerMesh = group;
+    myPlayerMesh.userData.color = myColor;
+    myPlayerMesh.userData.bodyType = myBodyType;
+    myPlayerMesh.userData.team = myPlayerTeam;
+
+    currentPosition = { x: startX, y: 0, z: startZ };
+    myPlayerMesh.position.set(startX, 0, startZ);
+    velocityX = 0; velocityZ = 0;
+
+    // La primera pelota la tiene el equipo azul (lado izquierdo)
+    possession = myPlayerTeam === 'blue' ? 'player' : null;
+    ballInAir = false;
+    if (possession === 'player') {
+        ball.position.set(startX, 1.0, startZ);
+        ball.userData.inAir = false;
+        ballAuthority = myPlayerId;
+    }
+    myPlayerScore = 0;
+    shotClock = 24;
+
+    // Escuchar jugadores de AMBOS equipos y pelota
+    listenRoomPlayers();
+
+    // UI
+    document.getElementById('game-ui').style.display = 'block';
+    document.getElementById('my-name').textContent = myPlayerName;
+    document.getElementById('my-score').textContent = '0';
+    document.getElementById('shot-clock-value').textContent = '24';
+    const badge = document.getElementById('my-team-badge');
+    if (badge) {
+        badge.textContent = myPlayerTeam === 'blue' ? '🔵' : '🔴';
+        badge.style.color = myPlayerTeam === 'blue' ? '#4488ff' : '#ff4444';
+    }
+
+    setupPointerLock();
+
+    setInterval(() => { updateShotClock(); updatePowerBar(); }, 1000);
+
+    gameRunning = true;
+    gamePaused = false;
+    updatePossessionUI();
+    showMessage('🎉 ¡Bienvenido ' + myPlayerName + ' (Equipo ' + (myPlayerTeam === 'blue' ? 'AZUL 🔵' : 'ROJO 🔴') + ')! Presiona E para agarrar la pelota');
+}
+
+// ============================================================
+// 12. POINTER LOCK
+// ============================================================
+
+function setupPointerLock() {
+    const canvas = renderer.domElement;
+    canvas.addEventListener('click', () => {
+        if (gameRunning && !gamePaused) canvas.requestPointerLock();
+    });
+
+    function onLockChange() {
+        if (document.pointerLockElement === canvas && !gamePaused) {
+            pointerLockActive = true;
+            const info = document.getElementById('pointer-lock-info');
+            if (info) info.style.opacity = '0';
+            document.addEventListener('mousemove', onMouseMove);
+        } else {
+            pointerLockActive = false;
+            const info = document.getElementById('pointer-lock-info');
+            if (info) info.style.opacity = '1';
+            document.removeEventListener('mousemove', onMouseMove);
+        }
+    }
+
+    function onMouseMove(e) {
+        if (!pointerLockActive || gamePaused) return;
+        targetCameraAngleX -= e.movementX * mouseSensitivity;
+        targetCameraAngleY += e.movementY * mouseSensitivity;
+        targetCameraAngleY = Math.max(-0.6, Math.min(1.0, targetCameraAngleY));
+    }
+
+    document.addEventListener('pointerlockchange', onLockChange);
+    document.addEventListener('mozpointerlockchange', onLockChange);
+}
+
+// ============================================================
+// 13. CÁMARA
+// ============================================================
+
+function updateCamera() {
+    if (!myPlayerMesh) return;
+    cameraAngleX += (targetCameraAngleX - cameraAngleX) * 0.15;
+    cameraAngleY += (targetCameraAngleY - cameraAngleY) * 0.15;
+    const pos = myPlayerMesh.position;
+    camera.position.set(
+        pos.x - Math.sin(cameraAngleX) * cameraDistance,
+        pos.y + 1.8 + Math.sin(cameraAngleY) * 2,
+        pos.z - Math.cos(cameraAngleX) * cameraDistance
+    );
+    camera.lookAt(pos);
+    myPlayerMesh.rotation.y = cameraAngleX;
+}
+
+// ============================================================
+// 14. MOVIMIENTO
+// ============================================================
+
+function handleMovement(deltaTime) {
+    if (!gameRunning || gamePaused || !myPlayerMesh) return;
+
+    let moveX = 0, moveZ = 0;
+    if (keysPressed['w'] || keysPressed['arrowup'])    moveZ -= 1;
+    if (keysPressed['s'] || keysPressed['arrowdown'])  moveZ += 1;
+    if (keysPressed['a'] || keysPressed['arrowleft'])  moveX -= 1;
+    if (keysPressed['d'] || keysPressed['arrowright']) moveX += 1;
+
+    isMoving = (moveX !== 0 || moveZ !== 0);
+
+    if (isMoving) {
+        const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+        moveX /= len; moveZ /= len;
+        const fwd = new THREE.Vector3(-Math.sin(cameraAngleX), 0, -Math.cos(cameraAngleX));
+        const rgt = new THREE.Vector3(Math.cos(cameraAngleX), 0, -Math.sin(cameraAngleX));
+        const tvX = (fwd.x * moveZ - rgt.x * moveX) * maxSpeed;
+        const tvZ = (fwd.z * moveZ - rgt.z * moveX) * maxSpeed;
+        velocityX += (tvX - velocityX) * acceleration * deltaTime;
+        velocityZ += (tvZ - velocityZ) * acceleration * deltaTime;
+    } else {
+        velocityX *= (1 - deceleration * deltaTime);
+        velocityZ *= (1 - deceleration * deltaTime);
+        if (Math.abs(velocityX) < 0.1) velocityX = 0;
+        if (Math.abs(velocityZ) < 0.1) velocityZ = 0;
+    }
+
+    currentPosition.x = Math.min(Math.max(currentPosition.x + velocityX * deltaTime, -courtConfig.limitX), courtConfig.limitX);
+    currentPosition.z = Math.min(Math.max(currentPosition.z + velocityZ * deltaTime, -courtConfig.limitZ), courtConfig.limitZ);
+
+    // Física de salto
+    if (isJumping) {
+        verticalVelocity -= gravity * deltaTime;
+        currentPosition.y += verticalVelocity * deltaTime;
+        if (currentPosition.y <= groundY) {
+            currentPosition.y = groundY;
+            isJumping = false;
+            verticalVelocity = 0;
+        }
+    } else {
+        currentPosition.y = groundY;
+    }
+
+    myPlayerMesh.position.set(currentPosition.x, currentPosition.y, currentPosition.z);
+
+    // Animación de brazos/piernas
+    if (isMoving && !isJumping) {
+        animationTime += deltaTime * 12;
+        const swing = Math.sin(animationTime) * 0.7;
+        if (myPlayerMesh.userData.leftArm) {
+            myPlayerMesh.userData.leftArm.rotation.x = swing;
+            myPlayerMesh.userData.rightArm.rotation.x = -swing;
+            myPlayerMesh.userData.leftLeg.rotation.x = Math.sin(animationTime) * 0.3;
+            myPlayerMesh.userData.rightLeg.rotation.x = -Math.sin(animationTime) * 0.3;
+        }
+        currentPosition.y = groundY + Math.abs(Math.sin(animationTime * 2)) * 0.02;
+        myPlayerMesh.position.y = currentPosition.y;
+    } else {
+        if (myPlayerMesh.userData.leftArm) {
+            myPlayerMesh.userData.leftArm.rotation.x = 0;
+            myPlayerMesh.userData.rightArm.rotation.x = 0;
+            myPlayerMesh.userData.leftLeg.rotation.x = 0;
+            myPlayerMesh.userData.rightLeg.rotation.x = 0;
+        }
+    }
+
+    // Mover pelota con jugador si la tiene
+    if (possession === 'player' && !ballInAir && ball) {
+        ball.position.set(currentPosition.x, currentPosition.y + 1.0, currentPosition.z);
+        ballAuthority = myPlayerId;
+    }
+
+    syncPosition();
+
+    // Sincronizar pelota si soy la autoridad
+    if (ballAuthority === myPlayerId) {
+        syncBallToFirebase();
+    }
+}
+
+function jump() {
+    if (!myPlayerMesh || !gameRunning || gamePaused) return;
+    if (!isJumping) {
+        isJumping = true;
+        verticalVelocity = jumpPower;
+        if (myPlayerMesh.userData.leftArm) {
+            myPlayerMesh.userData.leftArm.rotation.x = -0.8;
+            myPlayerMesh.userData.rightArm.rotation.x = -0.8;
+            setTimeout(() => {
+                if (myPlayerMesh && myPlayerMesh.userData.leftArm && !isMoving) {
+                    myPlayerMesh.userData.leftArm.rotation.x = 0;
+                    myPlayerMesh.userData.rightArm.rotation.x = 0;
+                }
+            }, 300);
+        }
+    }
+}
+
+// ============================================================
+// 15. TIRO
+// ============================================================
+
+function shoot() {
+    if (!gameRunning || gamePaused || ballInAir || possession !== 'player' || !pointerLockActive) return;
+
+    ballInAir = true;
+    ballAuthority = myPlayerId;
+
+    // Dirección exacta de la cámara + arco natural
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    const dir = new THREE.Vector3(camDir.x, camDir.y + 0.5, camDir.z).normalize();
+
+    const minPow = 6, maxPow = 22;
+    const power = minPow + (shootPower / shootMaxPower) * (maxPow - minPow);
+    const heightBonus = (shootPower / shootMaxPower) * 6;
+
+    // ¿Es triple? Calcular distancia al aro objetivo
+    const targetHoopIdx = myPlayerTeam === 'blue' ? 0 : 1;
+    const targetHoop = hoops[targetHoopIdx];
+    const distToHoop = myPlayerMesh.position.distanceTo(new THREE.Vector3(targetHoop.position.x, myPlayerMesh.position.y, targetHoop.position.z));
+    const isThreePoint = distToHoop > courtConfig.threePointLine;
+
+    ball.userData = {
+        inAir: true,
+        velocity: new THREE.Vector3(
+            dir.x * power,
+            5 + heightBonus + (dir.y * 2),
+            dir.z * power
+        ),
+        isThreePoint,
+        shooterTeam: myPlayerTeam,
+        shooterId: myPlayerId
+    };
+
+    possession = null;
+    updatePossessionUI();
+    showMessage('🏀 ¡TIRO! Potencia: ' + Math.floor((shootPower / shootMaxPower) * 100) + '% ' + (isThreePoint ? '(TRIPLE)' : ''));
+
+    shootPower = 0;
+    const fill = document.getElementById('power-bar-fill');
+    const pct  = document.getElementById('power-percent');
+    if (fill) fill.style.width = '0%';
+    if (pct)  pct.textContent = '0%';
+
+    if (myPlayerMesh.userData.rightArm) {
+        myPlayerMesh.userData.rightArm.rotation.x = -1.2;
+        myPlayerMesh.userData.rightArm.rotation.z = -0.5;
+        setTimeout(() => {
+            if (myPlayerMesh && myPlayerMesh.userData.rightArm && !isMoving) {
+                myPlayerMesh.userData.rightArm.rotation.x = 0;
+                myPlayerMesh.userData.rightArm.rotation.z = -0.3;
+            }
+        }, 300);
+    }
+    syncBallToFirebase();
+}
+
+// ============================================================
+// 16. ROBO / RECOGER PELOTA
+// ============================================================
+
+function stealBall() {
+    const now = performance.now() / 1000;
+    if (now - lastStealTime < stealCooldownMax) {
+        showMessage('⏳ Espera ' + (stealCooldownMax - (now - lastStealTime)).toFixed(1) + 's');
+        return false;
+    }
+    if (!gameRunning || gamePaused) return false;
+    if (possession === 'player') { showMessage('❌ ¡Ya tienes la pelota!'); return false; }
+    if (!myPlayerMesh) return false;
+
+    const dist = myPlayerMesh.position.distanceTo(ball.position);
+    if (dist < 5.0) {
+        possession = 'player';
+        ballInAir = false;
+        ball.userData.inAir = false;
+        ball.userData.velocity = null;
+        ball.position.set(currentPosition.x, currentPosition.y + 1.0, currentPosition.z);
+        ballAuthority = myPlayerId;
+        lastStealTime = now;
+        updatePossessionUI();
+        shotClock = 24;
+        const sc = document.getElementById('shot-clock-value');
+        if (sc) sc.textContent = shotClock;
+        showMessage(dist > 1.5 ? '🏀 ¡ATRAPASTE LA PELOTA EN EL AIRE!' : '🏀 ¡RECOGISTE LA PELOTA!');
+        if (myPlayerMesh.userData.rightArm) {
+            myPlayerMesh.userData.rightArm.rotation.x = -0.8;
+            setTimeout(() => {
+                if (myPlayerMesh && myPlayerMesh.userData.rightArm && !isMoving) myPlayerMesh.userData.rightArm.rotation.x = 0;
+            }, 300);
+        }
+        syncBallToFirebase();
+        return true;
+    } else {
+        showMessage('❌ Muy lejos: ' + dist.toFixed(1) + 'm (necesitas < 5m)');
+        lastStealTime = now - (stealCooldownMax - 0.8);
+        return false;
+    }
+}
+
+// ============================================================
+// 17. PASE
+// ============================================================
+
+function passBall() {
+    if (possession !== 'player' || ballInAir || gamePaused) return;
+    const dir = new THREE.Vector3(-Math.sin(cameraAngleX), 0.3, -Math.cos(cameraAngleX));
+    ballInAir = true;
+    ballAuthority = myPlayerId;
+    ball.userData = {
+        inAir: true,
+        velocity: new THREE.Vector3(dir.x * 16, 4.5, dir.z * 16),
+        isPass: true,
+        shooterTeam: myPlayerTeam
+    };
+    possession = null;
+    updatePossessionUI();
+    if (myPlayerMesh.userData.rightArm) {
+        myPlayerMesh.userData.rightArm.rotation.x = -0.5;
+        myPlayerMesh.userData.rightArm.rotation.z = -0.8;
+        setTimeout(() => {
+            if (myPlayerMesh && myPlayerMesh.userData.rightArm && !isMoving) {
+                myPlayerMesh.userData.rightArm.rotation.x = 0;
+                myPlayerMesh.userData.rightArm.rotation.z = -0.3;
+            }
+        }, 200);
+    }
+    showMessage('🎯 ¡Pase realizado!');
+    syncBallToFirebase();
+}
+
+// ============================================================
+// 18. FÍSICA DE LA PELOTA
+// ============================================================
+
+function updateBallPhysics(deltaTime) {
+    if (!ball) return;
+
+    // Rotar pelota visualmente si está en el aire
+    if (ballInAir) {
+        ball.rotation.x += 0.2;
+        ball.rotation.z += 0.1;
+    }
+
+    // Solo la autoridad computa la física
+    if (ballAuthority !== myPlayerId) return;
+    if (!ballInAir || !ball.userData || !ball.userData.inAir || gamePaused) return;
+
+    const data = ball.userData;
+    if (!data.velocity) return;
+
+    // Gravedad
+    data.velocity.y -= gravity * deltaTime;
+    ball.position.x += data.velocity.x * deltaTime;
+    ball.position.y += data.velocity.y * deltaTime;
+    ball.position.z += data.velocity.z * deltaTime;
+
+    // === DETECCIÓN DE CANASTA ===
+    // Azul ataca aro derecho (hoops[0]), Rojo ataca aro izquierdo (hoops[1])
+    const shooterTeam = data.shooterTeam;
+    if (shooterTeam && hoops.length >= 2) {
+        const targetIdx = shooterTeam === 'blue' ? 0 : 1;
+        const th = hoops[targetIdx];
+        const dist = new THREE.Vector3(ball.position.x - th.position.x, 0, ball.position.z - th.position.z).length();
+        const inHoopXZ = dist < 1.35;
+        const inHoopY  = ball.position.y < th.position.y + 0.85 && ball.position.y > th.position.y - 0.55;
+        const falling  = data.velocity.y < 0;
+
+        if (inHoopXZ && inHoopY && falling) {
+            const points = data.isThreePoint ? 3 : 2;
+            myPlayerScore += points;
+            document.getElementById('my-score').textContent = myPlayerScore;
+            const ps = document.getElementById('pause-score');
+            if (ps) ps.textContent = myPlayerScore;
+            syncPosition();
+            showScorePopup(points);
+            showMessage('🎉 ¡CANASTA ' + (shooterTeam === 'blue' ? '🔵' : '🔴') + '! +' + points + ' puntos 🎉');
+            resetBallAfterScore();
+            return;
+        }
+    }
+
+    // Rebote en el suelo
+    if (ball.position.y < 0.6) {
+        ball.position.y = 0.6;
+        data.velocity.y = Math.abs(data.velocity.y) * 0.52;
+        data.velocity.x *= 0.88;
+        data.velocity.z *= 0.88;
+
+        if (Math.abs(data.velocity.y) < 1.5 && Math.abs(data.velocity.x) < 1.5 && Math.abs(data.velocity.z) < 1.5) {
+            ballInAir = false;
+            data.inAir = false;
+            possession = null;
+            ball.position.y = 0.6;
+            showMessage('💪 ¡Pelota libre! Presiona E para agarrarla');
+            updatePossessionUI();
+            syncBallToFirebase();
+        }
+    }
+
+    // Límites de cancha
+    if (Math.abs(ball.position.x) > courtConfig.limitX) {
+        ball.position.x = Math.sign(ball.position.x) * courtConfig.limitX;
+        data.velocity.x *= -0.7;
+    }
+    if (Math.abs(ball.position.z) > courtConfig.limitZ) {
+        ball.position.z = Math.sign(ball.position.z) * courtConfig.limitZ;
+        data.velocity.z *= -0.7;
+    }
+
+    // Pelota muy alta
+    if (ball.position.y > 9) {
+        ballInAir = false;
+        data.inAir = false;
+        ball.position.set(0, 0.8, 0);
+        possession = null;
+        updatePossessionUI();
+        showMessage('🏀 ¡Pelota fuera! Está libre');
+        syncBallToFirebase();
+    }
+}
+
+function resetBallAfterScore() {
+    ballInAir = false;
+    if (ball.userData) { ball.userData.inAir = false; ball.userData.velocity = null; }
+    possession = null;
+    shotClock = 24;
+    const sc = document.getElementById('shot-clock-value');
+    if (sc) sc.textContent = shotClock;
+    ball.position.set(0, 0.8, 0);
+    updatePossessionUI();
+    syncBallToFirebase();
+}
+
+// ============================================================
+// 19. SHOT CLOCK
+// ============================================================
+
+function updateShotClock() {
+    if (!gameRunning || gamePaused) return;
+    if (possession === 'player' && !ballInAir) {
+        shotClock--;
+        const sc = document.getElementById('shot-clock-value');
+        if (sc) sc.textContent = Math.max(0, shotClock);
+        if (shotClock <= 0) {
+            showMessage('⏰ ¡VIOLACIÓN DE 24 SEGUNDOS! Pelota libre');
+            possession = null;
+            ballInAir = false;
+            if (ball.userData) { ball.userData.inAir = false; ball.userData.velocity = null; }
+            ball.position.set(currentPosition.x, 0.8, currentPosition.z);
+            shotClock = 24;
+            if (sc) sc.textContent = shotClock;
+            updatePossessionUI();
+            syncBallToFirebase();
+        }
+    }
+}
+
+// ============================================================
+// 20. BARRA DE POTENCIA
+// ============================================================
+
+function updatePowerBar() {
+    if (shooting && possession === 'player' && !ballInAir && pointerLockActive && !gamePaused) {
+        shootPower += 0.035;
+        if (shootPower > shootMaxPower) shootPower = shootMaxPower;
+        const pct = (shootPower / shootMaxPower) * 100;
+        const fill = document.getElementById('power-bar-fill');
+        const pctEl = document.getElementById('power-percent');
+        if (fill) fill.style.width = pct + '%';
+        if (pctEl) pctEl.textContent = Math.floor(pct) + '%';
+    }
+}
+
+// ============================================================
+// 21. UI
+// ============================================================
+
+function updatePossessionUI() {
+    const text = document.getElementById('possession-text');
+    const ballDiv = document.querySelector('.possession-ball');
+    if (!text || !ballDiv) return;
+    if (possession === 'player') {
+        text.textContent = '🏀 TIENES EL BALÓN 🏀';
+        ballDiv.style.background = '#4CAF50';
+        ballDiv.style.boxShadow = '0 0 15px #4CAF50';
+    } else {
+        text.textContent = '❌ BALÓN LIBRE / OTRO JUGADOR ❌';
+        ballDiv.style.background = '#FF5722';
+        ballDiv.style.boxShadow = '0 0 15px #FF5722';
+    }
+}
+
+function showMessage(msg) {
+    const existing = document.querySelector('.game-message');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.className = 'game-message';
+    div.textContent = msg;
+    const ui = document.getElementById('game-ui');
+    if (ui) ui.appendChild(div);
+    setTimeout(() => { if (div.parentNode) div.remove(); }, 2500);
+}
+
+function showScorePopup(points) {
+    const container = document.getElementById('score-popup-container');
+    if (!container) return;
+    const popup = document.createElement('div');
+    popup.className = 'score-popup';
+    popup.textContent = points === 3 ? '🏆 +3 🏆' : '⭐ +' + points + ' ⭐';
+    popup.style.color = points === 3 ? '#FF9800' : '#4CAF50';
+    container.appendChild(popup);
+    setTimeout(() => { if (popup.parentNode) popup.remove(); }, 1500);
+}
+
+function togglePauseMenu() {
+    const menu = document.getElementById('pause-menu');
+    if (!menu) return;
+    if (gamePaused) {
+        gamePaused = false;
+        menu.classList.remove('active');
+        if (renderer) renderer.domElement.requestPointerLock();
+    } else {
+        gamePaused = true;
+        menu.classList.add('active');
+        const pn = document.getElementById('pause-player-name');
+        const ps = document.getElementById('pause-score');
+        if (pn) pn.textContent = myPlayerName;
+        if (ps) ps.textContent = myPlayerScore;
+        if (pointerLockActive) document.exitPointerLock();
+    }
+}
+
+// ============================================================
+// 22. EVENTOS
+// ============================================================
+
+function setupEventListeners() {
+    window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+
+        if (key === 'escape') {
+            if (gameRunning && myPlayerMesh) { togglePauseMenu(); e.preventDefault(); }
+            return;
+        }
+        if (gamePaused) return;
+        if (key === 'e') { stealBall(); e.preventDefault(); return; }
+
+        keysPressed[key] = true;
+
+        if (key === ' ') { jump(); e.preventDefault(); }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        keysPressed[e.key.toLowerCase()] = false;
+    });
+
+    window.addEventListener('mousedown', (e) => {
+        if (gamePaused || !gameRunning || !myPlayerMesh) return;
+        if (e.button === 0 && !ballInAir && possession === 'player' && pointerLockActive) {
+            shooting = true;
+            shootPower = 0;
+            const pbc = document.getElementById('power-bar-container');
+            if (pbc) pbc.classList.add('active');
+        }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+        if (gamePaused) return;
+        if (e.button === 0 && shooting && !ballInAir && possession === 'player' && pointerLockActive) {
+            shoot();
+        }
+        shooting = false;
+        const pbc = document.getElementById('power-bar-container');
+        if (pbc) pbc.classList.remove('active');
+    });
+
+    window.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (!gamePaused && gameRunning && !ballInAir && possession === 'player' && myPlayerMesh && pointerLockActive) passBall();
+        return false;
+    });
+
+    // Botones UI
+    document.getElementById('resume-game')?.addEventListener('click', togglePauseMenu);
+    document.getElementById('exit-game')?.addEventListener('click', exitToMenu);
+    document.getElementById('create-room-btn')?.addEventListener('click', () => {
+        document.getElementById('create-room-modal').classList.add('active');
+        document.getElementById('room-name-input').value = '';
+        document.getElementById('room-name-input').focus();
+    });
+    document.getElementById('confirm-create-room')?.addEventListener('click', createRoom);
+    document.getElementById('cancel-create-room')?.addEventListener('click', () => document.getElementById('create-room-modal').classList.remove('active'));
+    document.getElementById('join-blue-btn')?.addEventListener('click', () => showNameModal('blue'));
+    document.getElementById('join-red-btn')?.addEventListener('click', () => showNameModal('red'));
+    document.getElementById('confirm-name-btn')?.addEventListener('click', confirmJoinGame);
+    document.getElementById('cancel-name-btn')?.addEventListener('click', () => document.getElementById('name-modal').classList.remove('active'));
+    document.getElementById('back-to-rooms')?.addEventListener('click', backToRooms);
+    document.getElementById('player-name-input')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') confirmJoinGame(); });
+    document.getElementById('room-name-input')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') createRoom(); });
+}
+
+// ============================================================
+// 23. BUCLE DE ANIMACIÓN
+// ============================================================
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    const now = performance.now();
+    let dt = Math.min(0.033, (now - (lastDeltaTimeFrame || now)) / 1000);
+    lastDeltaTimeFrame = now;
+    if (dt < 0.001) dt = 0.016;
+
+    if (myPlayerMesh && gameRunning && !gamePaused) {
+        handleMovement(dt);
+        updateBallPhysics(dt);
+        updateCamera();
+    }
+
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+}
+
+// ============================================================
+// 24. ARRANQUE
+// ============================================================
+
+window.onload = () => {
+    initThree();
+    setupEventListeners();
+    loadRooms();
+
+    onValue(ref(database, '.info/connected'), (snap) => {
+        const connStatus = document.getElementById('conn-status');
+        if (!connStatus) return;
+        if (snap.val() === true) {
+            connStatus.className = 'connection-status online';
+            connStatus.innerHTML = '🟢 Conectado';
+        } else {
+            connStatus.className = 'connection-status offline';
+            connStatus.innerHTML = '🔴 Desconectado';
+        }
+    });
+};

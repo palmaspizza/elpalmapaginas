@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Basketball Chibi - Sistema de Salas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- PANTALLA DE LISTA DE SALAS -->
+    <div id="rooms-screen" class="screen">
+        <div class="rooms-container">
+            <div class="rooms-header">
+                <h1>🏀 BASKETBALL MULTIPLAYER 🏀</h1>
+                <p class="subtitle">Elige o crea una sala para jugar</p>
+            </div>
+            <div class="rooms-actions">
+                <button id="create-room-btn" class="btn-create">➕ CREAR NUEVA SALA</button>
+            </div>
+            <div class="rooms-list" id="rooms-list">
+                <div class="loading">Cargando salas...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CREAR SALA -->
+    <div id="create-room-modal" class="modal">
+        <div class="modal-content">
+            <h2>🏟️ Crear Nueva Sala</h2>
+            <input type="text" id="room-name-input" placeholder="Nombre de la sala" maxlength="30">
+            <div class="mode-selector">
+                <label>Modo de juego:</label>
+                <select id="room-mode-select">
+                    <option value="1v1">1 vs 1 (2 jugadores)</option>
+                    <option value="2v2">2 vs 2 (4 jugadores)</option>
+                    <option value="3v3">3 vs 3 (6 jugadores)</option>
+                    <option value="4v4">4 vs 4 (8 jugadores)</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button id="confirm-create-room" class="btn-confirm">✅ CREAR</button>
+                <button id="cancel-create-room" class="btn-cancel">❌ CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA DE SALA (DENTRO DE LA SALA) -->
+    <div id="room-screen" class="screen" style="display: none;">
+        <div class="room-header">
+            <button id="back-to-rooms" class="btn-back">← Salir de la sala</button>
+            <div class="room-info">
+                <h2 id="room-name-display">Sala: -</h2>
+                <span id="room-mode-display" class="room-mode-badge">Modo: -</span>
+            </div>
+        </div>
+        <div class="teams-container">
+            <!-- EQUIPO AZUL -->
+            <div class="team-card team-blue">
+                <div class="team-header">
+                    <div class="team-icon">🔵</div>
+                    <h3>EQUIPO AZUL</h3>
+                    <div class="team-count" id="blue-team-count">0/0</div>
+                </div>
+                <div class="players-list" id="blue-team-list">
+                    <div class="empty-slot">Esperando jugadores...</div>
+                </div>
+                <button id="join-blue-btn" class="join-team-btn btn-blue">🎮 UNIRME AL EQUIPO AZUL</button>
+            </div>
+            <!-- EQUIPO ROJO -->
+            <div class="team-card team-red">
+                <div class="team-header">
+                    <div class="team-icon">🔴</div>
+                    <h3>EQUIPO ROJO</h3>
+                    <div class="team-count" id="red-team-count">0/0</div>
+                </div>
+                <div class="players-list" id="red-team-list">
+                    <div class="empty-slot">Esperando jugadores...</div>
+                </div>
+                <button id="join-red-btn" class="join-team-btn btn-red">🎮 UNIRME AL EQUIPO ROJO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA INGRESAR NOMBRE -->
+    <div id="name-modal" class="modal">
+        <div class="modal-content">
+            <h2>🏀 Ingresa tu nombre</h2>
+            <p>Te unirás al equipo <span id="selected-team-name">-</span></p>
+            <input type="text" id="player-name-input" placeholder="Tu nombre" maxlength="20" autocomplete="off">
+            <div class="modal-buttons">
+                <button id="confirm-name-btn" class="btn-confirm">🎮 JUGAR</button>
+                <button id="cancel-name-btn" class="btn-cancel">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI DEL JUEGO (se muestra después de unirse) -->
+    <div id="game-ui" style="display: none;">
+        <div class="top-bar">
+            <div class="players-count">
+                🟢 JUGADORES ONLINE: <span id="online-count">0</span>
+            </div>
+            <div class="current-player">
+                👤 TÚ: <span id="my-name">-</span>
+                <span id="my-team-badge" class="team-badge">🔵</span>
+            </div>
+            <div class="score-display">
+                🏆 PUNTOS: <span id="my-score">0</span>
+            </div>
+        </div>
+        <div class="crosshair">
+            <div class="crosshair-dot"></div>
+            <div class="crosshair-line horizontal"></div>
+            <div class="crosshair-line vertical"></div>
+            <div class="crosshair-outer"></div>
+        </div>
+        <div class="controls-info">
+            🎮 <span>WASD / FLECHAS</span> - Moverte &nbsp;|&nbsp;
+            <span>MOUSE</span> - Apuntar &nbsp;|&nbsp;
+            <span>ESPACIO</span> - Saltar &nbsp;|&nbsp;
+            <span>CLICK + HOLD</span> - Cargar tiro &nbsp;|&nbsp;
+            <span>SOLTAR CLICK</span> - Disparar &nbsp;|&nbsp;
+            <span>CLICK DERECHO</span> - Pasar &nbsp;|&nbsp;
+            <span style="color:#ff4444">🔴 E</span> - Robar/Agarrar &nbsp;|&nbsp;
+            <span>ESC</span> - Menú
+        </div>
+        <div class="connection-status online" id="conn-status">
+            🟢 Conectado
+        </div>
+        <div class="power-bar-container" id="power-bar-container">
+            <div class="power-bar-label">⚡ POTENCIA DE TIRO ⚡</div>
+            <div class="power-bar-bg">
+                <div class="power-bar-fill" id="power-bar-fill"></div>
+            </div>
+            <div class="power-bar-percent" id="power-percent">0%</div>
+        </div>
+        <div class="shot-clock" id="shot-clock">
+            <div class="shot-clock-label">⏱️ SHOT CLOCK</div>
+            <div class="shot-clock-value" id="shot-clock-value">24</div>
+        </div>
+        <div class="possession-indicator" id="possession-indicator">
+            <div class="possession-ball"></div>
+            <span id="possession-text">🏀 TIENES EL BALÓN 🏀</span>
+        </div>
+        <div id="score-popup-container"></div>
+        <div class="ambient-effects"></div>
+    </div>
+
+    <div id="pause-menu" class="pause-menu">
+        <div class="pause-card">
+            <h2>⏸️ JUEGO PAUSADO ⏸️</h2>
+            <div class="pause-stats">
+                <p>🎮 Jugador: <span id="pause-player-name">-</span></p>
+                <p>🏆 Puntos: <span id="pause-score">0</span></p>
+                <p>🟢 Jugadores online: <span id="pause-online-count">0</span></p>
+            </div>
+            <button id="resume-game" class="pause-btn resume-btn">▶ VOLVER AL JUEGO</button>
+            <button id="exit-game" class="pause-btn exit-btn">🚪 SALIR DE LA SALA</button>
+        </div>
+    </div>
+
+    <div id="pointer-lock-info">
+        🔒 Haz clic en la pantalla para activar el mouse | ESC para menú
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="game.js"></script>
+
+</body>
+</html>
