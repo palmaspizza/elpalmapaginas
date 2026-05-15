@@ -140,6 +140,7 @@ function getMaxPerTeam(modo) {
     return map[modo] || 2;
 }
 function loadRooms() {
+    cleanEmptyRooms();
     const roomsRef = ref(database, 'salas');
     onValue(roomsRef, (snapshot) => {
         const rooms = snapshot.val();
@@ -189,6 +190,28 @@ function loadRooms() {
     });
 }
 
+// Elimina salas que tienen 0 jugadores en ambos equipos
+function cleanEmptyRooms() {
+    const roomsRef = ref(database, 'salas');
+    onValue(roomsRef, (snapshot) => {
+        const rooms = snapshot.val();
+        if (!rooms) return;
+        
+        Object.entries(rooms).forEach(([roomId, room]) => {
+            // Contar jugadores en ambos equipos
+            const blueCount = room.equipos?.azul ? Object.keys(room.equipos.azul).length : 0;
+            const redCount = room.equipos?.rojo ? Object.keys(room.equipos.rojo).length : 0;
+            const totalPlayers = blueCount + redCount;
+            
+            // Si no hay jugadores, eliminar la sala (pero no la actual si estamos dentro)
+            if (totalPlayers === 0 && roomId !== currentRoomId) {
+                remove(ref(database, 'salas/' + roomId))
+                    .then(() => console.log(`Sala vacía eliminada: ${roomId}`))
+                    .catch(err => console.warn("Error al eliminar sala vacía:", err));
+            }
+        });
+    }, { onlyOnce: true }); // Solo se ejecuta una vez al llamarla
+}
 function createRoom() {
     const roomName = document.getElementById('room-name-input').value.trim();
     const mode = document.getElementById('room-mode-select').value;
