@@ -140,7 +140,7 @@ function getMaxPerTeam(modo) {
     return map[modo] || 2;
 }
 function loadRooms() {
-
+    
     const roomsRef = ref(database, 'salas');
     onValue(roomsRef, (snapshot) => {
         const rooms = snapshot.val();
@@ -189,7 +189,10 @@ function loadRooms() {
         });
     });
 }
-
+// Ejecutar cleanEmptyRooms cada 7 minutos (420,000 ms)
+setInterval(() => {
+    cleanEmptyRooms();
+}, 420000);
 // Elimina salas que tienen 0 jugadores en ambos equipos
 function cleanEmptyRooms() {
     const roomsRef = ref(database, 'salas');
@@ -219,77 +222,33 @@ function createRoom() {
     let pointsToWin = parseInt(document.getElementById('room-points-select').value);
     if (isNaN(pointsToWin)) pointsToWin = 10;
     
-    // Pedir nombre si aún no se tiene (puedes usar un prompt o un modal)
-    let playerName = myPlayerName;
-    if (!playerName) {
-        playerName = prompt("Ingresa tu nombre para jugar:");
-        if (!playerName) return;
-        myPlayerName = playerName;
-    }
-    
-    // Elegir equipo aleatorio (o podrías poner 'blue' fijo)
-    const randomTeam = Math.random() < 0.5 ? 'blue' : 'red';
-    myPlayerTeam = randomTeam;
-    
     const newRoomRef = push(ref(database, 'salas'));
     const roomData = {
-        puntos_ganar: pointsToWin,
-        nombre: roomName,
-        modo: mode,
-        max_por_equipo: getMaxPerTeam(mode),
-        equipos: { azul: {}, rojo: {} },
-        creada: Date.now(),
-        gameStarted: false,
-        bola: { /* ... */ }
-    };
+    puntos_ganar: pointsToWin,
+    nombre: roomName,
+    modo: mode,
+    max_por_equipo: getMaxPerTeam(mode),
+    equipos: { azul: {}, rojo: {} },
+    creada: Date.now(),
+    gameStarted: false,   // ← NUEVO: indica si la partida ha comenzado
+    bola: { x: 0, y: 0.8, z: 0, vx: 0, vy: 0, vz: 0, inAir: false, authorityId: null, possessorTeam: null }
+};
     
-    set(newRoomRef, roomData).then(() => {
-    document.getElementById('create-room-modal').classList.remove('active');
-    setTimeout(() => {
-        joinRoom(newRoomRef.key);
-        // Ahora asignamos al jugador al equipo guardado en myPlayerTeam
-        const fbTeam = myPlayerTeam === 'blue' ? 'azul' : 'rojo';
-        const playerRef = ref(database, 'salas/' + newRoomRef.key + '/equipos/' + fbTeam + '/' + myPlayerId);
-        const baseX = myPlayerTeam === 'blue' ? -8 : 8;
-        const startX = baseX + (Math.random() - 0.5) * 4;
-        const startZ = (Math.random() - 0.5) * 8;
-        set(playerRef, {
-            nombre: myPlayerName,
-            x: startX, y: 0, z: startZ,
-            rotationY: 0,
-            score: 0,
-            team: myPlayerTeam,
-            lastUpdate: Date.now()
+    set(newRoomRef, roomData)
+        .then(() => {
+            console.log("Sala creada exitosamente:", newRoomRef.key);
+            document.getElementById('create-room-modal').classList.remove('active');
+            // Esperar medio segundo para asegurar que Firebase indexe la sala
+            setTimeout(() => {
+                joinRoom(newRoomRef.key);
+            }, 300);
+        })
+        .catch((error) => {
+            console.error("Error al crear sala:", error);
+            alert("Error al crear sala: " + error.message);
         });
-        onDisconnect(playerRef).remove();
-        // Finalmente iniciamos el juego (si quieres que empiece de inmediato, o esperar a que se llene)
-        initGameWithRoom(startX, startZ);
-    }, 300);
-});
 }
-function assignPlayerToTeam(roomId, team, playerName) {
-    const fbTeam = team === 'blue' ? 'azul' : 'rojo';
-    myPlayerId = Date.now().toString() + Math.random().toString(36).substr(2, 6);
-    
-    const playerRef = ref(database, 'salas/' + roomId + '/equipos/' + fbTeam + '/' + myPlayerId);
-    // Posición inicial según equipo
-    const baseX = team === 'blue' ? -8 : 8;
-    const startX = baseX + (Math.random() - 0.5) * 4;
-    const startZ = (Math.random() - 0.5) * 8;
-    
-    set(playerRef, {
-        nombre: playerName,
-        x: startX, y: 0, z: startZ,
-        rotationY: 0,
-        score: 0,
-        team: team,
-        lastUpdate: Date.now()
-    });
-    onDisconnect(playerRef).remove();
-    
-    // Iniciar el juego directamente
-    initGameWithRoom(startX, startZ);
-}
+
 function joinRoom(roomId) {
     if (unsubscribeRoom) {
         unsubscribeRoom();
@@ -322,11 +281,10 @@ function joinRoom(roomId) {
         }
         
         // Cambiar pantalla solo si no ha comenzado el juego
-          if (!skipScreen) {
-        document.getElementById('rooms-screen').style.display = 'none';
-        document.getElementById('room-screen').style.display = 'block';
-    }
-        
+        if (document.getElementById('rooms-screen').style.display !== 'none') {
+            document.getElementById('rooms-screen').style.display = 'none';
+            document.getElementById('room-screen').style.display = 'block';
+        }
     });
     
     // Opcional: eventos de sonido
@@ -483,47 +441,27 @@ function startGameForAll() {
     }
 }
 function confirmJoinGame() {
-    console.log("confirmJoinGame llamado. myPlayerTeam =", myPlayerTeam, "currentRoomId =", currentRoomId);
-    
-    const input = document.getElementById('player-name-input');
-    const playerName = input ? input.value.trim() : '';
-    if (!playerName) { 
-        alert("Ingresa tu nombre"); 
-        return; 
-    }
-    myPlayerName = playerName;
-    
-    // ===== CASO 1: CREACIÓN DE SALA (pendiente) =====
-    if (window.pendingCreateRoom) {
-        window.pendingCreateRoom = false;
-        // Elegir equipo aleatorio si no se ha definido
-        if (!myPlayerTeam) {
-            myPlayerTeam = Math.random() < 0.5 ? 'blue' : 'red';
-        }
-        // Crear la sala (la función createRoom leerá los inputs del modal de sala)
-        createRoom();
-        document.getElementById('name-modal').classList.remove('active');
-        return;
-    }
-    
-    // ===== CASO 2: UNIÓN A SALA EXISTENTE =====
+     console.log("confirmJoinGame llamado. myPlayerTeam =", myPlayerTeam, "currentRoomId =", currentRoomId);
     if (!myPlayerTeam || !currentRoomId) {
-        console.error("Error: equipo o sala no definidos para unión normal");
+        console.error("Error: equipo o sala no definidos");
         alert("Error al unirse, intente de nuevo");
         return;
     }
-    
-    // Generar ID único para el jugador
+     const input = document.getElementById('player-name-input');
+    const playerName = input ? input.value.trim() : '';
+    if (!playerName) { alert("Ingresa tu nombre"); return; }
+    myPlayerName = playerName;
     myPlayerId = Date.now().toString() + Math.random().toString(36).substr(2, 6);
-    
+
     // Posición inicial según equipo
+    // Azul → izquierda (X negativo), ataca aro derecho
+    // Rojo → derecha (X positivo), ataca aro izquierdo
     const baseX = myPlayerTeam === 'blue' ? -8 : 8;
     const startX = baseX + (Math.random() - 0.5) * 4;
     const startZ = (Math.random() - 0.5) * 8;
-    
+
     const fbTeam = myPlayerTeam === 'blue' ? 'azul' : 'rojo';
     const playerRef = ref(database, 'salas/' + currentRoomId + '/equipos/' + fbTeam + '/' + myPlayerId);
-    
     set(playerRef, {
         nombre: myPlayerName,
         x: startX, y: 0, z: startZ,
@@ -531,19 +469,16 @@ function confirmJoinGame() {
         score: 0,
         team: myPlayerTeam,
         lastUpdate: Date.now()
-    }).then(() => {
-        onDisconnect(playerRef).remove();
-        // Limpiar sala si queda vacía al desconectar (solo si eres el último)
-        onDisconnect(ref(database, 'salas/' + currentRoomId + '/equipos/' + fbTeam + '/' + myPlayerId)).remove();
-        
-        document.getElementById('name-modal').classList.remove('active');
-        document.getElementById('room-screen').style.display = 'none';
-        
-        initGameWithRoom(startX, startZ);
-    }).catch(error => {
-        console.error("Error al unirse a la sala:", error);
-        alert("No se pudo unir a la sala. Inténtalo de nuevo.");
     });
+    onDisconnect(playerRef).remove();
+
+    // Limpiar sala si queda vacía al desconectar (solo si eres el último)
+    onDisconnect(ref(database, 'salas/' + currentRoomId + '/equipos/' + fbTeam + '/' + myPlayerId)).remove();
+
+    document.getElementById('name-modal').classList.remove('active');
+    document.getElementById('room-screen').style.display = 'none';
+
+    initGameWithRoom(startX, startZ);
 }
 
 function backToRooms() {
@@ -2410,11 +2345,10 @@ function setupEventListeners() {
     document.getElementById('resume-game')?.addEventListener('click', togglePauseMenu);
     document.getElementById('exit-game')?.addEventListener('click', exitToMenu);
     document.getElementById('create-room-btn')?.addEventListener('click', () => {
-    // Primero pedimos el nombre (modal)
-    document.getElementById('name-modal').classList.add('active');
-    // Guardamos que estamos en modo "crear sala"
-    window.pendingCreateRoom = true;
-});
+        document.getElementById('create-room-modal').classList.add('active');
+        document.getElementById('room-name-input').value = '';
+        document.getElementById('room-name-input').focus();
+    });
     document.getElementById('confirm-create-room')?.addEventListener('click', createRoom);
     document.getElementById('cancel-create-room')?.addEventListener('click', () => document.getElementById('create-room-modal').classList.remove('active'));
     document.getElementById('join-blue-btn')?.addEventListener('click', () => {
@@ -2708,7 +2642,6 @@ function endGameWithWinner(winningTeam) {
     document.getElementById('back-after-win')?.addEventListener('click', () => {
         winnerMsg.remove();
         backToRooms();
-        
     });
 
     // Opcional: detener la pelota y el movimiento
