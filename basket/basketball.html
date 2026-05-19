@@ -1,0 +1,2680 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🏀 HoopZ Online — Baloncesto Multijugador</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --court-wood: #c8843a;
+    --court-dark: #a0612a;
+    --neon-orange: #ff6b00;
+    --neon-yellow: #ffd700;
+    --ui-bg: #0a0a12;
+    --ui-panel: #13131f;
+    --ui-border: #2a2a40;
+    --ui-accent: #ff6b00;
+    --ui-accent2: #ffd700;
+    --text-primary: #f0f0f0;
+    --text-dim: #888;
+    --team-a: #e84040;
+    --team-b: #4080e8;
+    --green-line: #ffffff;
+    --power-bar: #ff6b00;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ui-bg);
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ─── LOBBY ─────────────────────────────────────────────── */
+  #lobby {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 0%, #1a1030 0%, #0a0a12 70%);
+    z-index: 100;
+  }
+  #lobby::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ff6b00' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .lobby-container {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    width: min(1100px, 96vw);
+    max-height: 92vh;
+    animation: fadeUp 0.6s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(30px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  .lobby-left { display: flex; flex-direction: column; gap: 16px; }
+  .lobby-right { display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 72px;
+    line-height: 1;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #ff6b00 0%, #ffd700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 30px rgba(255,107,0,0.4));
+  }
+  .logo-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-top: -8px;
+    margin-left: 4px;
+  }
+
+  .panel {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-orange), transparent);
+  }
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 3px;
+    color: var(--ui-accent);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .input-label { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+  .input-field, .select-field {
+    background: #0d0d1a;
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .input-field:focus, .select-field:focus {
+    border-color: var(--neon-orange);
+    box-shadow: 0 0 0 3px rgba(255,107,0,0.15);
+  }
+  .select-field option { background: #0d0d1a; }
+
+  .btn {
+    border: none; cursor: pointer; border-radius: 8px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px; font-size: 18px;
+    padding: 12px 20px;
+    transition: all 0.2s;
+    width: 100%;
+    position: relative; overflow: hidden;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #ff6b00, #ff9500);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255,107,0,0.4);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255,107,0,0.5);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--ui-border);
+    font-size: 14px;
+    padding: 8px 14px;
+  }
+  .btn-secondary:hover {
+    border-color: var(--neon-orange);
+    color: var(--neon-orange);
+  }
+
+  /* Skin preview */
+  .skin-area {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 12px;
+  }
+  .skin-preview-wrap {
+    width: 70px; height: 70px; border-radius: 50%;
+    border: 3px solid var(--neon-orange);
+    box-shadow: 0 0 20px rgba(255,107,0,0.4);
+    overflow: hidden; flex-shrink: 0;
+    background: #111;
+  }
+  #skinPreview {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  .skin-info { flex: 1; }
+  .skin-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .skin-hint { font-size: 12px; color: var(--text-dim); }
+
+  /* Rooms list */
+  .rooms-scroll {
+    overflow-y: auto;
+    max-height: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+  }
+  .rooms-scroll::-webkit-scrollbar { width: 4px; }
+  .rooms-scroll::-webkit-scrollbar-track { background: transparent; }
+  .rooms-scroll::-webkit-scrollbar-thumb { background: var(--ui-border); border-radius: 2px; }
+
+  .room-card {
+    background: #0d0d1a;
+    border: 1px solid var(--ui-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .room-card:hover {
+    border-color: var(--neon-orange);
+    background: #12121e;
+    transform: translateX(4px);
+  }
+  .room-name { font-weight: 700; font-size: 16px; }
+  .room-mode { font-size: 12px; color: var(--neon-yellow); letter-spacing: 1px; }
+  .room-players { font-size: 13px; color: var(--text-dim); }
+  .room-join-badge {
+    background: var(--neon-orange);
+    color: #fff;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .room-full .room-join-badge {
+    background: #333;
+    color: var(--text-dim);
+  }
+  .rooms-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  .rooms-loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-dim);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ─── GAME SCREEN ─────────────────────────────────────────── */
+  #gameScreen {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+  }
+
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, transparent 100%);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .hud-team {
+    display: flex; align-items: center; gap: 12px;
+    pointer-events: auto;
+  }
+  .hud-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px currentColor;
+  }
+  .score-a { color: var(--team-a); }
+  .score-b { color: var(--team-b); }
+  .hud-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .hud-center {
+    text-align: center;
+  }
+  .hud-room-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: var(--neon-yellow);
+  }
+  .hud-divider {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px;
+    color: rgba(255,255,255,0.2);
+    margin: 0 16px;
+  }
+
+  #gameCanvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+
+  /* Controls hint */
+  #controlsHint {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .hint-key {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .hint-key span { color: var(--neon-yellow); }
+
+  /* Toast notification */
+  #toast {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(0,0,0,0.85);
+    border: 1px solid var(--neon-orange);
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--neon-orange);
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Score popup */
+  .score-popup {
+    position: absolute;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 4px;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 30px var(--neon-orange);
+    pointer-events: none;
+    z-index: 20;
+    animation: scorePop 1.5s ease forwards;
+  }
+  @keyframes scorePop {
+    0%   { opacity:1; transform: translateX(-50%) scale(0.5); }
+    30%  { opacity:1; transform: translateX(-50%) scale(1.2); }
+    100% { opacity:0; transform: translateX(-50%) translateY(-80px) scale(1); }
+  }
+
+  #waiting-overlay {
+    position: absolute; inset: 0;
+    background: rgba(10,10,18,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 30;
+  }
+  .waiting-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 4px;
+    color: var(--neon-orange);
+  }
+  .waiting-dots span {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--neon-orange);
+    margin: 0 4px;
+    animation: dot 1.2s ease infinite;
+  }
+  .waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
+  .waiting-code {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  /* ─── WINNER SCREEN ─── */
+  #winner-overlay {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(10,10,18,0.92) 0%, rgba(0,0,0,0.97) 100%);
+    display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 24px;
+    z-index: 200;
+    animation: fadeUp 0.5s ease both;
+  }
+  #winner-overlay.show { display: flex; }
+  .winner-trophy {
+    font-size: 100px;
+    animation: trophyBounce 0.6s cubic-bezier(.36,.07,.19,.97) both;
+    filter: drop-shadow(0 0 40px gold);
+  }
+  @keyframes trophyBounce {
+    0%   { transform: scale(0) rotate(-15deg); }
+    60%  { transform: scale(1.2) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  .winner-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px;
+    letter-spacing: 8px;
+    line-height: 1;
+    filter: drop-shadow(0 0 30px currentColor);
+  }
+  .winner-team-a { color: var(--team-a); }
+  .winner-team-b { color: var(--team-b); }
+  .winner-score-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 4px;
+  }
+  .winner-btn {
+    margin-top: 12px;
+    background: linear-gradient(135deg, #ff6b00, #ffd700);
+    border: none; cursor: pointer;
+    border-radius: 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 3px;
+    padding: 14px 40px; color: #fff;
+    box-shadow: 0 6px 30px rgba(255,107,0,0.5);
+    transition: all 0.2s;
+  }
+  .winner-btn:hover { transform: scale(1.05); }
+
+  /* ─── POSSESSION TIMER ─── */
+  #possessionTimer {
+    position: absolute;
+    top: 72px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 3px;
+    color: var(--text-dim);
+    z-index: 10; pointer-events: none;
+    display: none;
+  }
+  #possessionTimer.urgent {
+    color: #ff4444;
+    animation: urgentPulse 0.3s ease infinite alternate;
+  }
+  @keyframes urgentPulse { from{opacity:1} to{opacity:0.3} }
+
+  /* ─── HUD MAX SCORE ─── */
+  .hud-maxscore {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(255,215,0,0.5);
+    margin-top: 2px;
+  }
+
+  /* ─── SPRINT / STEAL STATUS ─── */
+  #statusBars {
+    position: absolute;
+    bottom: 52px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 16px;
+    pointer-events: none; z-index: 10;
+  }
+  .status-bar-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .status-bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: rgba(255,255,255,0.4);
+  }
+  .status-bar-track {
+    width: 80px; height: 5px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px; overflow: hidden;
+  }
+  .status-bar-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.1s linear;
+  }
+  #sprintBarFill  { background: linear-gradient(90deg,#00e5ff,#00ff88); }
+  #stealBarFill   { background: linear-gradient(90deg,#ff4444,#ff9900); }
+/* ─── DEAD OVERLAY ─── */
+  #dead-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+    z-index: 150;
+  }
+  .dead-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 90px; line-height: 1;
+    color: #ff1111;
+    text-shadow: 0 0 40px #ff0000, 0 0 80px #ff3300;
+    animation: urgentPulse 0.45s ease infinite alternate;
+  }
+  .dead-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 26px; letter-spacing: 4px; color: #fff;
+  }
+  .hud-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px currentColor;
+  }
+  .score-a { color: var(--team-a); }
+  .score-b { color: var(--team-b); }
+  .hud-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .hud-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px;
+    line-height: 1;
+    letter-spacing: 4px;
+    text-shadow:
+      0 0 10px currentColor,
+      0 0 30px currentColor,
+      0 0 60px currentColor,
+      0 4px 20px rgba(0,0,0,0.8);
+    filter: drop-shadow(0 0 18px currentColor);
+    transition: transform 0.15s cubic-bezier(.36,.07,.19,.97), color 0.2s;
+  }
+  .hud-score.score-bump {
+    transform: scale(1.35);
+  }
+  .score-a {
+    color: var(--team-a);
+    background: linear-gradient(180deg, #ff6a6a 0%, #e84040 60%, #a00000 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 18px #e84040);
+  }
+  .score-b {
+    color: var(--team-b);
+    background: linear-gradient(180deg, #80b4ff 0%, #4080e8 60%, #0030a0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 18px #4080e8);
+  }
+  .hud-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255,255,255,0.2);
+  }
+  .hud-divider {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 60px;
+    color: rgba(255,255,255,0.15);
+    margin: 0 20px;
+    text-shadow: 0 0 20px rgba(255,255,255,0.1);
+    align-self: center;
+  }
+  /* ─── NETWORK BULLET ─── */
+  .net-bullet-flash {
+    animation: bulletAppear 0.1s ease both;
+  }
+  @keyframes bulletAppear {
+    from { opacity: 0; transform: scale(0.5); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  /* ─── SKIN PICKER MODAL ─── */
+  #skinModal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(8px);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: fadeUp 0.3s ease both;
+  }
+  #skinModal.open { display: flex; }
+  .skin-modal-box {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: min(720px, 94vw);
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .skin-modal-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-orange), transparent);
+    border-radius: 16px 16px 0 0;
+  }
+  .skin-modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: var(--neon-orange);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .skin-modal-close {
+    background: transparent;
+    border: 1px solid var(--ui-border);
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 18px;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    font-family: monospace;
+  }
+  .skin-modal-close:hover { border-color: var(--neon-orange); color: var(--neon-orange); }
+  .skin-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .skin-option {
+    background: #0d0d1a;
+    border: 2px solid var(--ui-border);
+    border-radius: 12px;
+    padding: 14px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .skin-option:hover {
+    border-color: var(--neon-orange);
+    background: #12121e;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(255,107,0,0.25);
+  }
+  .skin-option.selected {
+    border-color: var(--neon-yellow);
+    box-shadow: 0 0 20px rgba(255,215,0,0.3);
+  }
+  .skin-option-img-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #111;
+    border: 2px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  .skin-option-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  .skin-option-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-primary);
+    text-align: center;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+  }
+  /* ─── NAME VALIDATION ─── */
+  .input-field.invalid {
+    border-color: #e84040 !important;
+    box-shadow: 0 0 0 3px rgba(232,64,64,0.2) !important;
+    animation: shake 0.35s ease;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-6px); }
+    40%      { transform: translateX(6px); }
+    60%      { transform: translateX(-4px); }
+    80%      { transform: translateX(4px); }
+  }
+  .name-error {
+    font-size: 12px;
+    color: #e84040;
+    letter-spacing: 1px;
+    margin-top: 4px;
+    display: none;
+  }
+  .name-error.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOBBY ═══════════ -->
+<div id="lobby">
+  <div class="lobby-container">
+
+    <!-- LEFT COLUMN -->
+    <div class="lobby-left">
+      <div>
+        <div class="logo">HoopZ</div>
+        <div class="logo-sub">Online Basketball · Multijugador</div>
+      </div>
+
+      <!-- Player Setup -->
+      <div class="panel">
+        <div class="panel-title">👤 Tu Jugador</div>
+
+        <div class="skin-area">
+          <div class="skin-preview-wrap">
+            <img id="skinPreview" src="mockey.webp" alt="Skin" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ff6b00%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2250%22%3E🏀%3C/text%3E%3C/svg%3E'"/>
+          </div>
+          <div class="skin-info">
+            <div class="skin-name" id="skinName">Skin por defecto</div>
+            <div class="skin-hint">Sube tu propia imagen</div>
+            <input type="file" id="skinFile" accept="image/*" style="display:none"/>
+            <button class="btn btn-secondary" style="width:auto;margin-top:8px;" onclick="document.getElementById('skinFile').click()">📷 Cambiar Skin</button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">Nombre del Jugador</div>
+          <input class="input-field" id="playerName" type="text" placeholder="Tu apodo..." maxlength="16" value=""/>
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">Modalidad</div>
+          <select class="select-field" id="gameMode">
+            <option value="1v1">1 vs 1</option>
+            <option value="2v2">2 vs 2</option>
+            <option value="3v3" selected>3 vs 3</option>
+            <option value="4v4">4 vs 4</option>
+          </select>
+          <div class="input-group">
+          <div class="input-label">Puntos para ganar</div>
+          <input class="input-field" id="maxScore" type="number" min="5" max="100" value="21" step="1"/>
+        </div>
+        </div>
+
+        <button class="btn btn-primary" id="createRoomBtn">🏀 Crear Nueva Sala</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="lobby-right">
+      <div class="panel" style="flex:1; display:flex; flex-direction:column;">
+        <div class="panel-title">🌐 Salas Disponibles
+          <span style="font-size:12px;color:var(--text-dim);font-family:Rajdhani;font-weight:400;margin-left:auto;" id="roomCount"></span>
+        </div>
+        <div class="rooms-scroll" id="roomsList">
+          <div class="rooms-loading">Buscando salas<span>...</span></div>
+        </div>
+      </div>
+
+      <!-- Controls reference -->
+      <div class="panel" style="padding:14px 20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">WASD</span> — Mover</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">SPACE</span> — Cargar tiro</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">E</span> — Agarrar / Robar</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">Suelta SPACE</span> — Disparar</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">Click Derecho</span> — Pasar</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">Shift / BloqMayus</span> — Sprint</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ GAME SCREEN ═══════════ -->
+<div id="gameScreen">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-team">
+      <div>
+        <div class="hud-label">EQUIPO A</div>
+        <div class="hud-score score-a" id="scoreA">0</div>
+        <div class="hud-maxscore" id="hudMaxScore">/ 21 pts</div>
+      </div>
+    </div>
+    <div class="hud-center">
+      <div class="hud-room-name" id="hudRoomName"></div>
+      <div class="hud-label" id="hudMode"></div>
+    </div>
+    <div class="hud-team">
+      <div style="text-align:right;">
+        <div class="hud-label">EQUIPO B</div>
+        <div class="hud-score score-b" id="scoreB">0</div>
+        <div class="hud-maxscore" style="text-align:right;" id="hudMaxScoreB">/ 21 pts</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Possession timer -->
+  <div id="possessionTimer">⏱ <span id="possTimerVal">4.0</span>s</div>
+
+  <!-- Sprint / Steal status bars -->
+  <div id="statusBars">
+    <div class="status-bar-wrap">
+      <div class="status-bar-label">SPRINT</div>
+      <div class="status-bar-track"><div class="status-bar-fill" id="sprintBarFill" style="width:100%"></div></div>
+    </div>
+    <div class="status-bar-wrap">
+      <div class="status-bar-label">ROBO</div>
+      <div class="status-bar-track"><div class="status-bar-fill" id="stealBarFill" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- Winner overlay -->
+  <div id="winner-overlay">
+    <div class="winner-trophy">🏆</div>
+    <div class="winner-title" id="winnerTitle">EQUIPO A GANA</div>
+    <div class="winner-score-display" id="winnerScore">0 — 0</div>
+    <button class="winner-btn" id="playAgainBtn">🏀 JUGAR DE NUEVO</button>
+  </div>
+
+  <!-- Waiting overlay -->
+  <div id="waiting-overlay">
+    <div class="waiting-title">Esperando Jugadores</div>
+    <div class="waiting-dots"><span></span><span></span><span></span></div>
+    <div class="waiting-code" id="waitingInfo"></div>
+  </div>
+<!-- Dead overlay -->
+  <div id="dead-overlay">
+    <div class="dead-title">ESTÁS MUERTO</div>
+    <div class="dead-sub" id="dead-countdown">Reapareciendo en 3...</div>
+  </div>
+  <!-- Controls hint -->
+  <div id="controlsHint">
+    <div class="hint-key"><span>Click Izq.</span> Disparar pistola</div>
+  <div class="hint-key"><span>WASD</span> Mover</div>
+    <div class="hint-key"><span>E</span> Agarrar/Robar</div>
+    <div class="hint-key"><span>SPACE</span> Cargar · Soltar dispara</div>
+    <div class="hint-key"><span>Click Der.</span> Pasar</div>
+    <div class="hint-key"><span>Shift</span> Sprint 3s</div></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+<!-- ═══════════ SKIN PICKER MODAL ═══════════ -->
+<div id="skinModal">
+  <div class="skin-modal-box">
+    <div class="skin-modal-title">
+      🎭 ELIGE TU SKIN
+      <button class="skin-modal-close" onclick="closeSkinModal()">✕</button>
+    </div>
+    <div class="skin-grid" id="skinGrid">
+      <!-- Generado por JS -->
+    </div>
+  </div>
+</div>
+<!-- ═══════════ FIREBASE + GAME LOGIC ═══════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getDatabase, ref, set, push, onValue, update, remove,
+  onDisconnect, serverTimestamp, get
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ─── FIREBASE INIT ────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCSqgJA6uL8SkY-kphhuaR9TuGPulucPic",
+  authDomain: "ajedrez-65b15.firebaseapp.com",
+  databaseURL: "https://ajedrez-65b15-default-rtdb.firebaseio.com",
+  projectId: "ajedrez-65b15",
+  storageBucket: "ajedrez-65b15.firebasestorage.app",
+  messagingSenderId: "501222935015",
+  appId: "1:501222935015:web:bb08aeab5af07a77eb1542"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ─── CONSTANTS ────────────────────────────────────────────────
+const MAX_PER_SIDE = { '1v1': 1, '2v2': 2, '3v3': 3, '4v4': 4 };
+const PLAYER_RADIUS = 24;
+const BALL_RADIUS   = 14;
+const PLAYER_SPEED  = 4.2;
+const STEAL_DIST    = 54;
+const GRAB_DIST     = 46;
+const MAX_POWER     = 100;
+const POWER_RATE    = 1.8;  // per frame
+const SHOOT_MULT    = 0.18;
+const GRAVITY       = 0.28;
+const FRICTION      = 0.985;
+const BALL_BOUNCE   = 0.55;
+const HOOP_HEIGHT_3D = 30; // visual 3D effect
+
+// ─── STATE ────────────────────────────────────────────────────
+let myId        = null;
+let roomId      = null;
+let roomData    = null;
+let playersData = {};
+let ballData    = null;
+let localBall   = { x: 0, y: 0, vx: 0, vy: 0, vz: 0, z: 0, possessedBy: null, scored: false };
+let myTeam      = 'A';
+let gameRunning = false;
+let animId      = null;
+
+// Skin
+let skinBase64 = null;
+let skinImg    = new Image();
+skinImg.src    = 'tiorenechibi.png';
+
+// Input state
+const keys = { w:false, a:false, s:false, d:false, e:false, space:false };
+let ePressHandled = false;
+let spacePressing = false;
+let powerLevel    = 0;
+let iAmShooting   = false;
+// Sprint state
+let sprintActive     = false;
+let sprintTimer      = 0;          // frames restantes de sprint activo (60fps × 3s = 180)
+let sprintCooldown   = 0;          // frames de cooldown (60fps × 4s = 240)
+let sprintKeyHeld    = false;
+let lastRunAudio     = -1;
+
+// Steal cooldown
+let stealCooldownFrames = 0;       // 60fps × 3s = 180
+let lastWinAudio     = -1;
+
+// Possession timer (4 segundos = 240 frames a 60fps)
+const POSSESSION_FRAMES = 240;
+let possessionFrames = 0;          // frames que lleva el jugador con el balón
+
+// Max score (se leerá del room)
+let maxScore = 21;
+// ─── GUN & DEATH STATE ────────────────────────────────────────
+let gunState           = null;     // mirror de rooms/{roomId}/gun
+let unsubGun           = null;
+let gunCountdownInterval = null;
+let gunBullet          = null;     // { x,y,vx,vy,ownerTeam } — solo en el shooter
+let particles          = [];       // partículas de explosión (locales)
+const lastShotRef      = { val: -1 };
+const lastScoreRef     = { val: -1 };
+
+// Balas de otros jugadores (sincronizadas por Firebase)
+let networkBullets     = {};   // { bulletId: { x,y,vx,vy,ownerTeam } }
+let unsubBullets       = null;
+
+// Imágenes gun / muerto
+const gunImg  = new Image(); gunImg.src  = 'pistola.png';
+const deadImg = new Image(); deadImg.src = 'muerto.png';
+const bulletImg = new Image(); bulletImg.src = 'bala.png';
+const SKINS = [
+  { file: 'tiorenechibi.jpg',   name: 'Tiorene Chibi'    },
+  { file: 'jbthevoice.jpg',     name: 'JB The Voice'     },
+  { file: 'tencantalapasta.jpg',name: 'Ten Canta La Pasta'},
+  { file: 'flaytiano.jpg',      name: 'Flaytiano'        },
+  { file: 'jrplayboy.jpg',      name: 'JR Playboy'       },
+  { file: 'ninjamalveke.jpg',   name: 'Ninja Malveke'    },
+  { file: 'carlitos.jpg',       name: 'Carlitos'         },
+  { file: 'tiorene.jpg',        name: 'Tiorene'          },
+  { file: 'corxea.jpg',         name: 'Corxea'           },
+];
+
+let selectedSkinFile = 'tiorenechibi.jpg';
+let selectedSkinName = 'Tiorene Chibi';
+// Mouse (aim)
+let mouseX = 600, mouseY = 300;
+let lastAimPush   = 0;   // throttle 50 ms
+let lastBulletPush = 0;  // throttle 30 ms
+
+// Spawn position (guardada al unirse)
+let mySpawnX = 200, mySpawnY = 300;
+
+// Dead overlay control
+let deadOverlayShown = false;
+let myDeadUntil      = 0;
+let prevDeadStates   = {};
+// Canvas
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+
+// Player image cache
+const playerImgCache = {};
+
+// Unsubscribe functions
+let unsubPlayers = null;
+let unsubBall    = null;
+let unsubRoom    = null;
+
+// ─── UTILITY ──────────────────────────────────────────────────
+function uid()  { return Math.random().toString(36).slice(2, 10); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+// ─── PASS BALL ────────────────────────────────────────────────
+
+async function passBall() {
+  if (localBall.possessedBy !== myId) return;
+  const me = playersData[myId];
+  if (!me || me.dead) return;
+  if (!me) return;
+
+  // Buscar el compañero de equipo más cercano
+  let nearestId   = null;
+  let nearestDist = Infinity;
+  Object.values(playersData).forEach(p => {
+    if (p.id === myId) return;
+    if (p.team !== myTeam) return;  // solo compañeros
+    const d = dist(me, p);
+    if (d < nearestDist) { nearestDist = d; nearestId = p.id; }
+  });
+
+  if (!nearestId) { showToast('❌ No hay compañeros'); return; }
+
+  const target = playersData[nearestId];
+  // Lanzar el balón hacia el compañero con velocidad alta
+  const dx = target.x - me.x;
+  const dy = target.y - me.y;
+  const d  = Math.hypot(dx, dy) || 1;
+  const speed = 10;
+
+  await update(ref(db, `rooms/${roomId}/ball`), {
+    possessedBy: null,
+    x: me.x, y: me.y,
+    vx: (dx/d)*speed, vy: (dy/d)*speed,
+    vz: 1.5, z: 0
+  });
+
+  localBall.possessedBy = null;
+  localBall.vx = (dx/d)*speed; localBall.vy = (dy/d)*speed;
+  localBall.vz = 1.5; localBall.z = 0;
+  possessionFrames = 0;
+  document.getElementById('possessionTimer').style.display = 'none';
+
+  // El compañero agarra automáticamente (simular: cuando la pelota llega, el server la detectará)
+  // Marcar en firebase que va dirigida a ese jugador
+  await update(ref(db, `rooms/${roomId}/ball`), { passTarget: nearestId });
+  onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+  showToast(`📤 Pase a ${target.name}`);
+}
+
+window.openSkinModal = function() {
+  const modal = document.getElementById('skinModal');
+  const grid  = document.getElementById('skinGrid');
+  grid.innerHTML = '';
+  SKINS.forEach(sk => {
+    const card = document.createElement('div');
+    card.className = 'skin-option' + (sk.file === selectedSkinFile ? ' selected' : '');
+    card.innerHTML = `
+      <div class="skin-option-img-wrap">
+        <img src="${sk.file}" alt="${sk.name}"
+          onerror="this.style.display='none';this.parentElement.style.background='#1a1a2e'"/>
+      </div>
+      <div class="skin-option-name">${sk.name}</div>
+    `;
+    card.onclick = () => selectSkin(sk.file, sk.name, card);
+    grid.appendChild(card);
+  });
+  modal.classList.add('open');
+}
+
+window.closeSkinModal = function() {
+  document.getElementById('skinModal').classList.remove('open');
+}
+
+function selectSkin(file, name, card) {
+  selectedSkinFile = file;
+  selectedSkinName = name;
+  skinBase64 = null;
+  skinImg.src = file;
+  document.getElementById('skinPreview').src = file;
+  document.getElementById('skinName').textContent = name;
+  document.querySelectorAll('.skin-option').forEach(el => el.classList.remove('selected'));
+  if (card) card.classList.add('selected');
+  setTimeout(window.closeSkinModal, 300);
+}
+
+
+function onRightClick(e) {
+  e.preventDefault();
+  if (!gameRunning) return;
+  passBall();
+}
+function showToast(msg, dur = 2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function scorePopup(x, y, txt) {
+  const el = document.createElement('div');
+  el.className = 'score-popup';
+  el.textContent = txt;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  document.getElementById('gameScreen').appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+// ─── AUDIO SYSTEM (sin repetir 2 veces seguidas) ───────────────
+function playRandomAudio(prefix, count, lastRef) {
+  // prefix: 'ganar', 'correr'   count: 3   lastRef: { val: -1 }
+  let idx;
+  do { idx = Math.floor(Math.random() * count) + 1; } while (idx === lastRef.val && count > 1);
+  lastRef.val = idx;
+  const audio = new Audio(`${prefix}${idx}.mp3`);
+  audio.volume = 0.7;
+  audio.play().catch(() => {});  // catch si el navegador bloquea
+}
+const lastRunRef  = { val: -1 };
+const lastWinRef  = { val: -1 };
+
+function playRunAudio()  { playRandomAudio('correr', 3, lastRunRef); }
+function playWinAudio()  { playRandomAudio('ganar',  3, lastWinRef); }
+function playGunShotAudio()  { playRandomAudio('disparo', 3, lastShotRef); }
+function playGunGrantAudio() {
+  const a = new Audio('icrima.mp3');
+  a.volume = 0.8;
+  a.play().catch(() => {});
+}
+function playScoreAudio() { playRandomAudio('encesta', 3, lastScoreRef); }
+// ─── SKIN SYSTEM ──────────────────────────────────────────────
+document.getElementById('skinFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    skinBase64 = ev.target.result;
+    document.getElementById('skinPreview').src = skinBase64;
+    document.getElementById('skinName').textContent = file.name.slice(0, 20);
+    skinImg.src = skinBase64;
+  };
+  reader.readAsDataURL(file);
+});
+
+function getPlayerImg(p) {
+  const src = p.skin || 'tiorenechibi.png';
+  const key = src;
+  if (playerImgCache[key]) return playerImgCache[key];
+  const img = new Image();
+  img.src = src;
+  playerImgCache[key] = img;
+  return img;
+}
+
+// ─── LOBBY: List rooms ─────────────────────────────────────────
+const roomsRef = ref(db, 'rooms');
+onValue(roomsRef, snap => {
+  const rooms = snap.val() || {};
+  const list  = document.getElementById('roomsList');
+  const keys  = Object.keys(rooms);
+  document.getElementById('roomCount').textContent = keys.length + ' sala(s)';
+
+  if (!keys.length) {
+    list.innerHTML = '<div class="rooms-empty">🏀<br>No hay salas activas.<br>¡Crea la primera!</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  keys.forEach(rid => {
+    const r = rooms[rid];
+    const total    = MAX_PER_SIDE[r.mode] * 2;
+    const players  = Object.keys(r.players || {}).length;
+    const isFull   = players >= total;
+    const card = document.createElement('div');
+    card.className = 'room-card' + (isFull ? ' room-full' : '');
+    card.innerHTML = `
+      <div>
+        <div class="room-name">🏟️ ${r.name}</div>
+        <div class="room-mode">${r.mode}</div>
+      </div>
+      <div class="room-players">${players}/${total} jugadores</div>
+      <div class="room-join-badge">${isFull ? 'LLENA' : 'UNIRSE'}</div>
+    `;
+    if (!isFull) card.onclick = () => joinRoom(rid, r);
+    list.appendChild(card);
+  });
+});
+
+// ─── CREATE ROOM ──────────────────────────────────────────────
+document.getElementById('createRoomBtn').addEventListener('click', async () => {
+  const name     = document.getElementById('playerName').value.trim() || 'Jugador' + uid().slice(0,4);
+  const mode     = document.getElementById('gameMode').value;
+  const maxScoreVal = parseInt(document.getElementById('maxScore').value) || 21;
+  document.getElementById('playerName').value = name;
+
+  myId = uid();
+  const newRoomRef = push(ref(db, 'rooms'));
+  roomId = newRoomRef.key;
+
+
+    const roomObj = {
+    name: name + "'s Room",
+    mode,
+    host: myId,
+    maxScore: maxScoreVal,          // ← AGREGAR esta línea
+    createdAt: serverTimestamp(),
+    score: { A: 0, B: 0 },
+    players: {},
+    ball: {
+      x: canvas.width / 2 || 600,
+      y: canvas.height / 2 || 300,
+      vx: 0, vy: 0, vz: 0, z: 0,
+      possessedBy: null
+    }
+  };
+
+  const playerObj = {
+    id: myId,
+    name,
+    skin: skinBase64 || selectedSkinFile,
+    team: 'A',
+    x: 200, y: 300,
+    hasBall: false
+  };
+
+  roomObj.players[myId] = playerObj;
+  await set(newRoomRef, roomObj);
+
+ mySpawnX = 200;    // ✅ valor fijo, igual que el playerObj de arriba
+  mySpawnY = 300;    // ✅
+  myTeam = 'A';
+  enterGame(name, mode);
+});
+
+// ─── JOIN ROOM ─────────────────────────────────────────────────
+async function joinRoom(rid, r) {
+  const name = document.getElementById('playerName').value.trim() || 'Jugador' + uid().slice(0,4);
+  document.getElementById('playerName').value = name;
+
+  myId   = uid();
+  roomId = rid;
+
+  const existingPlayers = Object.values(r.players || {});
+  const teamA = existingPlayers.filter(p => p.team === 'A').length;
+  const teamB = existingPlayers.filter(p => p.team === 'B').length;
+  myTeam = teamA <= teamB ? 'A' : 'B';
+
+  const perSide = MAX_PER_SIDE[r.mode];
+  const spawnX  = myTeam === 'A' ? 200 : canvas.width - 200 || 1000;
+
+  const playerObj = {
+    id: myId,
+    name,
+    skin: skinBase64 || null,
+    team: myTeam,
+    x: spawnX, y: 280 + existingPlayers.length * 40,
+    hasBall: false
+  };
+
+  await update(ref(db, `rooms/${roomId}/players/${myId}`), playerObj);
+  mySpawnX = spawnX;
+  mySpawnY = 280 + existingPlayers.length * 40;
+  enterGame(r.name, r.mode);
+}
+// ─── ENTER GAME ────────────────────────────────────────────────
+function enterGame(rName, mode) {
+  document.getElementById('lobby').style.display = 'none';
+  const gs = document.getElementById('gameScreen');
+  gs.style.display = 'flex';
+  document.getElementById('hudRoomName').textContent = rName;
+  document.getElementById('hudMode').textContent = mode;
+  document.getElementById('waitingInfo').textContent = 'Sala: ' + roomId;
+
+  resizeCanvas();
+
+  // onDisconnect: remove player & release ball
+  const myPlayerRef = ref(db, `rooms/${roomId}/players/${myId}`);
+  onDisconnect(myPlayerRef).remove();
+  // Release ball if I have it
+  const ballRef = ref(db, `rooms/${roomId}/ball`);
+  // We'll update onDisconnect dynamically when I grab ball
+
+  setupListeners();
+  startGameLoop();
+
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup',   onKeyUp);
+  window.addEventListener('beforeunload', cleanup);
+  canvas.addEventListener('contextmenu', onRightClick);  // ← AGREGAR
+canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('click',     onGunClick);
+  onDisconnect(ref(db, `rooms/${roomId}/gun`)).remove();
+}
+
+// ─── RESIZE CANVAS ────────────────────────────────────────────
+function resizeCanvas() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', () => { resizeCanvas(); });
+
+// ─── FIREBASE LISTENERS ───────────────────────────────────────
+function setupListeners() {
+  // Players
+  unsubPlayers = onValue(ref(db, `rooms/${roomId}/players`), snap => {
+    playersData = snap.val() || {};
+// ── Detectar jugadores que acaban de morir (explosión para todos) ──
+    Object.values(playersData).forEach(p => {
+      if (p.dead && !prevDeadStates[p.id]) {
+        triggerExplosion(p.x, p.y);
+        if (p.id === myId && !deadOverlayShown) {
+          deadOverlayShown = true;
+          myDeadUntil = p.respawnAt || (Date.now() + 3000);
+          showDeadOverlay(p.respawnAt || (Date.now() + 3000));
+        }
+      }
+      if (!p.dead && prevDeadStates[p.id]) {
+        if (p.id === myId) deadOverlayShown = false;
+      }
+      prevDeadStates[p.id] = !!p.dead;
+    });
+    // Waiting overlay
+    const total = roomData ? MAX_PER_SIDE[roomData.mode] * 2 : 2;
+    const count = Object.keys(playersData).length;
+    if (count >= total && !gameRunning) {
+      startActualGame();
+    }
+    if (count < total) {
+      document.getElementById('waiting-overlay').style.display = 'flex';
+      gameRunning = false;
+    }
+
+    // Rebuild image cache for new players
+    Object.values(playersData).forEach(p => {
+      if (p.skin && !playerImgCache[p.skin]) {
+        const img = new Image(); img.src = p.skin;
+        playerImgCache[p.skin] = img;
+      }
+    });
+  });
+
+  // Ball (source of truth)
+  unsubBall = onValue(ref(db, `rooms/${roomId}/ball`), snap => {
+    const d = snap.val();
+    if (!d) return;
+    // Only update local ball physics from DB if nobody local is controlling it
+    // OR if possessedBy changed
+    const prevPossessed = localBall.possessedBy;
+    localBall.possessedBy = d.possessedBy;
+    if (d.possessedBy !== myId) {
+      // Someone else controls it or it's free — accept DB position
+      if (!d.possessedBy) {
+        // Free ball: update if not our local simulation
+        if (prevPossessed !== null && prevPossessed !== myId) {
+          localBall.x  = d.x;
+          localBall.y  = d.y;
+          localBall.vx = d.vx || 0;
+          localBall.vy = d.vy || 0;
+          localBall.vz = d.vz || 0;
+          localBall.z  = d.z  || 0;
+        } else if (prevPossessed !== myId) {
+          localBall.x  = d.x;
+          localBall.y  = d.y;
+          localBall.vx = d.vx || 0;
+          localBall.vy = d.vy || 0;
+          localBall.vz = d.vz || 0;
+          localBall.z  = d.z  || 0;
+        }
+      } else {
+        // Possessed by someone else — follow their player position
+        const owner = playersData[d.possessedBy];
+        if (owner) {
+          localBall.x = owner.x;
+          localBall.y = owner.y + 10;
+        } else {
+          localBall.x = d.x;
+          localBall.y = d.y;
+        }
+        localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+      }
+    }
+    // Auto-agarrar pases dirigidos a mí
+    if (d.passTarget === myId && !d.possessedBy) {
+      const me = playersData[myId];
+      if (me) {
+        const ballPos = { x: d.x, y: d.y };
+        // Auto-grab: actualizar possessedBy a mí
+        setTimeout(async () => {
+          const snap2 = await get(ref(db, `rooms/${roomId}/ball`));
+          const b = snap2.val();
+          if (!b || b.possessedBy) return; // alguien ya lo agarró
+          await update(ref(db, `rooms/${roomId}/ball`), {
+            possessedBy: myId, passTarget: null,
+            x: playersData[myId]?.x || b.x,
+            y: (playersData[myId]?.y || b.y) + 10
+          });
+          localBall.possessedBy = myId;
+          localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+          possessionFrames = 0;
+          document.getElementById('possessionTimer').style.display = 'block';
+          showToast('📥 ¡Pase recibido!');
+        }, 400); // pequeño delay para que la animación de vuelo se vea
+      }
+    }
+  });
+
+  // Room data (score, mode)
+    unsubRoom = onValue(ref(db, `rooms/${roomId}`), snap => {
+    roomData = snap.val();
+    // Si la sala fue eliminada y el juego ya había empezado → recargar para todos
+    if (!roomData && gameRunning) {
+      location.reload();
+      return;
+    }
+    if (!roomData) return;
+    document.getElementById('scoreA').textContent = roomData.score?.A ?? 0;
+    document.getElementById('scoreB').textContent = roomData.score?.B ?? 0;
+    // Leer maxScore dinámico
+    maxScore = roomData.maxScore || 21;
+    const label = `/ ${maxScore} pts`;
+    document.getElementById('hudMaxScore').textContent  = label;
+    document.getElementById('hudMaxScoreB').textContent = label;
+  });
+// ── Gun listener ────────────────────────────────────────────
+  unsubGun = onValue(ref(db, `rooms/${roomId}/gun`), snap => {
+    const prev = gunState;
+    gunState = snap.val() || null;
+    if (gunState && gunState.active && gunState.ownerId === myId) {
+      if (!prev || !prev.active || prev.ownerId !== myId) {
+        startGunCountdown();
+      }
+    } else {
+      if (prev && prev.ownerId === myId) clearInterval(gunCountdownInterval);
+    }
+  });
+
+  // ── Suscripción a balas de red (para ver balas de otros jugadores) ──
+  unsubBullets = onValue(ref(db, `rooms/${roomId}/bullets`), snap => {
+    const data = snap.val() || {};
+    // Detectar balas nuevas disparadas por OTROS jugadores
+    Object.entries(data).forEach(([bid, b]) => {
+      if (b.ownerId === myId) return; // mi propia bala ya la manejo local
+      if (!networkBullets[bid]) {
+        // Bala nueva: crear entrada local
+        networkBullets[bid] = {
+          x: b.x, y: b.y,
+          vx: b.vx, vy: b.vy,
+          ownerTeam: b.ownerTeam,
+          targetId: b.targetId || null,
+          ownerId: b.ownerId
+        };
+      }
+    });
+    // Eliminar balas que ya no están en Firebase
+    Object.keys(networkBullets).forEach(bid => {
+      if (!data[bid]) delete networkBullets[bid];
+    });
+  });
+}
+
+function startActualGame() {
+  gameRunning = true;
+  document.getElementById('waiting-overlay').style.display = 'none';
+  if (roomData?.ball) {
+    localBall.x = roomData.ball.x || canvas.width / 2;
+    localBall.y = roomData.ball.y || canvas.height / 2;
+    localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+    localBall.possessedBy = roomData.ball.possessedBy || null;
+  }
+}
+
+// ─── INPUT ────────────────────────────────────────────────────
+function onKeyDown(e) {
+  if (!gameRunning) return;
+  const me = playersData[myId];       // ← añadir esta línea
+  if (me && me.dead) return;          // ← el chequeo de muerte
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup')    { keys.w = true; e.preventDefault(); }
+  if (k === 'a' || k === 'arrowleft')  { keys.a = true; e.preventDefault(); }
+  if (k === 's' || k === 'arrowdown')  { keys.s = true; e.preventDefault(); }
+  if (k === 'd' || k === 'arrowright') { keys.d = true; e.preventDefault(); }
+  if (k === ' ') {
+    e.preventDefault();
+    if (!spacePressing && localBall.possessedBy === myId) {
+      spacePressing = true;
+      iAmShooting   = true;
+      powerLevel    = 0;
+    }
+  }
+  if (k === 'e' && !ePressHandled) {
+    ePressHandled = true;
+    handleGrabSteal();
+  }
+  // Sprint: Shift o CapsLock
+  if ((e.key === 'Shift' || e.key === 'CapsLock') && !sprintKeyHeld) {
+    sprintKeyHeld = true;
+    if (sprintCooldown <= 0 && !sprintActive) {
+      sprintActive = true;
+      sprintTimer  = 180;   // 3 segundos × 60fps
+      playRunAudio();
+    }
+  }
+}
+function onKeyUp(e) {
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup')    keys.w = false;
+  if (k === 'a' || k === 'arrowleft')  keys.a = false;
+  if (k === 's' || k === 'arrowdown')  keys.s = false;
+  if (k === 'd' || k === 'arrowright') keys.d = false;
+  if (k === 'e')  ePressHandled = false;
+  if (k === ' ') {
+    if (spacePressing && iAmShooting) shootBall();
+    spacePressing = false;
+    iAmShooting   = false;
+  }
+  if (e.key === 'Shift' || e.key === 'CapsLock') {
+    sprintKeyHeld = false;
+  }
+}
+
+// ─── GRAB / STEAL ─────────────────────────────────────────────
+async function handleGrabSteal() {
+  const me = playersData[myId];
+  if (!me) return;
+
+  // If ball is free & near me → grab
+  if (!localBall.possessedBy) {
+    const ballPos = { x: localBall.x, y: localBall.y };
+    if (dist(me, ballPos) < GRAB_DIST) {
+      await grabBall();
+      showToast('🏀 ¡Balón agarrado!');
+    }
+    return;
+  }
+
+  // If I already have it → drop (or do nothing)
+  if (localBall.possessedBy === myId) return;
+
+  // Try to steal from opponent
+  const owner = playersData[localBall.possessedBy];
+  if (!owner) return;
+  if (dist(me, owner) < STEAL_DIST) {
+    // 50% steal chance (but owner must be opponent)
+    const success = Math.random() > 0.45;
+    if (success) {
+      await grabBall();
+      showToast('🔥 ¡ROBO!');
+    } else {
+      showToast('❌ Robo fallido');
+    }
+  }
+}
+
+async function grabBall() {
+  const me = playersData[myId];
+  if (!me) return;
+  await update(ref(db, `rooms/${roomId}/ball`), {
+    possessedBy: myId,
+    x: me.x,
+    y: me.y + 10
+  });
+  localBall.possessedBy = myId;
+  localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+  possessionFrames = 0;  // ← reiniciar reloj de 4s
+
+  // Mostrar el timer de posesión
+  document.getElementById('possessionTimer').style.display = 'block';
+  onDisconnect(ref(db, `rooms/${roomId}/ball`)).update({ possessedBy: null });
+}
+
+// ─── SHOOT ────────────────────────────────────────────────────
+function getHoopTarget() {
+  const W = canvas.width;
+  const H = canvas.height;
+  const me = playersData[myId];
+  if (!me) return { tx: W/2, ty: H/2 };
+  // Shoot toward the enemy hoop
+  // Team A attacks right hoop, Team B attacks left hoop
+  if (myTeam === 'A') {
+    return { tx: W - 80, ty: H / 2 };
+  } else {
+    return { tx: 80, ty: H / 2 };
+  }
+}
+
+async function shootBall() {
+  if (localBall.possessedBy !== myId) return;
+  const me = playersData[myId];
+  if (!me) return;
+
+  const power = powerLevel;
+  const { tx, ty } = getHoopTarget();
+
+  const dx = tx - me.x;
+  const dy = ty - me.y;
+  const d  = Math.hypot(dx, dy) || 1;
+  const speed = 4 + power * SHOOT_MULT;
+
+  const vx = (dx / d) * speed;
+  const vy = (dy / d) * speed;
+  const vz = 3 + power * 0.05; // arc height
+
+  await update(ref(db, `rooms/${roomId}/ball`), {
+    possessedBy: null,
+    x: me.x, y: me.y,
+    vx, vy, vz, z: 0
+  });
+
+  localBall.possessedBy = null;
+  localBall.vx = vx;
+  localBall.vy = vy;
+  localBall.vz = vz;
+  localBall.z  = 0;
+  powerLevel   = 0;
+  spacePressing = false;
+
+  // Remove disconnect handler for ball since I released it
+  onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+}
+
+// ─── GAME LOOP ────────────────────────────────────────────────
+function startGameLoop() {
+  if (animId) cancelAnimationFrame(animId);
+  function loop() {
+    tick();
+    render();
+    animId = requestAnimationFrame(loop);
+  }
+  animId = requestAnimationFrame(loop);
+}
+
+let lastPushedX = -9999, lastPushedY = -9999;
+
+function tick() {
+  if (!gameRunning) return;
+
+  // ── Cooldown timers ─────────────────────
+  if (stealCooldownFrames > 0) stealCooldownFrames--;
+  const stealPct = 1 - (stealCooldownFrames / 180);
+  document.getElementById('stealBarFill').style.width = (stealPct * 100) + '%';
+
+  // ── Sprint lógica ───────────────────────
+  let currentSpeed = PLAYER_SPEED;
+  if (sprintActive) {
+    sprintTimer--;
+    if (sprintTimer <= 0) {
+      sprintActive     = false;
+      sprintCooldown   = 240; // 4 segundos cooldown
+    }
+    currentSpeed = PLAYER_SPEED * 2;
+  } else if (sprintCooldown > 0) {
+    sprintCooldown--;
+  }
+  const sprintBarPct = sprintActive
+    ? sprintTimer / 180
+    : (sprintCooldown > 0 ? 1 - sprintCooldown / 240 : 1);
+  document.getElementById('sprintBarFill').style.width = (sprintBarPct * 100) + '%';
+
+  // ── Possession timer (4 segundos) ───────
+  if (localBall.possessedBy === myId) {
+    possessionFrames++;
+    const secsLeft = Math.max(0, (POSSESSION_FRAMES - possessionFrames) / 60).toFixed(1);
+    const timerEl  = document.getElementById('possessionTimer');
+    document.getElementById('possTimerVal').textContent = secsLeft;
+    timerEl.classList.toggle('urgent', possessionFrames > POSSESSION_FRAMES * 0.65);
+    if (possessionFrames >= POSSESSION_FRAMES) {
+      // Tiempo agotado: soltar el balón automáticamente
+      possessionFrames = 0;
+      timerEl.style.display = 'none';
+      timerEl.classList.remove('urgent');
+      update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(()=>{});
+      localBall.possessedBy = null;
+      showToast('⏱ ¡Tiempo de posesión agotado!');
+      onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+    }
+  }
+
+  // ── Move my player ──────────────────────
+  const me = playersData[myId];
+  if (!me) return;
+  // ── Bloquear movimiento si muerto ──────────────────────
+  const amIDead = me.dead && Date.now() < myDeadUntil;
+  const W = canvas.width, H = canvas.height;
+  const courtLeft = 60, courtRight = W - 60;
+  const courtTop  = 80, courtBottom = H - 40;
+
+  // ── Bala local (solo en el shooter) CON SEGUIMIENTO (HOMING) ──
+  if (gunBullet) {
+    // Si la bala tiene un objetivo, recalcular vx y vy hacia su posición actual
+    if (gunBullet.targetId) {
+      const target = playersData[gunBullet.targetId];
+      if (target && !target.dead) {
+        const tdx = target.x - gunBullet.x;
+        const tdy = target.y - gunBullet.y;
+        const td  = Math.hypot(tdx, tdy) || 1;
+        
+        // Se actualiza la velocidad manteniendo la constante de 18
+        gunBullet.vx = (tdx / td) * 18;
+        gunBullet.vy = (tdy / td) * 18;
+      }
+    }
+
+    // Mover la bala con las velocidades actualizadas
+    gunBullet.x += gunBullet.vx;
+    gunBullet.y += gunBullet.vy;
+
+    let bulletHit = false;
+    Object.values(playersData).forEach(p => {
+      if (bulletHit || p.id === myId || p.team === gunBullet.ownerTeam || p.dead) return;
+      if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS) {
+        bulletHit = true;
+        killPlayer(p.id);
+      }
+    });
+
+    if (bulletHit || gunBullet.x < 0 || gunBullet.x > W || gunBullet.y < 0 || gunBullet.y > H) {
+      // Eliminar bala de Firebase cuando impacta o sale del mapa
+      if (gunBullet.bulletId) {
+        remove(ref(db, `rooms/${roomId}/bullets/${gunBullet.bulletId}`)).catch(() => {});
+      }
+      gunBullet = null;
+    }
+  }
+
+  // ── Balas de red (de otros jugadores) ───────────────────────
+  Object.entries(networkBullets).forEach(([bid, nb]) => {
+    // Homing hacia objetivo
+    if (nb.targetId) {
+      const target = playersData[nb.targetId];
+      if (target && !target.dead) {
+        const tdx = target.x - nb.x;
+        const tdy = target.y - nb.y;
+        const td  = Math.hypot(tdx, tdy) || 1;
+        nb.vx = (tdx / td) * 18;
+        nb.vy = (tdy / td) * 18;
+      }
+    }
+    nb.x += nb.vx;
+    nb.y += nb.vy;
+
+    // Colisión con jugadores locales (solo el cliente que recibe el golpe lo registra)
+    let nbHit = false;
+    Object.values(playersData).forEach(p => {
+      if (nbHit || p.team === nb.ownerTeam || p.dead) return;
+      if (p.id !== myId) return; // solo me importa si me golpea a mí
+      if (Math.hypot(p.x - nb.x, p.y - nb.y) < PLAYER_RADIUS) {
+        nbHit = true;
+        killPlayer(p.id);
+        remove(ref(db, `rooms/${roomId}/bullets/${bid}`)).catch(() => {});
+      }
+    });
+
+    if (nbHit || nb.x < 0 || nb.x > W || nb.y < 0 || nb.y > H) {
+      delete networkBullets[bid];
+    }
+  });
+
+  // ── Partículas (tick) ───────────────────────────────────
+  if (!amIDead) {
+    let dx = 0, dy = 0;
+    if (keys.a) dx -= currentSpeed;
+    if (keys.d) dx += currentSpeed;
+    if (keys.w) dy -= currentSpeed;
+    if (keys.s) dy += currentSpeed;
+
+    const newX = clamp(me.x + dx, courtLeft + PLAYER_RADIUS, courtRight - PLAYER_RADIUS);
+    const newY = clamp(me.y + dy, courtTop  + PLAYER_RADIUS, courtBottom - PLAYER_RADIUS);
+
+    if (newX !== me.x || newY !== me.y) {
+      playersData[myId].x = newX;
+      playersData[myId].y = newY;
+      const dd = Math.hypot(newX - lastPushedX, newY - lastPushedY);
+      if (dd > 2) {
+        update(ref(db, `rooms/${roomId}/players/${myId}`), { x: newX, y: newY, sprinting: sprintActive }).catch(()=>{});
+        lastPushedX = newX; lastPushedY = newY;
+      }
+    }
+  }
+
+  // ── Power bar ───────────────────────────
+  if (spacePressing && localBall.possessedBy === myId) {
+    powerLevel = Math.min(MAX_POWER, powerLevel + POWER_RATE);
+  }
+
+  // ── Ball physics ────────────────────────
+  if (!localBall.possessedBy) {
+    localBall.x  += localBall.vx;
+    localBall.y  += localBall.vy;
+    localBall.vz -= GRAVITY;
+    localBall.z  += localBall.vz;
+    if (localBall.z <= 0) {
+      localBall.z  = 0;
+      localBall.vz = -localBall.vz * BALL_BOUNCE;
+      if (Math.abs(localBall.vz) < 0.5) localBall.vz = 0;
+      localBall.vx *= 0.85;
+      localBall.vy *= 0.85;
+    }
+    localBall.vx *= FRICTION;
+    localBall.vy *= FRICTION;
+
+    if (localBall.x < courtLeft  + BALL_RADIUS) { localBall.x = courtLeft  + BALL_RADIUS; localBall.vx *= -BALL_BOUNCE; }
+    if (localBall.x > courtRight - BALL_RADIUS) { localBall.x = courtRight - BALL_RADIUS; localBall.vx *= -BALL_BOUNCE; }
+    if (localBall.y < courtTop   + BALL_RADIUS) { localBall.y = courtTop   + BALL_RADIUS; localBall.vy *= -BALL_BOUNCE; }
+    if (localBall.y > courtBottom- BALL_RADIUS) { localBall.y = courtBottom- BALL_RADIUS; localBall.vy *= -BALL_BOUNCE; }
+
+    checkHoop();
+
+    const speed = Math.hypot(localBall.vx, localBall.vy);
+    if (speed > 0.3) {
+      update(ref(db, `rooms/${roomId}/ball`), {
+        x: localBall.x, y: localBall.y,
+        vx: localBall.vx, vy: localBall.vy,
+        vz: localBall.vz, z: localBall.z,
+        possessedBy: null
+      }).catch(()=>{});
+    }
+  } else if (localBall.possessedBy === myId) {
+    localBall.x = playersData[myId].x;
+    localBall.y = playersData[myId].y + 10;
+  } else {
+    const owner = playersData[localBall.possessedBy];
+    if (owner) {
+      localBall.x = owner.x;
+      localBall.y = owner.y + 10;
+    }
+  }
+}
+
+// ─── HOOP DETECTION ───────────────────────────────────────────
+let scoreCooldown = 0;
+function checkHoop() {
+  if (scoreCooldown > 0) { scoreCooldown--; return; }
+  const W = canvas.width, H = canvas.height;
+  const hoopLeft  = { x: 80,     y: H / 2 };
+  const hoopRight = { x: W - 80, y: H / 2 };
+  const hoopR = 28;
+
+  const inLeft  = dist(localBall, hoopLeft)  < hoopR && localBall.z < 20;
+  const inRight = dist(localBall, hoopRight) < hoopR && localBall.z < 20;
+
+  if (inLeft || inRight) {
+    const scoringTeam = inRight ? 'A' : 'B';
+    const pts = 2;
+    scoreCooldown = 120;
+
+    const newA = (roomData?.score?.A || 0) + (scoringTeam === 'A' ? pts : 0);
+    const newB = (roomData?.score?.B || 0) + (scoringTeam === 'B' ? pts : 0);
+
+    update(ref(db, `rooms/${roomId}/score`), { A: newA, B: newB });
+    // ── Trigger pistola en múltiplos de 6 ──────────────────
+    if (scoringTeam === 'A' && newA > 0 && newA % 6 === 0) {
+      assignGunToTeam('B');
+    } else if (scoringTeam === 'B' && newB > 0 && newB % 6 === 0) {
+      assignGunToTeam('A');
+    }
+    update(ref(db, `rooms/${roomId}/ball`), {
+      possessedBy: null,
+      x: W/2, y: H/2,
+      vx: 0, vy: 0, vz: 0, z: 0
+    });
+    localBall.x = W/2; localBall.y = H/2;
+    localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+    localBall.possessedBy = null;
+    possessionFrames = 0;
+    document.getElementById('possessionTimer').style.display = 'none';
+
+    const hx = scoringTeam === 'A' ? W - 80 : 80;
+    scorePopup(hx, H/2 - 60, `+${pts} ${scoringTeam === 'A' ? '🔴' : '🔵'}`);
+    showToast(scoringTeam === 'A' ? '🔴 EQUIPO ROJO ANOTA!' : '🔵 EQUIPO AZUL ANOTA!', 2500);
+
+    // Audio de enceste (aleatorio entre encesta1, encesta2, encesta3)
+    playScoreAudio();
+
+    // Animación bump en el score del equipo que anotó
+    const scoreElId = scoringTeam === 'A' ? 'scoreA' : 'scoreB';
+    const scoreElBump = document.getElementById(scoreElId);
+    scoreElBump.classList.remove('score-bump');
+    void scoreElBump.offsetWidth; // force reflow
+    scoreElBump.classList.add('score-bump');
+    setTimeout(() => scoreElBump.classList.remove('score-bump'), 300);
+    // Verificar victoria con maxScore dinámico
+    if (newA >= maxScore || newB >= maxScore) {
+      gameRunning = false;
+      const winTeam  = newA >= maxScore ? 'A' : 'B';
+      const winColor = winTeam === 'A' ? 'winner-team-a' : 'winner-team-b';
+      const overlay  = document.getElementById('winner-overlay');
+      const titleEl  = document.getElementById('winnerTitle');
+      const scoreEl  = document.getElementById('winnerScore');
+
+      titleEl.textContent = `EQUIPO ${winTeam} GANA`;
+      titleEl.className   = `winner-title ${winColor}`;
+      scoreEl.textContent = `${newA} — ${newB}`;
+      overlay.classList.add('show');
+
+      // Reproducir audio de victoria (sin repetir)
+      playWinAudio();
+    }
+  }
+}
+// ─── GUN MECHANICS ────────────────────────────────────────────
+
+async function assignGunToTeam(team) {
+  // Solo el cliente que detectó el gol asigna la pistola
+  // (checkHoop solo corre en el cliente que tiene el balón libre → el que empujó el update)
+  const teamPlayers = Object.values(playersData).filter(p => p.team === team && !p.dead);
+  if (!teamPlayers.length) return;
+  const lucky = teamPlayers[Math.floor(Math.random() * teamPlayers.length)];
+  const gunRef = ref(db, `rooms/${roomId}/gun`);
+  await set(gunRef, {
+    ownerId:  lucky.id,
+    aimX:     lucky.x,
+    aimY:     lucky.y,
+    timeLeft: 3,
+    active:   true
+  });
+  onDisconnect(gunRef).remove();
+  playGunGrantAudio();
+  if (lucky.id === myId) {
+    showToast('🔫 ¡TIENES LA PISTOLA! Haz click para disparar', 3500);
+  } else {
+    showToast(`🔫 ${lucky.name} tiene la pistola!`, 2500);
+  }
+}
+
+function startGunCountdown() {
+  clearInterval(gunCountdownInterval);
+  let secsLeft = 3;
+  gunCountdownInterval = setInterval(async () => {
+    secsLeft--;
+    if (!roomId) { clearInterval(gunCountdownInterval); return; }
+    if (secsLeft <= 0) {
+      clearInterval(gunCountdownInterval);
+      // Explotar (sin muerte)
+      const me = playersData[myId];
+      if (me) triggerExplosion(me.x, me.y);
+      remove(ref(db, `rooms/${roomId}/gun`)).catch(() => {});
+      showToast('💥 ¡La pistola explotó!', 2000);
+    } else {
+      update(ref(db, `rooms/${roomId}/gun`), { timeLeft: secsLeft }).catch(() => {});
+    }
+  }, 1000);
+}
+
+async function fireGun() {
+  if (!gunState || !gunState.active || gunState.ownerId !== myId) return;
+  const me = playersData[myId];
+  if (!me || me.dead) return;
+
+  clearInterval(gunCountdownInterval);
+
+  // Borrar pistola de Firebase
+  await remove(ref(db, `rooms/${roomId}/gun`)).catch(() => {});
+
+  // Crear bala local
+  const dx = mouseX - me.x;
+  const dy = mouseY - me.y;
+  const d  = Math.hypot(dx, dy) || 1;
+  const BULLET_SPEED = 18;
+
+  // Buscar enemigo más cercano al cursor en el momento del disparo
+  let targetId = null;
+  let minDist  = Infinity;
+  Object.values(playersData).forEach(p => {
+    if (p.team === myTeam || p.dead) return;
+    const d = Math.hypot(p.x - mouseX, p.y - mouseY);
+    if (d < minDist) { 
+      minDist = d; 
+      targetId = p.id; 
+    }
+  });
+
+  const bulletId = uid();
+  const bulletData = {
+    x: me.x,
+    y: me.y,
+    vx: (dx / d) * BULLET_SPEED,
+    vy: (dy / d) * BULLET_SPEED,
+    ownerTeam: myTeam,
+    targetId: targetId || null,
+    ownerId: myId,
+    createdAt: Date.now()
+  };
+
+  // Publicar bala en Firebase para que todos la vean
+  const bulletRef = ref(db, `rooms/${roomId}/bullets/${bulletId}`);
+  await set(bulletRef, bulletData).catch(() => {});
+  // Auto-eliminar de Firebase después de 2 segundos
+  setTimeout(() => remove(bulletRef).catch(() => {}), 2000);
+
+  // Bala local (para el shooter)
+  gunBullet = {
+    x: me.x,
+    y: me.y,
+    vx: bulletData.vx,
+    vy: bulletData.vy,
+    ownerTeam: myTeam,
+    targetId,
+    bulletId
+  };
+
+  playGunShotAudio();
+}
+
+async function killPlayer(pid) {
+  const p = playersData[pid];
+  if (!p || p.dead) return;
+  triggerExplosion(p.x, p.y);
+  // Soltar el balón si lo tenía
+  if (localBall.possessedBy === pid) {
+    await update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
+    if (pid === myId) localBall.possessedBy = null;
+  }
+  // Si era el portador de la pistola, limpiar gun
+  if (gunState && gunState.ownerId === pid) {
+    clearInterval(gunCountdownInterval);
+    await remove(ref(db, `rooms/${roomId}/gun`)).catch(() => {});
+  }
+  const respawnAt = Date.now() + 3000;
+  await update(ref(db, `rooms/${roomId}/players/${pid}`), {
+    dead: true, respawnAt
+  }).catch(() => {});
+}
+
+function showDeadOverlay(respawnAt) {
+  const overlay     = document.getElementById('dead-overlay');
+  const countdownEl = document.getElementById('dead-countdown');
+  overlay.style.display = 'flex';
+  function tick() {
+    const left = Math.ceil((respawnAt - Date.now()) / 1000);
+    if (left <= 0) {
+      overlay.style.display = 'none';
+      // Reaparece en spawn
+      const me = playersData[myId];
+      if (me) {
+        playersData[myId].x = mySpawnX;
+        playersData[myId].y = mySpawnY;
+        playersData[myId].dead = false;
+        update(ref(db, `rooms/${roomId}/players/${myId}`), {
+          dead: false, respawnAt: 0, x: mySpawnX, y: mySpawnY
+        }).catch(() => {});
+      }
+      myDeadUntil = 0;
+      return;
+    }
+    countdownEl.textContent = `Reapareciendo en ${left}...`;
+    setTimeout(tick, 250);
+  }
+  tick();
+}
+
+function triggerExplosion(x, y) {
+  // Partículas de fuego
+  for (let i = 0; i < 80; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 9;
+    const hue   = Math.random() * 60;
+    particles.push({
+      type: 'fire', x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 4 + Math.random() * 8,
+      color: `hsl(${hue},100%,${40 + Math.random() * 40}%)`,
+      life: 1.0,
+      decay: 0.015 + Math.random() * 0.025
+    });
+  }
+  // Brasas
+  for (let i = 0; i < 25; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 3 + Math.random() * 13;
+    particles.push({
+      type: 'ember', x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.5,
+      size: 2,
+      life: 1.0,
+      decay: 0.008 + Math.random() * 0.015
+    });
+  }
+  // Ondas de choque (3 anillos)
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      type: 'wave', x, y,
+      r: 5,
+      maxR: 70 + i * 55,
+      life: 1.0,
+      decay: 0.028 + i * 0.008,
+      hue: i === 0 ? 40 : 15
+    });
+  }
+}
+
+function drawParticles() {
+  ctx.save();
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+    if (p.type === 'fire') {
+      ctx.globalAlpha  = p.life;
+      ctx.fillStyle    = p.color;
+      ctx.shadowColor  = p.color;
+      ctx.shadowBlur   = 12;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.type === 'ember') {
+      ctx.globalAlpha  = p.life;
+      ctx.fillStyle    = '#ffffff';
+      ctx.shadowColor  = '#ffaa00';
+      ctx.shadowBlur   = 8;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      p.vy += 0.06; // gravedad leve
+    } else if (p.type === 'wave') {
+      ctx.globalAlpha  = p.life * 0.7;
+      ctx.strokeStyle  = `hsl(${p.hue},100%,60%)`;
+      ctx.lineWidth    = 4 * p.life;
+      ctx.shadowColor  = `hsl(${p.hue},100%,60%)`;
+      ctx.shadowBlur   = 15;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.stroke();
+      p.r += (p.maxR - p.r) * 0.1;
+    }
+
+    p.x  += (p.vx || 0);
+    p.y  += (p.vy || 0);
+    if (p.vx !== undefined) { p.vx *= 0.93; p.vy *= 0.93; }
+  }
+  ctx.restore();
+}
+
+function drawGunOverlay(W, H) {
+  // Mira (crosshair) en la posición del aim, visible para todos
+  if (gunState && gunState.active) {
+    const cx = gunState.aimX || W / 2;
+    const cy = gunState.aimY || H / 2;
+    const r  = PLAYER_RADIUS;
+    ctx.save();
+    ctx.strokeStyle = '#00cc44';
+    ctx.fillStyle   = '#00cc44';
+    ctx.shadowColor = '#00ff66';
+    ctx.shadowBlur  = 12;
+    ctx.lineWidth   = 2.5;
+    // Brazos de la cruz (con hueco central)
+    ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx - 7, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 7, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy - 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy + 7); ctx.lineTo(cx, cy + r); ctx.stroke();
+    // Punto central
+    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+    // Círculo exterior (scope)
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw bullet (local shooter's bullet)
+  // Draw bullet (local shooter's bullet)
+  if (gunBullet) {
+    ctx.save();
+    const BULLET_SIZE = 24;
+    const angle = Math.atan2(gunBullet.vy, gunBullet.vx);
+    ctx.translate(gunBullet.x, gunBullet.y);
+    ctx.rotate(angle);
+    if (bulletImg.complete && bulletImg.naturalWidth > 0) {
+      ctx.drawImage(bulletImg, -BULLET_SIZE / 2, -BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE);
+    } else {
+      ctx.fillStyle = '#ffdd00';
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(-8, -4, 16, 8);
+    }
+    ctx.restore();
+  }
+
+  // Draw network bullets (balas de otros jugadores)
+  Object.values(networkBullets).forEach(nb => {
+    ctx.save();
+    const BULLET_SIZE = 24;
+    const angle = Math.atan2(nb.vy, nb.vx);
+    ctx.translate(nb.x, nb.y);
+    ctx.rotate(angle);
+    if (bulletImg.complete && bulletImg.naturalWidth > 0) {
+      ctx.drawImage(bulletImg, -BULLET_SIZE / 2, -BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE);
+    } else {
+      ctx.fillStyle = '#ffdd00';
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(-8, -4, 16, 8);
+    }
+    ctx.restore();
+  });
+}
+// Handlers de ratón
+function onMouseMove(e) {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+  // Sync aim a Firebase (throttled 50ms), solo si soy el portador
+  if (!gunState || gunState.ownerId !== myId || !gunState.active) return;
+  const now = Date.now();
+  if (now - lastAimPush < 50) return;
+  lastAimPush = now;
+  update(ref(db, `rooms/${roomId}/gun`), { aimX: mouseX, aimY: mouseY }).catch(() => {});
+}
+
+function onGunClick(e) {
+  if (!gameRunning) return;
+  if (!gunState || gunState.ownerId !== myId || !gunState.active) return;
+  const me = playersData[myId];
+  if (me && me.dead) return;
+  fireGun();
+}
+// ─── RENDER ───────────────────────────────────────────────────
+function render() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  drawCourt(W, H);
+  drawHoops(W, H);
+  drawBall(W, H);
+  drawPlayers(W, H);
+  drawUI(W, H);
+  drawParticles();
+  drawGunOverlay(W, H);
+}
+
+// Court
+function drawCourt(W, H) {
+  // Wood floor background
+  const woodGrad = ctx.createLinearGradient(0, 0, 0, H);
+  woodGrad.addColorStop(0,   '#c8813a');
+  woodGrad.addColorStop(0.5, '#d4924a');
+  woodGrad.addColorStop(1,   '#b87030');
+  ctx.fillStyle = woodGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Wood planks
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  for (let i = 0; i < H; i += 12) {
+    const shade = i % 24 < 12;
+    ctx.fillStyle = shade ? '#fff' : '#000';
+    ctx.fillRect(60, i, W - 120, 6);
+  }
+  // Vertical grain lines
+  ctx.globalAlpha = 0.06;
+  for (let x = 60; x < W - 60; x += 4) {
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 8, H); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Court boundary
+  ctx.save();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = 'rgba(255,255,255,0.5)';
+  ctx.shadowBlur  = 6;
+  ctx.strokeRect(70, 80, W - 140, H - 120);
+
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(W/2, H/2, 70, 0, Math.PI * 2);
+  ctx.stroke();
+  // Center dot
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(W/2, H/2, 6, 0, Math.PI * 2);
+  ctx.fill();
+  // Center line
+  ctx.beginPath(); ctx.moveTo(W/2, 80); ctx.lineTo(W/2, H - 40); ctx.stroke();
+
+  // Paint zones
+  const pW = 180, pH = 200;
+  ctx.fillStyle = 'rgba(200,60,60,0.15)';
+  ctx.fillRect(70, H/2 - pH/2, pW, pH);
+  ctx.strokeRect(70, H/2 - pH/2, pW, pH);
+  ctx.fillStyle = 'rgba(60,100,200,0.15)';
+  ctx.fillRect(W - 70 - pW, H/2 - pH/2, pW, pH);
+  ctx.strokeRect(W - 70 - pW, H/2 - pH/2, pW, pH);
+
+  // Free-throw arcs
+  ctx.beginPath();
+  ctx.arc(70 + pW, H/2, pH/2, -Math.PI/2, Math.PI/2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W - 70 - pW, H/2, pH/2, Math.PI/2, Math.PI * 1.5);
+  ctx.stroke();
+
+  // 3-point arcs
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(90, H/2, 200, -Math.PI/2 + 0.3, Math.PI/2 - 0.3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W - 90, H/2, 200, Math.PI/2 + 0.3, Math.PI * 1.5 - 0.3);
+  ctx.stroke();
+  // 3pt corner lines
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(70, H/2 - 200); ctx.lineTo(70 + 120, H/2 - 200); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(70, H/2 + 200); ctx.lineTo(70 + 120, H/2 + 200); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W - 70, H/2 - 200); ctx.lineTo(W - 70 - 120, H/2 - 200); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W - 70, H/2 + 200); ctx.lineTo(W - 70 - 120, H/2 + 200); ctx.stroke();
+
+  ctx.restore();
+}
+
+// Hoops
+function drawHoops(W, H) {
+  const hoopY = H / 2;
+  drawSingleHoop(80, hoopY, W, H, 'left');
+  drawSingleHoop(W - 80, hoopY, W, H, 'right');
+}
+
+function drawSingleHoop(cx, cy, W, H, side) {
+  ctx.save();
+
+  // Backboard
+  const bbW = 8, bbH = 100;
+  const bbX = side === 'left' ? cx - 30 : cx + 22;
+  ctx.fillStyle = 'rgba(200,220,255,0.15)';
+  ctx.strokeStyle = 'rgba(200,220,255,0.8)';
+  ctx.lineWidth = 3;
+  ctx.fillRect(bbX, cy - bbH/2, bbW, bbH);
+  ctx.strokeRect(bbX, cy - bbH/2, bbW, bbH);
+  // Target square
+  ctx.strokeStyle = 'rgba(200,220,255,0.6)';
+  ctx.lineWidth = 2;
+  const sqOff = side === 'left' ? bbX + bbW : bbX - 30;
+  ctx.strokeRect(sqOff, cy - 20, 30, 30);
+
+  // Pole
+  ctx.fillStyle = '#888';
+  ctx.fillRect(side === 'left' ? cx - 68 : cx + 52, cy - 4, 16, 80);
+
+  // Rim
+  const rimR = 28;
+  ctx.strokeStyle = '#e84a0f';
+  ctx.lineWidth   = 5;
+  ctx.shadowColor = '#ff6b00';
+  ctx.shadowBlur  = 12;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rimR, rimR * 0.4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Net lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth   = 1.2;
+  for (let i = 0; i < 10; i++) {
+    const angle = (i / 10) * Math.PI * 2;
+    const x1 = cx + Math.cos(angle) * rimR;
+    const y1 = cy + Math.sin(angle) * rimR * 0.4;
+    const x2 = cx + Math.cos(angle) * (rimR * 0.3);
+    const y2 = cy + rimR * 0.4 + 30;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  // Net bottom
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + rimR * 0.4 + 30, rimR * 0.3, 6, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// Ball
+function drawBall(W, H) {
+  const bx = localBall.x;
+  const by = localBall.y - localBall.z;
+
+  // Shadow on floor
+  const shadowScale = 1 - clamp(localBall.z / 200, 0, 0.7);
+  ctx.save();
+  ctx.globalAlpha = 0.35 * shadowScale;
+  ctx.fillStyle   = '#000';
+  ctx.beginPath();
+  ctx.ellipse(bx, localBall.y, BALL_RADIUS * shadowScale, BALL_RADIUS * 0.4 * shadowScale, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Ball body
+  ctx.save();
+  const ballGrad = ctx.createRadialGradient(bx - 4, by - 4, 2, bx, by, BALL_RADIUS);
+  ballGrad.addColorStop(0,   '#ffad5c');
+  ballGrad.addColorStop(0.5, '#e8640a');
+  ballGrad.addColorStop(1,   '#a33c00');
+  ctx.fillStyle = ballGrad;
+  ctx.shadowColor = 'rgba(255,107,0,0.6)';
+  ctx.shadowBlur  = 12;
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lines
+  ctx.strokeStyle = '#7a2c00';
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.stroke();
+  // Seams
+  const t = Date.now() * 0.001;
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, -0.5 + t * 0.3, 0.5 + t * 0.3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, Math.PI - 0.5 + t * 0.3, Math.PI + 0.5 + t * 0.3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(bx, by - BALL_RADIUS);
+  ctx.bezierCurveTo(bx + BALL_RADIUS * 0.6, by - BALL_RADIUS * 0.3, bx + BALL_RADIUS * 0.6, by + BALL_RADIUS * 0.3, bx, by + BALL_RADIUS);
+  ctx.stroke();
+  ctx.restore();
+
+  // Possession indicator
+  if (localBall.possessedBy) {
+    const owner = playersData[localBall.possessedBy];
+    if (owner) {
+      ctx.save();
+      ctx.strokeStyle = owner.team === 'A' ? 'rgba(232,64,64,0.7)' : 'rgba(64,128,232,0.7)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      ctx.arc(bx, by, BALL_RADIUS + 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+// Players
+// Players
+function drawPlayers(W, H) {
+  Object.values(playersData).forEach(p => {
+    if (!p || !p.id) return;
+    const isMe = p.id === myId;
+    const img  = p.skin ? (playerImgCache[p.skin] || getPlayerImg(p)) : skinImg;
+    const team = p.team === 'A' ? '#e84040' : '#4080e8';
+
+    ctx.save();
+
+    // ── INSERCIÓN 1: detectar si este jugador está sprintando ──
+    // Si soy yo, uso la variable local `sprintActive`.
+    // Si es otro jugador, uso p.sprinting (que el tick() sube a Firebase).
+    const isSprinting = isMe ? sprintActive : p.sprinting;
+
+    // ── INSERCIÓN 1 (continuación): sobreescribir el glow si está sprintando ──
+    // Normalmente el glow es del color del equipo (rojo/azul).
+    // Si sprint está activo, cambiamos a cyan eléctrico para que se note.
+    if (isSprinting) {
+      ctx.shadowColor = '#00e5ff';   // cyan eléctrico
+      ctx.shadowBlur  = 35;          // más intenso que el glow normal (que es 20/10)
+    } else {
+      // Glow normal (igual que antes)
+      ctx.shadowColor = team;
+      ctx.shadowBlur  = isMe ? 20 : 10;
+    }
+
+    // Circle background (sin cambios)
+    ctx.fillStyle = team;
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Player ring (sin cambios)
+    ctx.strokeStyle = team;
+    ctx.lineWidth   = isMe ? 3.5 : 2.5;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, PLAYER_RADIUS, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Clip & draw image — muerto.png si está muerto
+    const drawSkinImg = (p.dead && deadImg.complete) ? deadImg
+                        : (p.skin ? (playerImgCache[p.skin] || getPlayerImg(p)) : skinImg);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, PLAYER_RADIUS - 2, 0, Math.PI * 2);
+    ctx.clip();
+    try {
+      ctx.drawImage(drawSkinImg, p.x - PLAYER_RADIUS + 2, p.y - PLAYER_RADIUS + 2,
+                    (PLAYER_RADIUS - 2) * 2, (PLAYER_RADIUS - 2) * 2);
+    } catch(e2) {
+      ctx.fillStyle = team;
+      ctx.fillRect(p.x - PLAYER_RADIUS + 2, p.y - PLAYER_RADIUS + 2,
+                   (PLAYER_RADIUS - 2)*2, (PLAYER_RADIUS-2)*2);
+    }
+    ctx.restore();
+
+    // Name (sin cambios)
+    ctx.shadowBlur = 0;
+    ctx.font = 'bold 12px Rajdhani, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillText(p.name || '?', p.x + 1, p.y - PLAYER_RADIUS - 6);
+    ctx.fillStyle = isMe ? '#fff' : (p.team === 'A' ? '#ff9999' : '#99aaff');
+    ctx.fillText(p.name || '?', p.x, p.y - PLAYER_RADIUS - 7);
+
+    // "ME" indicator (sin cambios)
+    if (isMe) {
+      ctx.fillStyle = '#ffd700';
+      ctx.font = 'bold 10px Space Mono, monospace';
+      ctx.fillText('◀ TÚ', p.x + PLAYER_RADIUS + 16, p.y + 4);
+    }
+
+    // Power bar (sin cambios)
+    if (isMe && iAmShooting && localBall.possessedBy === myId) {
+      const barW = 60, barH = 8;
+      const barX = p.x - barW/2;
+      const barY = p.y - PLAYER_RADIUS - 26;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(barX - 3, barY - 3, barW + 6, barH + 6);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY, barW, barH);
+      const pct = powerLevel / MAX_POWER;
+      const col = pct < 0.5 ? `hsl(${90 - pct*90}, 90%, 50%)` : `hsl(${45 - (pct-0.5)*45}, 90%, 50%)`;
+      ctx.fillStyle = col;
+      ctx.shadowColor = col;
+      ctx.shadowBlur  = 8;
+      ctx.fillRect(barX, barY, barW * pct, barH);
+      ctx.shadowBlur = 0;
+    }
+// ── Pistola: dibujar sobre el portador ──────────────────
+    if (gunState && gunState.active && gunState.ownerId === p.id) {
+      const GUN_SIZE = PLAYER_RADIUS * 2 * 3; // 144 px
+      const aimX = gunState.aimX ?? p.x + GUN_SIZE;
+      const aimY = gunState.aimY ?? p.y;
+      const angle = Math.atan2(aimY - p.y, aimX - p.x);
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(angle);
+      // Dibujar pistola hacia la derecha (rotada hacia el aim)
+      if (gunImg.complete && gunImg.naturalWidth > 0) {
+        ctx.drawImage(gunImg, 8, -GUN_SIZE / 4, GUN_SIZE * 0.75, GUN_SIZE / 2);
+      } else {
+        // Fallback si la imagen no cargó
+        ctx.fillStyle = '#888';
+        ctx.fillRect(8, -10, 50, 18);
+      }
+      ctx.restore();
+
+      // Countdown sobre la cabeza
+      const tLeft = Math.max(0, Math.ceil(gunState.timeLeft ?? 0));
+      ctx.save();
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.font         = 'bold 20px Space Mono, monospace';
+      ctx.fillStyle    = tLeft <= 1 ? '#ff2200' : '#ffdd00';
+      ctx.shadowColor  = '#ff4400';
+      ctx.shadowBlur   = 14;
+      ctx.fillText(`🔫 ${tLeft}`, p.x, p.y - PLAYER_RADIUS - 20);
+      ctx.restore();
+    }
+    // ── INSERCIÓN 2: anillo animado de sprint, justo antes de ctx.restore() ──
+    // Solo se dibuja si el jugador está sprintando.
+    // Es un círculo punteado que pulsa y gira gracias a Math.sin(t2).
+    if (isSprinting) {
+      const t2 = Date.now() * 0.005;          // tiempo para la animación (varía cada frame)
+      ctx.strokeStyle = 'rgba(0,229,255,0.6)'; // cyan semitransparente
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);                 // línea punteada: 4px trazo, 4px hueco
+      ctx.beginPath();
+      ctx.arc(
+        p.x,
+        p.y,
+        PLAYER_RADIUS + 8 + Math.sin(t2) * 3, // radio oscila entre +5 y +11px
+        0,
+        Math.PI * 2
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);                     // restaurar línea sólida para lo siguiente
+    }
+
+    ctx.restore();
+  });
+}
+
+// UI overlays
+function drawUI(W, H) {
+  // Trajectory line for shooter
+  if (iAmShooting && localBall.possessedBy === myId) {
+    const me = playersData[myId];
+    if (!me) return;
+    const { tx, ty } = getHoopTarget();
+    ctx.save();
+    ctx.setLineDash([6, 8]);
+    ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(me.x, me.y);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    // Hoop highlight
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(255,215,0,0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(tx, ty, 32, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ─── CLEANUP ──────────────────────────────────────────────────
+async function cleanup() {
+  clearInterval(gunCountdownInterval);
+  if (roomId && myId) {
+    try {
+      if (localBall.possessedBy === myId) {
+        await update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null });
+      }
+      if (gunState && gunState.ownerId === myId) {
+        await remove(ref(db, `rooms/${roomId}/gun`));
+      }
+      await remove(ref(db, `rooms/${roomId}/players/${myId}`));
+      const snap = await get(ref(db, `rooms/${roomId}/players`));
+      if (!snap.exists()) {
+        await remove(ref(db, `rooms/${roomId}`));
+      }
+    } catch(e) {}
+  }
+  if (unsubPlayers) { unsubPlayers(); }
+  if (unsubBall)    { unsubBall(); }
+  if (unsubRoom)    { unsubRoom(); }
+  if (unsubGun)     { unsubGun(); }
+  if (unsubBullets) { unsubBullets(); }
+}
+window.addEventListener('beforeunload', cleanup);
+// ─── PLAY AGAIN: eliminar sala para todos ─────────────────────
+document.getElementById('playAgainBtn').addEventListener('click', async () => {
+  if (!roomId) { location.reload(); return; }
+  try {
+    // Cancelar suscripciones primero
+    if (unsubPlayers) { unsubPlayers(); unsubPlayers = null; }
+    if (unsubBall)    { unsubBall();    unsubBall    = null; }
+    if (unsubRoom)    { unsubRoom();    unsubRoom    = null; }
+    if (unsubGun)     { unsubGun();     unsubGun     = null; }
+    if (unsubBullets) { unsubBullets(); unsubBullets = null; }
+    clearInterval(gunCountdownInterval);
+    cancelAnimationFrame(animId);
+
+    // Eliminar sala completa de Firebase (todos serán redirigidos por el listener unsubRoom)
+    await remove(ref(db, `rooms/${roomId}`));
+  } catch(e) {
+    console.warn('playAgain cleanup error:', e);
+  }
+  // Recargar la página local
+  location.reload();
+});
+// Start canvas
+resizeCanvas();
+</script>
+</body>
+</html>
