@@ -927,6 +927,7 @@ let myId        = null;
 let roomId      = null;
 let roomData    = null;
 let playersData = {};
+let playersRenderPos = {}; // posición visual interpolada de cada jugador
 let ballData    = null;
 let localBall   = { x: 0, y: 0, vx: 0, vy: 0, vz: 0, z: 0, possessedBy: null, scored: false };
 let myTeam      = 'A';
@@ -1338,6 +1339,12 @@ function setupListeners() {
   // Players
   unsubPlayers = onValue(ref(db, `rooms/${roomId}/players`), snap => {
     playersData = snap.val() || {};
+    // Inicializar posición de render si es jugador nuevo
+Object.values(playersData).forEach(p => {
+  if (!playersRenderPos[p.id]) {
+    playersRenderPos[p.id] = { x: p.x, y: p.y };
+  }
+});
 // ── Detectar jugadores que acaban de morir (explosión para todos) ──
     Object.values(playersData).forEach(p => {
       if (p.dead && !prevDeadStates[p.id]) {
@@ -1825,10 +1832,13 @@ function tick() {
     if (newX !== me.x || newY !== me.y) {
       playersData[myId].x = newX;
       playersData[myId].y = newY;
-      const dd = Math.hypot(newX - lastPushedX, newY - lastPushedY);
-      if (dd > 2) {
+      const dd  = Math.hypot(newX - lastPushedX, newY - lastPushedY);
+      const now = Date.now();
+      if (dd > 8 && now - lastPushTime > 50) {
         update(ref(db, `rooms/${roomId}/players/${myId}`), { x: newX, y: newY, sprinting: sprintActive }).catch(()=>{});
-        lastPushedX = newX; lastPushedY = newY;
+        lastPushedX  = newX;
+        lastPushedY  = newY;
+        lastPushTime = now;
       }
     }
   }
@@ -1862,7 +1872,9 @@ function tick() {
     checkHoop();
 
     const speed = Math.hypot(localBall.vx, localBall.vy);
-    if (speed > 0.3) {
+    const nowBall = Date.now();
+    if (speed > 0.3 && nowBall - lastBallPushTime > 66) {
+      lastBallPushTime = nowBall;
       update(ref(db, `rooms/${roomId}/ball`), {
         x: localBall.x, y: localBall.y,
         vx: localBall.vx, vy: localBall.vy,
@@ -1880,6 +1892,21 @@ function tick() {
       localBall.y = owner.y + 10;
     }
   }
+  // ── Interpolación de posiciones rivales ──
+Object.values(playersData).forEach(p => {
+  if (p.id === myId) {
+    // Yo me muevo instantáneo
+    playersRenderPos[myId] = { x: p.x, y: p.y };
+    return;
+  }
+  if (!playersRenderPos[p.id]) {
+    playersRenderPos[p.id] = { x: p.x, y: p.y };
+    return;
+  }
+  // Deslizar 25% hacia la posición real cada frame
+  playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * 0.25;
+  playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * 0.25;
+});
 }
 
 
@@ -2497,116 +2524,112 @@ function drawBall(W, H) {
 function drawPlayers(W, H) {
   Object.values(playersData).forEach(p => {
     if (!p || !p.id) return;
-    const isMe = p.id === myId;
-    const img  = p.skin ? (playerImgCache[p.skin] || getPlayerImg(p)) : skinImg;
-    const team = p.team === 'A' ? '#e84040' : '#4080e8';
+    const rpos  = playersRenderPos[p.id] || p;
+    const drawX = p.id === myId ? p.x : rpos.x;
+    const drawY = p.id === myId ? p.y : rpos.y;
+    const isMe  = p.id === myId;
+    const team  = p.team === 'A' ? '#e84040' : '#4080e8';
 
     ctx.save();
 
-    // ── INSERCIÓN 1: detectar si este jugador está sprintando ──
-    // Si soy yo, uso la variable local `sprintActive`.
-    // Si es otro jugador, uso p.sprinting (que el tick() sube a Firebase).
     const isSprinting = isMe ? sprintActive : p.sprinting;
 
-    // ── INSERCIÓN 1 (continuación): sobreescribir el glow si está sprintando ──
-    // Normalmente el glow es del color del equipo (rojo/azul).
-    // Si sprint está activo, cambiamos a cyan eléctrico para que se note.
     if (isSprinting) {
-      ctx.shadowColor = '#00e5ff';   // cyan eléctrico
-      ctx.shadowBlur  = 35;          // más intenso que el glow normal (que es 20/10)
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur  = 35;
     } else {
-      // Glow normal (igual que antes)
       ctx.shadowColor = team;
       ctx.shadowBlur  = isMe ? 20 : 10;
     }
 
-    // Circle background (sin cambios)
-    ctx.fillStyle = team;
+    // Circle background
+    ctx.fillStyle   = team;
     ctx.globalAlpha = 0.25;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+    ctx.arc(drawX, drawY, PLAYER_RADIUS + 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // Player ring (sin cambios)
+    // Player ring
     ctx.strokeStyle = team;
     ctx.lineWidth   = isMe ? 3.5 : 2.5;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, PLAYER_RADIUS, 0, Math.PI * 2);
+    ctx.arc(drawX, drawY, PLAYER_RADIUS, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Clip & draw image — muerto.png si está muerto
+    // Clip & draw image
     const drawSkinImg = (p.dead && deadImg.complete) ? deadImg
-                        : (p.skin ? (playerImgCache[p.skin] || getPlayerImg(p)) : skinImg);
+                      : (p.skin ? (playerImgCache[p.skin] || getPlayerImg(p)) : skinImg);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(p.x, p.y, PLAYER_RADIUS - 2, 0, Math.PI * 2);
+    ctx.arc(drawX, drawY, PLAYER_RADIUS - 2, 0, Math.PI * 2);
     ctx.clip();
     try {
-      ctx.drawImage(drawSkinImg, p.x - PLAYER_RADIUS + 2, p.y - PLAYER_RADIUS + 2,
-                    (PLAYER_RADIUS - 2) * 2, (PLAYER_RADIUS - 2) * 2);
+      ctx.drawImage(drawSkinImg,
+        drawX - PLAYER_RADIUS + 2, drawY - PLAYER_RADIUS + 2,
+        (PLAYER_RADIUS - 2) * 2,   (PLAYER_RADIUS - 2) * 2);
     } catch(e2) {
       ctx.fillStyle = team;
-      ctx.fillRect(p.x - PLAYER_RADIUS + 2, p.y - PLAYER_RADIUS + 2,
-                   (PLAYER_RADIUS - 2)*2, (PLAYER_RADIUS-2)*2);
+      ctx.fillRect(drawX - PLAYER_RADIUS + 2, drawY - PLAYER_RADIUS + 2,
+                   (PLAYER_RADIUS - 2) * 2,   (PLAYER_RADIUS - 2) * 2);
     }
     ctx.restore();
 
-    // Name (sin cambios)
-    ctx.shadowBlur = 0;
-    ctx.font = 'bold 12px Rajdhani, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillText(p.name || '?', p.x + 1, p.y - PLAYER_RADIUS - 6);
+    // Name
+    ctx.shadowBlur    = 0;
+    ctx.font          = 'bold 12px Rajdhani, sans-serif';
+    ctx.textAlign     = 'center';
+    ctx.textBaseline  = 'bottom';
+    ctx.fillStyle     = 'rgba(0,0,0,0.6)';
+    ctx.fillText(p.name || '?', drawX + 1, drawY - PLAYER_RADIUS - 6);
     ctx.fillStyle = isMe ? '#fff' : (p.team === 'A' ? '#ff9999' : '#99aaff');
-    ctx.fillText(p.name || '?', p.x, p.y - PLAYER_RADIUS - 7);
+    ctx.fillText(p.name || '?', drawX, drawY - PLAYER_RADIUS - 7);
 
-    // "ME" indicator (sin cambios)
+    // "ME" indicator
     if (isMe) {
       ctx.fillStyle = '#ffd700';
-      ctx.font = 'bold 10px Space Mono, monospace';
-      ctx.fillText('◀ TÚ', p.x + PLAYER_RADIUS + 16, p.y + 4);
+      ctx.font      = 'bold 10px Space Mono, monospace';
+      ctx.fillText('◀ TÚ', drawX + PLAYER_RADIUS + 16, drawY + 4);
     }
 
-    // Power bar (sin cambios)
+    // Power bar
     if (isMe && iAmShooting && localBall.possessedBy === myId) {
       const barW = 60, barH = 8;
-      const barX = p.x - barW/2;
-      const barY = p.y - PLAYER_RADIUS - 26;
+      const barX = drawX - barW / 2;
+      const barY = drawY - PLAYER_RADIUS - 26;
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(barX - 3, barY - 3, barW + 6, barH + 6);
       ctx.fillStyle = '#333';
       ctx.fillRect(barX, barY, barW, barH);
       const pct = powerLevel / MAX_POWER;
-      const col = pct < 0.5 ? `hsl(${90 - pct*90}, 90%, 50%)` : `hsl(${45 - (pct-0.5)*45}, 90%, 50%)`;
-      ctx.fillStyle = col;
+      const col = pct < 0.5
+        ? `hsl(${90 - pct * 90}, 90%, 50%)`
+        : `hsl(${45 - (pct - 0.5) * 45}, 90%, 50%)`;
+      ctx.fillStyle   = col;
       ctx.shadowColor = col;
       ctx.shadowBlur  = 8;
       ctx.fillRect(barX, barY, barW * pct, barH);
-      ctx.shadowBlur = 0;
+      ctx.shadowBlur  = 0;
     }
-// ── Pistola: dibujar sobre el portador ──────────────────
+
+    // Pistola
     if (gunState && gunState.active && gunState.ownerId === p.id) {
-      const GUN_SIZE = PLAYER_RADIUS * 2 * 3; // 144 px
-      const aimX = gunState.aimX ?? p.x + GUN_SIZE;
-      const aimY = gunState.aimY ?? p.y;
-      const angle = Math.atan2(aimY - p.y, aimX - p.x);
+      const GUN_SIZE = PLAYER_RADIUS * 2 * 3;
+      const aimX  = gunState.aimX ?? drawX + GUN_SIZE;
+      const aimY  = gunState.aimY ?? drawY;
+      const angle = Math.atan2(aimY - drawY, aimX - drawX);
 
       ctx.save();
-      ctx.translate(p.x, p.y);
+      ctx.translate(drawX, drawY);
       ctx.rotate(angle);
-      // Dibujar pistola hacia la derecha (rotada hacia el aim)
       if (gunImg.complete && gunImg.naturalWidth > 0) {
         ctx.drawImage(gunImg, 8, -GUN_SIZE / 4, GUN_SIZE * 0.75, GUN_SIZE / 2);
       } else {
-        // Fallback si la imagen no cargó
         ctx.fillStyle = '#888';
         ctx.fillRect(8, -10, 50, 18);
       }
       ctx.restore();
 
-      // Countdown sobre la cabeza
       const tLeft = Math.max(0, Math.ceil(gunState.timeLeft ?? 0));
       ctx.save();
       ctx.textAlign    = 'center';
@@ -2615,27 +2638,20 @@ function drawPlayers(W, H) {
       ctx.fillStyle    = tLeft <= 1 ? '#ff2200' : '#ffdd00';
       ctx.shadowColor  = '#ff4400';
       ctx.shadowBlur   = 14;
-      ctx.fillText(`🔫 ${tLeft}`, p.x, p.y - PLAYER_RADIUS - 20);
+      ctx.fillText(`🔫 ${tLeft}`, drawX, drawY - PLAYER_RADIUS - 20);
       ctx.restore();
     }
-    // ── INSERCIÓN 2: anillo animado de sprint, justo antes de ctx.restore() ──
-    // Solo se dibuja si el jugador está sprintando.
-    // Es un círculo punteado que pulsa y gira gracias a Math.sin(t2).
+
+    // Anillo de sprint
     if (isSprinting) {
-      const t2 = Date.now() * 0.005;          // tiempo para la animación (varía cada frame)
-      ctx.strokeStyle = 'rgba(0,229,255,0.6)'; // cyan semitransparente
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4, 4]);                 // línea punteada: 4px trazo, 4px hueco
+      const t2 = Date.now() * 0.005;
+      ctx.strokeStyle = 'rgba(0,229,255,0.6)';
+      ctx.lineWidth   = 2;
+      ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(
-        p.x,
-        p.y,
-        PLAYER_RADIUS + 8 + Math.sin(t2) * 3, // radio oscila entre +5 y +11px
-        0,
-        Math.PI * 2
-      );
+      ctx.arc(drawX, drawY, PLAYER_RADIUS + 8 + Math.sin(t2) * 3, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.setLineDash([]);                     // restaurar línea sólida para lo siguiente
+      ctx.setLineDash([]);
     }
 
     ctx.restore();
