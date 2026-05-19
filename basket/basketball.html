@@ -920,7 +920,8 @@ const GRAVITY       = 0.28;
 const FRICTION      = 0.985;
 const BALL_BOUNCE   = 0.55;
 const HOOP_HEIGHT_3D = 30; // visual 3D effect
-
+const LOGIC_W = 1200;
+const LOGIC_H = 600;
 // ─── STATE ────────────────────────────────────────────────────
 let myId        = null;
 let roomId      = null;
@@ -1315,8 +1316,15 @@ canvas.addEventListener('mousemove', onMouseMove);
 
 // ─── RESIZE CANVAS ────────────────────────────────────────────
 function resizeCanvas() {
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width  = LOGIC_W;
+  canvas.height = LOGIC_H;
+  const scale = Math.min(window.innerWidth / LOGIC_W, window.innerHeight / LOGIC_H);
+  canvas.style.width    = (LOGIC_W * scale) + 'px';
+  canvas.style.height   = (LOGIC_H * scale) + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.left     = ((window.innerWidth  - LOGIC_W * scale) / 2) + 'px';
+  canvas.style.top      = ((window.innerHeight - LOGIC_H * scale) / 2) + 'px';
+  canvas._scale = scale;
 }
 window.addEventListener('resize', () => { resizeCanvas(); });
 
@@ -1713,7 +1721,7 @@ function tick() {
   if (!me) return;
   // ── Bloquear movimiento si muerto ──────────────────────
   const amIDead = me.dead && Date.now() < myDeadUntil;
-  const W = canvas.width, H = canvas.height;
+  const W = LOGIC_W, H = LOGIC_H;
   const courtLeft = 60, courtRight = W - 60;
   const courtTop  = 80, courtBottom = H - 40;
 
@@ -1863,7 +1871,7 @@ function tick() {
 let scoreCooldown = 0;
 function checkHoop() {
   if (scoreCooldown > 0) { scoreCooldown--; return; }
-  const W = canvas.width, H = canvas.height;
+  const W = LOGIC_W, H = LOGIC_H;
   const hoopLeft  = { x: 80,     y: H / 2 };
   const hoopRight = { x: W - 80, y: H / 2 };
   const hoopR = 28;
