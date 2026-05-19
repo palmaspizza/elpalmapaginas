@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>🏀 BASKET PALMA — Baloncesto Multijugador</title>
+<title>🏀 HoopZ Online — Baloncesto Multijugador</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
   :root {
@@ -1166,12 +1166,17 @@ function emitSoundEvent(name) {
 }
 function getPlayerImg(p) {
   const src = p.skin || 'tiorenechibi.png';
-  const key = src;
-  if (playerImgCache[key]) return playerImgCache[key];
-  const img = new Image();
-  img.src = src;
-  playerImgCache[key] = img;
-  return img;
+  if (playerImgCache[src] && playerImgCache[src].complete && playerImgCache[src].naturalWidth > 0) {
+    return playerImgCache[src];
+  }
+  if (!playerImgCache[src]) {
+    const img = new Image();
+    img.onload  = () => { playerImgCache[src] = img; };
+    img.onerror = () => { playerImgCache[src] = skinImg; };
+    img.src = src;
+    playerImgCache[src] = img;
+  }
+  return playerImgCache[src];
 }
 
 // ─── LOBBY: List rooms ─────────────────────────────────────────
@@ -1359,15 +1364,14 @@ function setupListeners() {
       gameRunning = false;
     }
 
-    // Rebuild image cache for new players
-    // Rebuild image cache for new players
+// Rebuild image cache for new players
 Object.values(playersData).forEach(p => {
-  if (p.skin && !playerImgCache[p.skin]) {
+  if (p.skin && (!playerImgCache[p.skin] || playerImgCache[p.skin].naturalWidth === 0)) {
     const img = new Image();
-    img.onload = () => { playerImgCache[p.skin] = img; };
-    img.onerror = () => { playerImgCache[p.skin] = skinImg; }; // fallback
+    img.onload  = () => { playerImgCache[p.skin] = img; };
+    img.onerror = () => { playerImgCache[p.skin] = skinImg; };
     img.src = p.skin;
-    playerImgCache[p.skin] = img; // guardar igual (aunque no haya cargado aún)
+    playerImgCache[p.skin] = img;
   }
 });
   });
@@ -1439,12 +1443,17 @@ Object.values(playersData).forEach(p => {
 
   // Room data (score, mode)
     unsubRoom = onValue(ref(db, `rooms/${roomId}`), snap => {
-    roomData = snap.val();
-    // Si la sala fue eliminada y el juego ya había empezado → recargar para todos
-    if (!roomData && gameRunning) {
-      location.reload();
-      return;
-    }
+  roomData = snap.val();
+  // Si alguien presionó jugar de nuevo → recargar para todos
+  if (roomData && roomData.reloadAll) {
+    location.reload();
+    return;
+  }
+  // Si la sala fue eliminada → recargar para todos
+  if (!roomData && gameRunning) {
+    location.reload();
+    return;
+  }
     if (!roomData) return;
     document.getElementById('scoreA').textContent = roomData.score?.A ?? 0;
     document.getElementById('scoreB').textContent = roomData.score?.B ?? 0;
@@ -2688,22 +2697,12 @@ window.addEventListener('beforeunload', cleanup);
 document.getElementById('playAgainBtn').addEventListener('click', async () => {
   if (!roomId) { location.reload(); return; }
   try {
-    // Cancelar suscripciones primero
-    if (unsubPlayers) { unsubPlayers(); unsubPlayers = null; }
-    if (unsubBall)    { unsubBall();    unsubBall    = null; }
-    if (unsubRoom)    { unsubRoom();    unsubRoom    = null; }
-    if (unsubGun)     { unsubGun();     unsubGun     = null; }
-    if (unsubBullets) { unsubBullets(); unsubBullets = null; }
-    clearInterval(gunCountdownInterval);
-    cancelAnimationFrame(animId);
-
-    // Eliminar sala completa de Firebase (todos serán redirigidos por el listener unsubRoom)
-    await remove(ref(db, `rooms/${roomId}`));
+    // Primero escribir señal de reload en Firebase para avisar a todos
+    await update(ref(db, `rooms/${roomId}`), { reloadAll: true });
   } catch(e) {
-    console.warn('playAgain cleanup error:', e);
+    console.warn('playAgain error:', e);
+    location.reload();
   }
-  // Recargar la página local
-  location.reload();
 });
 // Start canvas
 resizeCanvas();
