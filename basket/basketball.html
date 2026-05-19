@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>🏀 BASKET DEL PALMA Online — Baloncesto Multijugador</title>
+<title>🏀 BASKET PALMA — Baloncesto Multijugador</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
   :root {
@@ -1644,7 +1644,7 @@ async function shootBall() {
   const vx = (dx / d) * speed;
   const vy = (dy / d) * speed;
   const vz = 3 + power * 0.05; // arc height
-
+localBall.lastShooter = myId;
   await update(ref(db, `rooms/${roomId}/ball`), {
     possessedBy: null,
     x: me.x, y: me.y,
@@ -1689,8 +1689,8 @@ function tick() {
   if (sprintActive) {
     sprintTimer--;
     if (sprintTimer <= 0) {
-      sprintActive     = false;
-      sprintCooldown   = 240; // 4 segundos cooldown
+      sprintActive   = false;
+      sprintCooldown = 240;
     }
     currentSpeed = PLAYER_SPEED * 2;
   } else if (sprintCooldown > 0) {
@@ -1709,7 +1709,6 @@ function tick() {
     document.getElementById('possTimerVal').textContent = secsLeft;
     timerEl.classList.toggle('urgent', possessionFrames > POSSESSION_FRAMES * 0.65);
     if (possessionFrames >= POSSESSION_FRAMES) {
-      // Tiempo agotado: soltar el balón automáticamente
       possessionFrames = 0;
       timerEl.style.display = 'none';
       timerEl.classList.remove('urgent');
@@ -1723,43 +1722,42 @@ function tick() {
   // ── Move my player ──────────────────────
   const me = playersData[myId];
   if (!me) return;
-  // ── Bloquear movimiento si muerto ──────────────────────
   const amIDead = me.dead && Date.now() < myDeadUntil;
   const W = LOGIC_W, H = LOGIC_H;
   const courtLeft = 60, courtRight = W - 60;
   const courtTop  = 80, courtBottom = H - 40;
 
-  // ── Bala local (solo en el shooter) CON SEGUIMIENTO (HOMING) ──
+  // ── Bala local (solo en el shooter) ──────
   if (gunBullet) {
-    // Si la bala tiene un objetivo, recalcular vx y vy hacia su posición actual
     if (gunBullet.targetId) {
       const target = playersData[gunBullet.targetId];
       if (target && !target.dead) {
         const tdx = target.x - gunBullet.x;
         const tdy = target.y - gunBullet.y;
         const td  = Math.hypot(tdx, tdy) || 1;
-        
-        // Se actualiza la velocidad manteniendo la constante de 18
-        gunBullet.vx = (tdx / td) * 18;
-        gunBullet.vy = (tdy / td) * 18;
+        const dotProduct = tdx * gunBullet.vx + tdy * gunBullet.vy;
+        if (dotProduct > 0) {
+          gunBullet.vx = (tdx / td) * 18;
+          gunBullet.vy = (tdy / td) * 18;
+        } else {
+          gunBullet.targetId = null;
+        }
       }
     }
 
-    // Mover la bala con las velocidades actualizadas
     gunBullet.x += gunBullet.vx;
     gunBullet.y += gunBullet.vy;
 
     let bulletHit = false;
     Object.values(playersData).forEach(p => {
       if (bulletHit || p.id === myId || p.team === gunBullet.ownerTeam || p.dead) return;
-      if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS) {
+      if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS * 0.5) {
         bulletHit = true;
         killPlayer(p.id);
       }
     });
 
     if (bulletHit || gunBullet.x < 0 || gunBullet.x > W || gunBullet.y < 0 || gunBullet.y > H) {
-      // Eliminar bala de Firebase cuando impacta o sale del mapa
       if (gunBullet.bulletId) {
         remove(ref(db, `rooms/${roomId}/bullets/${gunBullet.bulletId}`)).catch(() => {});
       }
@@ -1769,26 +1767,30 @@ function tick() {
 
   // ── Balas de red (de otros jugadores) ───────────────────────
   Object.entries(networkBullets).forEach(([bid, nb]) => {
-    // Homing hacia objetivo
     if (nb.targetId) {
       const target = playersData[nb.targetId];
       if (target && !target.dead) {
         const tdx = target.x - nb.x;
         const tdy = target.y - nb.y;
         const td  = Math.hypot(tdx, tdy) || 1;
-        nb.vx = (tdx / td) * 18;
-        nb.vy = (tdy / td) * 18;
+        const dotProduct = tdx * nb.vx + tdy * nb.vy;
+        if (dotProduct > 0) {
+          nb.vx = (tdx / td) * 18;
+          nb.vy = (tdy / td) * 18;
+        } else {
+          nb.targetId = null;
+        }
       }
     }
+
     nb.x += nb.vx;
     nb.y += nb.vy;
 
-    // Colisión con jugadores locales (solo el cliente que recibe el golpe lo registra)
     let nbHit = false;
     Object.values(playersData).forEach(p => {
       if (nbHit || p.team === nb.ownerTeam || p.dead) return;
-      if (p.id !== myId) return; // solo me importa si me golpea a mí
-      if (Math.hypot(p.x - nb.x, p.y - nb.y) < PLAYER_RADIUS) {
+      if (p.id !== myId) return;
+      if (Math.hypot(p.x - nb.x, p.y - nb.y) < PLAYER_RADIUS * 0.5) {
         nbHit = true;
         killPlayer(p.id);
         remove(ref(db, `rooms/${roomId}/bullets/${bid}`)).catch(() => {});
@@ -1800,7 +1802,7 @@ function tick() {
     }
   });
 
-  // ── Partículas (tick) ───────────────────────────────────
+  // ── Movimiento del jugador ───────────────
   if (!amIDead) {
     let dx = 0, dy = 0;
     if (keys.a) dx -= currentSpeed;
@@ -1871,10 +1873,13 @@ function tick() {
   }
 }
 
+
 // ─── HOOP DETECTION ───────────────────────────────────────────
 let scoreCooldown = 0;
 function checkHoop() {
   if (scoreCooldown > 0) { scoreCooldown--; return; }
+  // Solo el cliente que simuló el último tiro cuenta el gol
+  if (localBall.lastShooter !== myId) return;
   const W = LOGIC_W, H = LOGIC_H;
   const hoopLeft  = { x: 80,     y: H / 2 };
   const hoopRight = { x: W - 80, y: H / 2 };
@@ -2002,17 +2007,14 @@ async function fireGun() {
   const d  = Math.hypot(dx, dy) || 1;
   const BULLET_SPEED = 18;
 
-  // Buscar enemigo más cercano al cursor en el momento del disparo
-  let targetId = null;
-  let minDist  = Infinity;
-  Object.values(playersData).forEach(p => {
-    if (p.team === myTeam || p.dead) return;
-    const d = Math.hypot(p.x - mouseX, p.y - mouseY);
-    if (d < minDist) { 
-      minDist = d; 
-      targetId = p.id; 
-    }
-  });
+ // Solo asignar targetId si el cursor estaba encima del rival al disparar
+let targetId = null;
+Object.values(playersData).forEach(p => {
+  if (p.team === myTeam || p.dead) return;
+  if (Math.hypot(p.x - mouseX, p.y - mouseY) < PLAYER_RADIUS) {
+    targetId = p.id;
+  }
+});
 
   const bulletId = uid();
   const bulletData = {
