@@ -1360,12 +1360,16 @@ function setupListeners() {
     }
 
     // Rebuild image cache for new players
-    Object.values(playersData).forEach(p => {
-      if (p.skin && !playerImgCache[p.skin]) {
-        const img = new Image(); img.src = p.skin;
-        playerImgCache[p.skin] = img;
-      }
-    });
+    // Rebuild image cache for new players
+Object.values(playersData).forEach(p => {
+  if (p.skin && !playerImgCache[p.skin]) {
+    const img = new Image();
+    img.onload = () => { playerImgCache[p.skin] = img; };
+    img.onerror = () => { playerImgCache[p.skin] = skinImg; }; // fallback
+    img.src = p.skin;
+    playerImgCache[p.skin] = img; // guardar igual (aunque no haya cargado aún)
+  }
+});
   });
 
   // Ball (source of truth)
