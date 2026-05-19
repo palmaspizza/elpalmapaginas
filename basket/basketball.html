@@ -1141,7 +1141,11 @@ const lastWinRef  = { val: -1 };
 
 function playRunAudio()  { playRandomAudio('correr', 3, lastRunRef); }
 function playWinAudio()  { playRandomAudio('ganar',  3, lastWinRef); }
-function playGunShotAudio()  { playRandomAudio('disparo', 3, lastShotRef); }
+function playGunShotAudio() {
+  const audiodisparo = new Audio('disparo.mp3');
+  audiodisparo.play();
+}
+
 function playGunGrantAudio() {
   const a = new Audio('icrima.mp3');
   a.volume = 0.8;
