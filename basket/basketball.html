@@ -1644,7 +1644,7 @@ async function shootBall() {
   const vx = (dx / d) * speed;
   const vy = (dy / d) * speed;
   const vz = 3 + power * 0.05; // arc height
-
+localBall.lastShooter = myId;
   await update(ref(db, `rooms/${roomId}/ball`), {
     possessedBy: null,
     x: me.x, y: me.y,
@@ -1730,20 +1730,22 @@ function tick() {
   const courtTop  = 80, courtBottom = H - 40;
 
   // ── Bala local (solo en el shooter) CON SEGUIMIENTO (HOMING) ──
-  if (gunBullet) {
-    // Si la bala tiene un objetivo, recalcular vx y vy hacia su posición actual
-    if (gunBullet.targetId) {
-      const target = playersData[gunBullet.targetId];
-      if (target && !target.dead) {
-        const tdx = target.x - gunBullet.x;
-        const tdy = target.y - gunBullet.y;
-        const td  = Math.hypot(tdx, tdy) || 1;
-        
-        // Se actualiza la velocidad manteniendo la constante de 18
-        gunBullet.vx = (tdx / td) * 18;
-        gunBullet.vy = (tdy / td) * 18;
-      }
+  if (gunBullet.targetId) {
+  const target = playersData[gunBullet.targetId];
+  if (target && !target.dead) {
+    const tdx = target.x - gunBullet.x;
+    const tdy = target.y - gunBullet.y;
+    const td  = Math.hypot(tdx, tdy) || 1;
+    // Solo seguir si el rival está por delante (no redirigir si ya lo pasé)
+    const dotProduct = tdx * gunBullet.vx + tdy * gunBullet.vy;
+    if (dotProduct > 0) {
+      gunBullet.vx = (tdx / td) * 18;
+      gunBullet.vy = (tdy / td) * 18;
+    } else {
+      gunBullet.targetId = null; // ya lo pasé, volar recto
     }
+  }
+}
 
     // Mover la bala con las velocidades actualizadas
     gunBullet.x += gunBullet.vx;
@@ -1752,7 +1754,7 @@ function tick() {
     let bulletHit = false;
     Object.values(playersData).forEach(p => {
       if (bulletHit || p.id === myId || p.team === gunBullet.ownerTeam || p.dead) return;
-      if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS) {
+      if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS * 0.5) {
         bulletHit = true;
         killPlayer(p.id);
       }
@@ -1771,15 +1773,20 @@ function tick() {
   Object.entries(networkBullets).forEach(([bid, nb]) => {
     // Homing hacia objetivo
     if (nb.targetId) {
-      const target = playersData[nb.targetId];
-      if (target && !target.dead) {
-        const tdx = target.x - nb.x;
-        const tdy = target.y - nb.y;
-        const td  = Math.hypot(tdx, tdy) || 1;
-        nb.vx = (tdx / td) * 18;
-        nb.vy = (tdy / td) * 18;
-      }
+  const target = playersData[nb.targetId];
+  if (target && !target.dead) {
+    const tdx = target.x - nb.x;
+    const tdy = target.y - nb.y;
+    const td  = Math.hypot(tdx, tdy) || 1;
+    const dotProduct = tdx * nb.vx + tdy * nb.vy;
+    if (dotProduct > 0) {
+      nb.vx = (tdx / td) * 18;
+      nb.vy = (tdy / td) * 18;
+    } else {
+      nb.targetId = null;
     }
+  }
+}
     nb.x += nb.vx;
     nb.y += nb.vy;
 
@@ -1788,7 +1795,7 @@ function tick() {
     Object.values(playersData).forEach(p => {
       if (nbHit || p.team === nb.ownerTeam || p.dead) return;
       if (p.id !== myId) return; // solo me importa si me golpea a mí
-      if (Math.hypot(p.x - nb.x, p.y - nb.y) < PLAYER_RADIUS) {
+      if (Math.hypot(p.x - nb.x, p.y - nb.y) < PLAYER_RADIUS * 0.5) {
         nbHit = true;
         killPlayer(p.id);
         remove(ref(db, `rooms/${roomId}/bullets/${bid}`)).catch(() => {});
@@ -1869,12 +1876,14 @@ function tick() {
       localBall.y = owner.y + 10;
     }
   }
-}
+
 
 // ─── HOOP DETECTION ───────────────────────────────────────────
 let scoreCooldown = 0;
 function checkHoop() {
   if (scoreCooldown > 0) { scoreCooldown--; return; }
+  // Solo el cliente que simuló el último tiro cuenta el gol
+  if (localBall.lastShooter !== myId) return;
   const W = LOGIC_W, H = LOGIC_H;
   const hoopLeft  = { x: 80,     y: H / 2 };
   const hoopRight = { x: W - 80, y: H / 2 };
@@ -2002,17 +2011,14 @@ async function fireGun() {
   const d  = Math.hypot(dx, dy) || 1;
   const BULLET_SPEED = 18;
 
-  // Buscar enemigo más cercano al cursor en el momento del disparo
-  let targetId = null;
-  let minDist  = Infinity;
-  Object.values(playersData).forEach(p => {
-    if (p.team === myTeam || p.dead) return;
-    const d = Math.hypot(p.x - mouseX, p.y - mouseY);
-    if (d < minDist) { 
-      minDist = d; 
-      targetId = p.id; 
-    }
-  });
+ // Solo asignar targetId si el cursor estaba encima del rival al disparar
+let targetId = null;
+Object.values(playersData).forEach(p => {
+  if (p.team === myTeam || p.dead) return;
+  if (Math.hypot(p.x - mouseX, p.y - mouseY) < PLAYER_RADIUS) {
+    targetId = p.id;
+  }
+});
 
   const bulletId = uid();
   const bulletData = {
