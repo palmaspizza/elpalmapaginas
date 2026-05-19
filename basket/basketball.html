@@ -747,7 +747,7 @@
             <div class="skin-name" id="skinName">Skin por defecto</div>
             <div class="skin-hint">Sube tu propia imagen</div>
             <input type="file" id="skinFile" accept="image/*" style="display:none"/>
-            <button class="btn btn-secondary" style="width:auto;margin-top:8px;" onclick="document.getElementById('skinFile').click()">📷 Cambiar Skin</button>
+            <button class="btn btn-secondary" style="width:auto;margin-top:8px;" onclick="window.openSkinModal()">🎭 Cambiar Skin</button>
           </div>
         </div>
 
@@ -1159,7 +1159,10 @@ document.getElementById('skinFile').addEventListener('change', e => {
   };
   reader.readAsDataURL(file);
 });
-
+// ─── SOUND EVENTS (sincronizados por Firebase) ────────────────
+function emitSoundEvent(name) {
+  set(ref(db, `rooms/${roomId}/soundEvent`), { name, t: Date.now() }).catch(() => {});
+}
 function getPlayerImg(p) {
   const src = p.skin || 'tiorenechibi.png';
   const key = src;
@@ -1460,7 +1463,9 @@ function setupListeners() {
       if (b.ownerId === myId) return; // mi propia bala ya la manejo local
       if (!networkBullets[bid]) {
         // Bala nueva: crear entrada local
+        playGunShotAudio();
         networkBullets[bid] = {
+          
           x: b.x, y: b.y,
           vx: b.vx, vy: b.vy,
           ownerTeam: b.ownerTeam,
@@ -1474,7 +1479,17 @@ function setupListeners() {
       if (!data[bid]) delete networkBullets[bid];
     });
   });
-}
+onValue(ref(db, `rooms/${roomId}/soundEvent`), snap => {
+    const ev = snap.val();
+    if (!ev) return;
+    if (ev.name === 'ganar')   playWinAudio();
+    if (ev.name === 'encesta') playScoreAudio();
+    if (ev.name === 'muerte')  { const a = new Audio('muerte1.mp3'); a.volume=0.8; a.play().catch(()=>{}); }
+    if (ev.name === 'pistola') playGunGrantAudio();
+    if (ev.name === 'disparo') playGunShotAudio();
+  });
+
+} 
 
 function startActualGame() {
   gameRunning = true;
@@ -2023,6 +2038,9 @@ async function killPlayer(pid) {
   const p = playersData[pid];
   if (!p || p.dead) return;
   triggerExplosion(p.x, p.y);
+    const deathAudio = new Audio('muerte1.mp3'); // o playRandomAudio('muerte', 3, ...) si quieres varios
+  deathAudio.volume = 0.8;
+  deathAudio.play().catch(() => {});
   // Soltar el balón si lo tenía
   if (localBall.possessedBy === pid) {
     await update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
