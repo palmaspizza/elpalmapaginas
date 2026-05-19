@@ -1835,7 +1835,7 @@ function tick() {
       playersData[myId].y = newY;
       const dd  = Math.hypot(newX - lastPushedX, newY - lastPushedY);
       const now = Date.now();
-      if (dd > 8 && now - lastPushTime > 50) {
+      if (dd > 2 && now - lastPushTime > 30) {
         update(ref(db, `rooms/${roomId}/players/${myId}`), { x: newX, y: newY, sprinting: sprintActive }).catch(()=>{});
         lastPushedX  = newX;
         lastPushedY  = newY;
@@ -1905,8 +1905,8 @@ Object.values(playersData).forEach(p => {
     return;
   }
   // Deslizar 25% hacia la posición real cada frame
-  playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * 0.25;
-  playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * 0.25;
+  playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * 0.40;
+  playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * 0.40;
 });
 }
 
@@ -2283,14 +2283,16 @@ function drawGunOverlay(W, H) {
   });
 }
 // Handlers de ratón
+// ✅ REEMPLAZAR POR (divide por el factor de escala del canvas)
 function onMouseMove(e) {
-  const rect = canvas.getBoundingClientRect();
-  mouseX = e.clientX - rect.left;
-  mouseY = e.clientY - rect.top;
+  const rect  = canvas.getBoundingClientRect();
+  const scale = canvas._scale || 1;
+  mouseX = (e.clientX - rect.left) / scale;
+  mouseY = (e.clientY - rect.top)  / scale;
   // Sync aim a Firebase (throttled 50ms), solo si soy el portador
   if (!gunState || gunState.ownerId !== myId || !gunState.active) return;
   const now = Date.now();
-  if (now - lastAimPush < 50) return;
+  if (now - lastAimPush < 30) return;
   lastAimPush = now;
   update(ref(db, `rooms/${roomId}/gun`), { aimX: mouseX, aimY: mouseY }).catch(() => {});
 }
