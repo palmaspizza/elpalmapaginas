@@ -927,7 +927,7 @@ let myId        = null;
 let roomId      = null;
 let roomData    = null;
 let playersData = {};
-let playersRenderPos = {}; // posición visual interpolada de cada jugador
+let playersRenderPos = {}; 
 let ballData    = null;
 let localBall   = { x: 0, y: 0, vx: 0, vy: 0, vz: 0, z: 0, possessedBy: null, scored: false };
 let myTeam      = 'A';
@@ -1691,7 +1691,8 @@ function startGameLoop() {
 }
 
 let lastPushedX = -9999, lastPushedY = -9999;
-
+let lastBallPushTime = 0;
+let lastPushTime = 0;
 function tick() {
   if (!gameRunning) return;
 
