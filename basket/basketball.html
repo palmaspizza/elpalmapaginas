@@ -1080,6 +1080,16 @@ const lastScoreRef     = { val: -1 };
 // Balas de otros jugadores (sincronizadas por Firebase)
 let networkBullets     = {};   // { bulletId: { x,y,vx,vy,ownerTeam } }
 let unsubBullets       = null;
+let activePowerups    = {};
+let myPowerups        = {};
+let unsubPowerups     = null;
+let lastGiantPushTime = 0;
+let traicionActive       = false;
+let traicionAviso        = false;
+let traicionAvisoTO      = null;
+let traicionExpiresAt    = 0;
+let traicionOriginalTeam = null;
+let nextTraicionTime     = 0;
 
 // Imágenes gun / muerto
 const gunImg  = new Image(); gunImg.src  = 'pistola.png';
@@ -1259,7 +1269,65 @@ function playRandomAudio(prefix, count, lastRef) {
 const lastRunRef  = { val: -1 };
 const lastWinRef  = { val: -1 };
 const lastDeathRef = { val: -1 };
-
+function playSynth(freq, dur, type='sine', vol=0.5, freqEnd=null) {
+  try {
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ac.currentTime);
+    if (freqEnd) osc.frequency.linearRampToValueAtTime(freqEnd, ac.currentTime+dur);
+    gain.gain.setValueAtTime(vol, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+dur);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime+dur);
+  } catch(e){}
+}
+function playSynthSeq(notes) {
+  let accumulated = 0;
+  notes.forEach(([params, delay = 0]) => {
+    accumulated += delay;
+    const t = accumulated;
+    setTimeout(() => playSynth(...params), t);
+  });
+}
+function playPowerupSpawnAudio() {
+  playSynthSeq([[[440,.12,'triangle',.4],0],[[554,.12,'triangle',.4],80],[[659,.12,'triangle',.4],80],[[880,.18,'triangle',.55],80]]);
+}
+function playPowerupPickupAudio() {
+  playSynthSeq([[[880,.08,'square',.5],0],[[1100,.08,'square',.5],60],[[1320,.14,'triangle',.55],60]]);
+}
+function playPowerupExpireAudio() {
+  playSynth(600,.4,'triangle',.4,200);
+  playSynthSeq([[[500,.1,'triangle',.3],0],[[350,.1,'triangle',.3],80],[[220,.2,'triangle',.25],80]]);
+}
+function playGiantActivateAudio() {
+  playSynth(80,.5,'sawtooth',.7,40);
+  playSynth(160,.4,'square',.4,80);
+  playSynthSeq([[[220,.15,'square',.5],0],[[180,.15,'sawtooth',.5],80],[[140,.25,'sawtooth',.6],80]]);
+}
+let _lastPushSnd=0;
+function playGiantPushAudio() {
+  const n=Date.now(); if(n-_lastPushSnd<400)return; _lastPushSnd=n;
+  playSynth(60,.15,'sawtooth',.8,20); playSynth(200,.1,'square',.5);
+}
+function playShieldActivateAudio() {
+  playSynth(400,.3,'square',.25,800);
+  playSynthSeq([[[1200,.08,'sawtooth',.4],0],[[1400,.08,'sawtooth',.4],60],[[1600,.08,'sawtooth',.4],60],[[1800,.2,'sawtooth',.3,800],60]]);
+}
+function playShieldDeflectAudio() {
+  playSynth(2000,.05,'sawtooth',.7,500); playSynth(300,.2,'square',.4,100);
+  playSynthSeq([[[1500,.05,'sawtooth',.5],0],[[800,.05,'sawtooth',.5],40],[[400,.1,'square',.4],40]]);
+}
+function playTraicionAvisoAudio() {
+  playSynthSeq([[[440,.12,'square',.55],0],[[440,.12,'square',.55],200],[[554,.2,'square',.65],200]]);
+}
+function playTraicionActivateAudio() {
+  playSynth(110,.6,'sawtooth',.6,55);
+  playSynthSeq([[[220,.15,'square',.4],0],[[185,.15,'square',.4],120],[[165,.3,'sawtooth',.5],120]]);
+}
+function playTraicionEndAudio() {
+  playSynthSeq([[[330,.12,'triangle',.4],0],[[392,.12,'triangle',.4],80],[[523,.22,'triangle',.5],80]]);
+}
 function playRunAudio()  { playRandomAudio('correr', 3, lastRunRef); }
 function playWinAudio()  { playRandomAudio('ganar',  3, lastWinRef); }
 function playGunShotAudio() {
@@ -1662,6 +1730,10 @@ unsubMassExplosion = onValue(ref(db, `rooms/${roomId}/massExplosionEvent`), snap
     lastMassExplosionT = ev.t;
     handleMassExplosion(ev.immuneId, ev.immuneName);
   });
+  // ── Listener power-ups ──────────────────────────────────────
+  unsubPowerups = onValue(ref(db,`rooms/${roomId}/powerups`), snap => {
+    activePowerups = snap.val() || {};
+  });
 } 
 
 function startActualGame() {
@@ -1673,6 +1745,7 @@ function startActualGame() {
     localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
     localBall.possessedBy = roomData.ball.possessedBy || null;
   }
+
 }
 
 // ─── INPUT ────────────────────────────────────────────────────
@@ -1705,6 +1778,17 @@ function onKeyDown(e) {
       sprintTimer  = 180;   // 3 segundos × 60fps
       playRunAudio();
     }
+  }
+  if (k === 't' && traicionAviso && !traicionActive) {
+    clearTimeout(traicionAvisoTO);
+    traicionAviso        = false;
+    traicionActive       = true;
+    traicionOriginalTeam = myTeam;
+    myTeam               = myTeam === 'A' ? 'B' : 'A';
+    traicionExpiresAt    = Date.now()+10000;
+    showToast('⚠️ ¡TRAICIÓN ACTIVA! — 10 segundos',3000);
+    playTraicionActivateAudio();
+    if (navigator.vibrate) navigator.vibrate([300,100,300,100,500]);
   }
 }
 function onKeyUp(e) {
@@ -1838,6 +1922,63 @@ function startGameLoop() {
 let lastPushedX = -9999, lastPushedY = -9999;
 let lastBallPushTime = 0;
 let lastPushTime = 0;
+function spawnPowerup() {
+  if (!gameRunning || !roomId) return;
+  if (Object.keys(activePowerups).length >= 3) return;
+  const types = ['giant','shield'];
+  const type  = types[Math.floor(Math.random()*types.length)];
+  const x = 160 + Math.random()*(LOGIC_W-320);
+  const y = 120 + Math.random()*(LOGIC_H-200);
+  const id = uid();
+  set(ref(db,`rooms/${roomId}/powerups/${id}`),{id,type,x,y,spawnedAt:Date.now()}).catch(()=>{});
+  setTimeout(()=>remove(ref(db,`rooms/${roomId}/powerups/${id}`)).catch(()=>{}), 5000);
+  playPowerupSpawnAudio();
+}
+function checkPowerupPickup() {
+  const me = playersData[myId];
+  if (!me || me.dead) return;
+  Object.entries(activePowerups).forEach(([id, pu]) => {
+    if (!pu) return;
+    if (Math.hypot(me.x-pu.x, me.y-pu.y) >= 20+PLAYER_RADIUS) return;
+    remove(ref(db,`rooms/${roomId}/powerups/${id}`)).catch(()=>{});
+    delete activePowerups[id];
+    myPowerups[pu.type] = { expiresAt: Date.now()+6000 };
+    playPowerupPickupAudio();
+    triggerPowerupActivation(me.x, me.y, pu.type==='giant'?'#ffd700':'#00ccff');
+    if (pu.type === 'giant') {
+      update(ref(db,`rooms/${roomId}/players/${myId}`),{giant:true}).catch(()=>{});
+      showToast('🔵 ¡MODO GIGANTE — 6 SEGUNDOS!', 2500);
+      playGiantActivateAudio();
+      setTimeout(()=>{
+        delete myPowerups['giant'];
+        update(ref(db,`rooms/${roomId}/players/${myId}`),{giant:false}).catch(()=>{});
+        showToast('⬇️ Modo gigante terminó',1500);
+        playPowerupExpireAudio();
+      }, 6000);
+    } else if (pu.type === 'shield') {
+      update(ref(db,`rooms/${roomId}/players/${myId}`),{shield:true}).catch(()=>{});
+      showToast('🛡️ ¡ESCUDO ELÉCTRICO — 6 SEGUNDOS!', 2500);
+      playShieldActivateAudio();
+      setTimeout(()=>{
+        delete myPowerups['shield'];
+        update(ref(db,`rooms/${roomId}/players/${myId}`),{shield:false}).catch(()=>{});
+        showToast('💔 Escudo roto',1500);
+        playPowerupExpireAudio();
+      }, 6000);
+    }
+  });
+}
+function triggerPowerupActivation(x, y, color) {
+  for (let i=0;i<40;i++){
+    const a=Math.random()*Math.PI*2, s=2+Math.random()*7;
+    particles.push({type:'fire',x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      size:3+Math.random()*6,color,life:1.0,decay:0.02+Math.random()*0.03});
+  }
+  for(let i=0;i<2;i++){
+    particles.push({type:'wave',x,y,r:5,maxR:60+i*30,
+      life:1.0,decay:0.04+i*0.01,hue:color==='#ffd700'?50:195});
+  }
+}
 function tick() {
   if (!gameRunning) return;
 
@@ -1894,6 +2035,7 @@ function tick() {
   const courtTop  = 80, courtBottom = H - 40;
 
   // ── Bala local (solo en el shooter) ──────
+  // ── Bala local (solo en el shooter) ──────
   if (gunBullet) {
     if (gunBullet.targetId) {
       const target = playersData[gunBullet.targetId];
@@ -1901,8 +2043,8 @@ function tick() {
         const tdx = target.x - gunBullet.x;
         const tdy = target.y - gunBullet.y;
         const td  = Math.hypot(tdx, tdy) || 1;
-        const dotProduct = tdx * gunBullet.vx + tdy * gunBullet.vy;
-        if (dotProduct > 0) {
+        const dot = tdx * gunBullet.vx + tdy * gunBullet.vy;
+        if (dot > 0) {
           gunBullet.vx = (tdx / td) * 18;
           gunBullet.vy = (tdy / td) * 18;
         } else {
@@ -1916,10 +2058,27 @@ function tick() {
 
     let bulletHit = false;
     Object.values(playersData).forEach(p => {
-      if (bulletHit || p.id === myId || p.team === gunBullet.ownerTeam || p.dead) return;
+      if (bulletHit) return;
+      // Saltarse aliados (la ownerTeam puede cambiar si hay escudo)
+      if (p.team === gunBullet.ownerTeam || p.dead) return;
       if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS * 0.5) {
-        bulletHit = true;
-        killPlayer(p.id);
+        if (p.shield) {
+          // ── ESCUDO: redirigir bala al tirador original ──
+          gunBullet.ownerTeam = p.team;      // ahora persigue al equipo contrario (el mío)
+          gunBullet.targetId  = myId;        // apunta directamente a mí
+          const rx = playersData[myId].x - gunBullet.x;
+          const ry = playersData[myId].y - gunBullet.y;
+          const rd = Math.hypot(rx, ry) || 1;
+          gunBullet.vx = (rx / rd) * 18;
+          gunBullet.vy = (ry / rd) * 18;
+          playShieldDeflectAudio();
+          showToast('🛡️ ¡ESCUDO desvió la bala!', 2000);
+          triggerPowerupActivation(p.x, p.y, '#00ccff');
+          // NO poner bulletHit = true → la bala sigue viva
+        } else {
+          bulletHit = true;
+          killPlayer(p.id);
+        }
       }
     });
 
@@ -1954,12 +2113,32 @@ function tick() {
 
     let nbHit = false;
     Object.values(playersData).forEach(p => {
-      if (nbHit || p.team === nb.ownerTeam || p.dead) return;
-      if (p.id !== myId) return;
-      if (Math.hypot(p.x - nb.x, p.y - nb.y) < PLAYER_RADIUS * 0.5) {
-        nbHit = true;
-        killPlayer(p.id);
-        remove(ref(db, `rooms/${roomId}/bullets/${bid}`)).catch(() => {});
+      if (nbHit || p.team === nb.ownerTeam || p.dead || p.id !== myId) return;
+      if (Math.hypot(p.x-nb.x, p.y-nb.y) < PLAYER_RADIUS*0.5) {
+        if (myPowerups['shield'] && myPowerups['shield'].expiresAt > Date.now()) {
+          // Escudo: crear bala nueva que persigue al tirador original
+          nbHit = true;
+          remove(ref(db,`rooms/${roomId}/bullets/${bid}`)).catch(()=>{});
+          delete networkBullets[bid];
+          playShieldDeflectAudio();
+          showToast('🛡️ ¡ESCUDO desvió la bala!',2000);
+          triggerPowerupActivation(p.x,p.y,'#00ccff');
+          // Bala de retorno local
+          const shooter = playersData[nb.ownerId];
+          if (shooter && !shooter.dead) {
+            const rdx=shooter.x-p.x, rdy=shooter.y-p.y, rd=Math.hypot(rdx,rdy)||1;
+            const retBulletId = uid();
+            const retData = {x:p.x,y:p.y,vx:(rdx/rd)*18,vy:(rdy/rd)*18,
+              ownerTeam:myTeam,targetId:nb.ownerId,ownerId:myId,createdAt:Date.now()};
+            set(ref(db,`rooms/${roomId}/bullets/${retBulletId}`),retData).catch(()=>{});
+            setTimeout(()=>remove(ref(db,`rooms/${roomId}/bullets/${retBulletId}`)).catch(()=>{}),2000);
+            gunBullet={...retData,bulletId:retBulletId};
+          }
+        } else {
+          nbHit = true;
+          killPlayer(p.id);
+          remove(ref(db,`rooms/${roomId}/bullets/${bid}`)).catch(()=>{});
+        }
       }
     });
 
@@ -1992,7 +2171,33 @@ function tick() {
       }
     }
   }
-
+// ── Empuje gigante ───────────────────────────────────────────
+  if (myPowerups['giant'] && myPowerups['giant'].expiresAt > Date.now()) {
+    const me2 = playersData[myId];
+    const nowP = Date.now();
+    if (me2 && !me2.dead && nowP - lastGiantPushTime > 350) {
+      Object.values(playersData).forEach(p => {
+        if (p.id === myId || p.dead) return;
+        if (Math.hypot(me2.x-p.x, me2.y-p.y) < PLAYER_RADIUS*3+PLAYER_RADIUS) {
+          lastGiantPushTime = nowP;
+          let pDx = (keys.d?1:0)-(keys.a?1:0);
+          let pDy = (keys.s?1:0)-(keys.w?1:0);
+          if (!pDx && !pDy) { pDx=p.x-me2.x; pDy=p.y-me2.y; }
+          const pD = Math.hypot(pDx,pDy)||1;
+          const nx = clamp(p.x+(pDx/pD)*18, 60+PLAYER_RADIUS, LOGIC_W-60-PLAYER_RADIUS);
+          const ny = clamp(p.y+(pDy/pD)*18, 80+PLAYER_RADIUS, LOGIC_H-40-PLAYER_RADIUS);
+          update(ref(db,`rooms/${roomId}/players/${p.id}`),{x:nx,y:ny,pushed:nowP}).catch(()=>{});
+          if (playersData[p.id]) { playersData[p.id].x=nx; playersData[p.id].y=ny; }
+          if (localBall.possessedBy===p.id) {
+            update(ref(db,`rooms/${roomId}/ball`),{possessedBy:null}).catch(()=>{});
+            localBall.possessedBy=null;
+          }
+          triggerPowerupActivation(p.x,p.y,'#ffd700');
+          playGiantPushAudio();
+        }
+      });
+    }
+  }
   // ── Power bar ───────────────────────────
   if (spacePressing && localBall.possessedBy === myId) {
     powerLevel = Math.min(MAX_POWER, powerLevel + POWER_RATE);
@@ -2057,11 +2262,88 @@ Object.values(playersData).forEach(p => {
   playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * 0.40;
   playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * 0.40;
 });
+// ── Traición ─────────────────────────────────────────────────
+  const nowTr = Date.now();
+  if (gameRunning && nextTraicionTime === 0)
+    nextTraicionTime = nowTr + 45000 + Math.random()*15000;
+
+  if (!traicionActive && !traicionAviso && nextTraicionTime > 0 && nowTr >= nextTraicionTime) {
+    traicionAviso    = true;
+    nextTraicionTime = 0;
+    playTraicionAvisoAudio();
+    if (navigator.vibrate) navigator.vibrate([200,100,200]);
+    traicionAvisoTO = setTimeout(()=>{
+      traicionAviso    = false;
+      nextTraicionTime = Date.now()+45000+Math.random()*15000;
+    }, 5000);
+  }
+
+  if (traicionActive && nowTr >= traicionExpiresAt) {
+    traicionActive       = false;
+    myTeam               = traicionOriginalTeam;
+    traicionOriginalTeam = null;
+    traicionExpiresAt    = 0;
+    showToast('✅ Traición terminada — volviste a tu equipo', 2500);
+    playTraicionEndAudio();
+    nextTraicionTime = Date.now()+45000+Math.random()*15000;
+  }
+  checkPowerupPickup(); 
 }
 
 
 // ─── HOOP DETECTION ───────────────────────────────────────────
 let scoreCooldown = 0;
+function drawPowerups() {
+  const now = Date.now();
+  Object.values(activePowerups).forEach(pu => {
+    if (!pu) return;
+    const { x, y, type, spawnedAt } = pu;
+    const pulse   = 0.7 + Math.sin(now*0.006)*0.3;
+    const timePct = Math.max(0, 1 - (now-spawnedAt)/5000);
+    const color   = type==='giant' ? '#ffd700' : '#00ccff';
+    const letter  = type==='giant' ? 'G' : 'E';
+
+    ctx.save();
+
+    // Sombra exterior
+    ctx.shadowColor = color; ctx.shadowBlur = 24;
+
+    // Fondo
+    ctx.globalAlpha = pulse*0.7;
+    ctx.fillStyle   = type==='giant' ? 'rgba(255,215,0,0.25)' : 'rgba(0,200,255,0.25)';
+    ctx.beginPath(); ctx.arc(x,y,20,0,Math.PI*2); ctx.fill();
+
+    // Borde
+    ctx.globalAlpha  = pulse;
+    ctx.strokeStyle  = color;
+    ctx.lineWidth    = 3;
+    ctx.beginPath(); ctx.arc(x,y,20,0,Math.PI*2); ctx.stroke();
+
+    // Letra central
+    ctx.globalAlpha  = 1;
+    ctx.shadowBlur   = 10;
+    ctx.fillStyle    = '#fff';
+    ctx.font         = 'bold 15px Bebas Neue, sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(letter, x, y);
+
+    // Arco de tiempo restante
+    ctx.strokeStyle  = color;
+    ctx.lineWidth    = 4;
+    ctx.globalAlpha  = 0.55;
+    ctx.beginPath();
+    ctx.arc(x, y, 25, -Math.PI/2, -Math.PI/2 + timePct*Math.PI*2);
+    ctx.stroke();
+
+    // Icono emoji pequeño encima
+    ctx.font = '11px sans-serif';
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(type==='giant'?'🔵':'🛡️', x, y-32);
+
+    ctx.restore();
+  });
+}
 function checkHoop() {
   if (scoreCooldown > 0) { scoreCooldown--; return; }
   // Solo el cliente que simuló el último tiro cuenta el gol
@@ -2075,7 +2357,8 @@ function checkHoop() {
   const inRight = dist(localBall, hoopRight) < hoopR && localBall.z < 20;
 
   if (inLeft || inRight) {
-    const scoringTeam = inRight ? 'A' : 'B';
+    let scoringTeam = inRight ? 'A' : 'B';
+if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
     const pts = 2;
     scoreCooldown = 120;
 
@@ -2249,6 +2532,7 @@ Object.values(playersData).forEach(p => {
   };
 
   playGunShotAudio();
+    spawnPowerup();
 }
 
 async function killPlayer(pid) {
@@ -2558,13 +2842,52 @@ function render() {
   ctx.clearRect(0, 0, W, H);
   drawCourt(W, H);
   drawHoops(W, H);
+  drawPowerups();          // ← NUEVO
   drawPlayers(W, H);
   drawBall(W, H);
   drawUI(W, H);
   drawParticles();
   drawGunOverlay(W, H);
+  drawTraicionHUD(W, H);  // ← NUEVO
 }
+function drawTraicionHUD(W, H) {
+  // Aviso de traición disponible
+  if (traicionAviso) {
+    const pulse = 0.6+Math.sin(Date.now()*0.01)*0.4;
+    ctx.save();
+    ctx.globalAlpha  = pulse;
+    ctx.fillStyle    = 'rgba(160,0,255,0.18)';
+    ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha  = 1;
+    ctx.font         = 'bold 28px Bebas Neue, sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor  = '#cc00ff'; ctx.shadowBlur = 30;
+    ctx.fillStyle    = '#ff44ff';
+    ctx.fillText('⚠️ TRAICIÓN DISPONIBLE — Presiona T para activar', W/2, H/2+80);
+    ctx.restore();
+  }
 
+  // Contador de traición activa (solo visible para mí)
+  if (traicionActive) {
+    const secsLeft = Math.max(0, Math.ceil((traicionExpiresAt-Date.now())/1000));
+    const pulse    = 0.8+Math.sin(Date.now()*0.008)*0.2;
+    ctx.save();
+    // Borde morado en pantalla
+    ctx.strokeStyle  = '#aa00ff'; ctx.lineWidth = 6;
+    ctx.shadowColor  = '#ff00ff'; ctx.shadowBlur = 20;
+    ctx.globalAlpha  = pulse*0.7;
+    ctx.strokeRect(6,6,W-12,H-12);
+    // Texto contador
+    ctx.globalAlpha  = 1;
+    ctx.font         = 'bold 22px Bebas Neue, sans-serif';
+    ctx.textAlign    = 'center'; ctx.textBaseline='top';
+    ctx.fillStyle    = '#ff44ff';
+    ctx.shadowBlur   = 15;
+    ctx.fillText(`⚠️ TRAICIÓN: ${secsLeft}s`, W/2, 72);
+    ctx.restore();
+  }
+}
 // Court
 function drawCourt(W, H) {
   // Wood floor background
@@ -2780,7 +3103,8 @@ function drawPlayers(W, H) {
     const drawY = p.id === myId ? p.y : rpos.y;
     const isMe  = p.id === myId;
     const team  = p.team === 'A' ? '#e84040' : '#4080e8';
-
+const drawRadius = p.giant ? PLAYER_RADIUS*3 : PLAYER_RADIUS;
+    const ringColor  = (isMe && traicionActive) ? '#aa00ff' : team;
     ctx.save();
 
     const isSprinting = isMe ? sprintActive : p.sprinting;
@@ -2792,37 +3116,51 @@ function drawPlayers(W, H) {
       ctx.shadowColor = team;
       ctx.shadowBlur  = isMe ? 20 : 10;
     }
-
+// Aura gigante (pulsante amarilla)
+    if (p.giant) {
+      const tG  = Date.now()*0.003;
+      const aR  = drawRadius + 10 + Math.sin(tG)*8;
+      ctx.save();
+      ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 40;
+      ctx.globalAlpha = 0.35+Math.sin(tG*2)*0.2;
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(drawX,drawY,aR,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha = 0.15+Math.sin(tG*1.5+1)*0.1;
+      ctx.lineWidth   = 10;
+      ctx.beginPath(); ctx.arc(drawX,drawY,aR+8,0,Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
     // Circle background
     ctx.fillStyle   = team;
     ctx.globalAlpha = 0.25;
     ctx.beginPath();
-    ctx.arc(drawX, drawY, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+    ctx.arc(drawX, drawY, drawRadius + 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
     // Player ring
-    ctx.strokeStyle = team;
+      ctx.strokeStyle = ringColor;
     ctx.lineWidth   = isMe ? 3.5 : 2.5;
+    if (isMe && traicionActive) { ctx.shadowColor='#aa00ff'; ctx.shadowBlur=25; }
     ctx.beginPath();
-    ctx.arc(drawX, drawY, PLAYER_RADIUS, 0, Math.PI * 2);
+    ctx.arc(drawX, drawY, drawRadius, 0, Math.PI * 2);
     ctx.stroke();
 
     // Clip & draw image
     const drawSkinImg = (p.dead && deadImg.complete) ? deadImg
-                      : (p.skin ? (playerImgCache[p.skin] || getPlayerImg(p)) : skinImg);
+                      : (p.skin ? (playerImgCache[p.skin]||getPlayerImg(p)) : skinImg);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(drawX, drawY, PLAYER_RADIUS - 2, 0, Math.PI * 2);
+    ctx.arc(drawX, drawY, drawRadius - 2, 0, Math.PI * 2);
     ctx.clip();
     try {
       ctx.drawImage(drawSkinImg,
-        drawX - PLAYER_RADIUS + 2, drawY - PLAYER_RADIUS + 2,
-        (PLAYER_RADIUS - 2) * 2,   (PLAYER_RADIUS - 2) * 2);
+        drawX - drawRadius + 2, drawY - drawRadius + 2,
+        (drawRadius - 2) * 2,   (drawRadius - 2) * 2);
     } catch(e2) {
       ctx.fillStyle = team;
-      ctx.fillRect(drawX - PLAYER_RADIUS + 2, drawY - PLAYER_RADIUS + 2,
-                   (PLAYER_RADIUS - 2) * 2,   (PLAYER_RADIUS - 2) * 2);
+      ctx.fillRect(drawX - drawRadius + 2, drawY - drawRadius + 2,
+                   (drawRadius - 2) * 2,   (drawRadius - 2) * 2);
     }
     ctx.restore();
 
@@ -2831,23 +3169,24 @@ function drawPlayers(W, H) {
     ctx.font          = 'bold 12px Rajdhani, sans-serif';
     ctx.textAlign     = 'center';
     ctx.textBaseline  = 'bottom';
-    ctx.fillStyle     = 'rgba(0,0,0,0.6)';
-    ctx.fillText(p.name || '?', drawX + 1, drawY - PLAYER_RADIUS - 6);
-    ctx.fillStyle = isMe ? '#fff' : (p.team === 'A' ? '#ff9999' : '#99aaff');
-    ctx.fillText(p.name || '?', drawX, drawY - PLAYER_RADIUS - 7);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillText(p.name||'?', drawX+1, drawY - drawRadius - 6);
+    ctx.fillStyle = isMe ? '#fff' : (p.team==='A' ? '#ff9999' : '#99aaff');
+    ctx.fillText(p.name||'?', drawX,   drawY - drawRadius - 7);
 
     // "ME" indicator
     if (isMe) {
       ctx.fillStyle = '#ffd700';
       ctx.font      = 'bold 10px Space Mono, monospace';
-      ctx.fillText('◀ TÚ', drawX + PLAYER_RADIUS + 16, drawY + 4);
+      ctx.fillText('◀ TÚ', drawX + drawRadius + 16, drawY + 4);
     }
 
     // Power bar
     if (isMe && iAmShooting && localBall.possessedBy === myId) {
       const barW = 60, barH = 8;
       const barX = drawX - barW / 2;
-      const barY = drawY - PLAYER_RADIUS - 26;
+      const barY = drawY - drawRadius - 26;
+
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(barX - 3, barY - 3, barW + 6, barH + 6);
       ctx.fillStyle = '#333';
@@ -2889,7 +3228,7 @@ function drawPlayers(W, H) {
       ctx.fillStyle    = tLeft <= 1 ? '#ff2200' : '#ffdd00';
       ctx.shadowColor  = '#ff4400';
       ctx.shadowBlur   = 14;
-      ctx.fillText(`🔫 ${tLeft}`, drawX, drawY - PLAYER_RADIUS - 20);
+      ctx.fillText(`🔫 ${tLeft}`, drawX, drawY - drawRadius - 20);
       ctx.restore();
     }
 
@@ -2900,15 +3239,37 @@ function drawPlayers(W, H) {
       ctx.lineWidth   = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(drawX, drawY, PLAYER_RADIUS + 8 + Math.sin(t2) * 3, 0, Math.PI * 2);
+      ctx.arc(drawX, drawY, drawRadius + 8 + Math.sin(t2) * 3, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    ctx.restore();
+    // Anillo de escudo eléctrico
+    if (p.shield) {
+      const tS = Date.now() * 0.008;
+      ctx.save();
+      ctx.strokeStyle    = '#00ccff';
+      ctx.shadowColor    = '#00eeff';
+      ctx.shadowBlur     = 22;
+      ctx.lineWidth      = 3;
+      ctx.globalAlpha    = 0.85;
+      ctx.setLineDash([8, 4]);
+      ctx.lineDashOffset = -(tS * 50) % 12;
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, drawRadius + 12, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle   = '#00ccff';
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, drawRadius + 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.restore();   // ← este ya existía
   });
 }
-
 // UI overlays
 function drawUI(W, H) {
   // Trajectory line for shooter
@@ -2959,6 +3320,7 @@ async function cleanup() {
   if (unsubGun)           { unsubGun(); }
   if (unsubBullets)       { unsubBullets(); }
   if (unsubMassExplosion) { unsubMassExplosion(); }
+  if (unsubPowerups) { unsubPowerups(); }
 }
 window.addEventListener('beforeunload', cleanup);
 // ─── PLAY AGAIN: eliminar sala para todos ─────────────────────
@@ -2977,4 +3339,4 @@ resizeCanvas();
 </script>
 </body>
 </html>
-""""""
+
