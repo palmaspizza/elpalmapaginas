@@ -720,6 +720,95 @@
     display: none;
   }
   .name-error.show { display: block; }
+  /* ─── DISPARA OVERLAY ─── */
+  #dispara-overlay {
+    position: absolute; inset: 0;
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 160;
+    pointer-events: none;
+    background: rgba(255, 215, 0, 0.88);
+  }
+  #dispara-overlay.show {
+    display: flex;
+    animation: disparaFade 0.75s cubic-bezier(.22,.61,.36,1) forwards;
+  }
+  .dispara-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 180px;
+    letter-spacing: 16px;
+    color: #111;
+    text-shadow:
+      0 0 30px #ff4400,
+      0 0 70px #ff0000,
+      6px 6px 0 #ff6600,
+      -6px -6px 0 #cc2200;
+    animation: disparaZoom 0.75s cubic-bezier(.22,.61,.36,1) forwards;
+  }
+  @keyframes disparaFade {
+    0%   { opacity: 1; }
+    60%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes disparaZoom {
+    0%   { transform: scale(0.4) rotate(-4deg); opacity: 0; }
+    25%  { transform: scale(1.15) rotate(2deg);  opacity: 1; }
+    60%  { transform: scale(1.0)  rotate(0deg);  opacity: 1; }
+    100% { transform: scale(1.2)  rotate(-1deg); opacity: 0; }
+  }
+  /* ─── MASS EXPLOSION ALERT ─── */
+#massExplosionAlert {
+  position: absolute; inset: 0;
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 9999;
+  pointer-events: none;
+}
+#massExplosionAlert.show {
+  display: flex;
+  animation: alertScreenFlash 0.08s ease infinite alternate;
+}
+@keyframes alertScreenFlash {
+  from { background: rgba(255,30,0,0.22); }
+  to   { background: rgba(255,200,0,0.28); }
+}
+.mass-explosion-box {
+  background: linear-gradient(135deg, #ff0000 0%, #ff6b00 50%, #ffd700 100%);
+  border: 6px solid #fff;
+  border-radius: 24px;
+  padding: 36px 70px;
+  text-align: center;
+  animation: explosionBoxPulse 0.12s ease infinite alternate;
+}
+@keyframes explosionBoxPulse {
+  from { transform: scale(0.96) rotate(-1deg); box-shadow: 0 0 80px #ff0000, 0 0 160px rgba(255,50,0,0.7); }
+  to   { transform: scale(1.04) rotate(1deg);  box-shadow: 0 0 140px #ff6b00, 0 0 280px rgba(255,200,0,0.8); }
+}
+.mass-explosion-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 110px;
+  letter-spacing: 10px;
+  color: #fff;
+  text-shadow: 0 0 40px #ff0000, 0 0 80px #ff6b00, 4px 4px 0 #7a0000;
+  line-height: 1;
+}
+.mass-explosion-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 20px;
+  letter-spacing: 5px;
+  color: #fff;
+  margin-top: 10px;
+  text-shadow: 0 0 14px #ff6b00;
+  text-transform: uppercase;
+}
+.mass-explosion-immune {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 34px;
+  letter-spacing: 4px;
+  color: #ffd700;
+  margin-top: 8px;
+  text-shadow: 0 0 20px #ffd700, 2px 2px 0 #7a5a00;
+}
 </style>
 </head>
 <body>
@@ -856,7 +945,12 @@
     <div class="waiting-dots"><span></span><span></span><span></span></div>
     <div class="waiting-code" id="waitingInfo"></div>
   </div>
+  <!-- DISPARA overlay -->
+  <div id="dispara-overlay">
+    <div class="dispara-text">🔫 DISPARA</div>
+  </div>
 <!-- Dead overlay -->
+
   <div id="dead-overlay">
     <div class="dead-title">ESTÁS MUERTO</div>
     <div class="dead-sub" id="dead-countdown">Reapareciendo en 3...</div>
@@ -870,7 +964,14 @@
     <div class="hint-key"><span>Click Der.</span> Pasar</div>
     <div class="hint-key"><span>Shift</span> Sprint 3s</div></div>
 </div>
-
+<!-- Mass Explosion Alert -->
+<div id="massExplosionAlert">
+    <div class="mass-explosion-box">
+      <div class="mass-explosion-title">💥 BOOM 💥</div>
+      <div class="mass-explosion-sub">¡TODOS EXPLOTAN!</div>
+      <div class="mass-explosion-immune" id="massExplosionImmuneName">🛡️ ??? SOBREVIVE</div>
+    </div>
+  </div>
 <!-- Toast -->
 <div id="toast"></div>
 <!-- ═══════════ SKIN PICKER MODAL ═══════════ -->
@@ -962,6 +1063,11 @@ let possessionFrames = 0;          // frames que lleva el jugador con el balón
 
 // Max score (se leerá del room)
 let maxScore = 21;
+// ─── MASS EXPLOSION STATE ──────────────────────────────────────
+let massExplosionTriggeredA = false;  // se activa cuando Equipo A llega a 15
+let massExplosionTriggeredB = false;  // se activa cuando Equipo B llega a 15
+let lastMassExplosionT      = 0;      // evita doble ejecución del mismo evento
+let unsubMassExplosion      = null;   // para limpiar el listener al salir
 // ─── GUN & DEATH STATE ────────────────────────────────────────
 let gunState           = null;     // mirror de rooms/{roomId}/gun
 let unsubGun           = null;
@@ -1124,7 +1230,13 @@ function showToast(msg, dur = 2000) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), dur);
 }
-
+function showDispara() {
+  const el = document.getElementById('dispara-overlay');
+  el.classList.remove('show');
+  void el.offsetWidth; // forzar reflow para reiniciar animación
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 750);
+}
 function scorePopup(x, y, txt) {
   const el = document.createElement('div');
   el.className = 'score-popup';
@@ -1502,6 +1614,7 @@ Object.values(playersData).forEach(p => {
     if (gunState && gunState.active && gunState.ownerId === myId) {
       if (!prev || !prev.active || prev.ownerId !== myId) {
         startGunCountdown();
+        showDispara();
       }
     } else {
       if (prev && prev.ownerId === myId) clearInterval(gunCountdownInterval);
@@ -1541,7 +1654,14 @@ onValue(ref(db, `rooms/${roomId}/soundEvent`), snap => {
     if (ev.name === 'pistola') playGunGrantAudio();
     if (ev.name === 'disparo') playGunShotAudio();
   });
-
+// ── Mass Explosion Event (escucha a todos los clientes) ──────
+unsubMassExplosion = onValue(ref(db, `rooms/${roomId}/massExplosionEvent`), snap => {
+    const ev = snap.val();
+    if (!ev) return;
+    if (ev.t === lastMassExplosionT) return; // evitar duplicado
+    lastMassExplosionT = ev.t;
+    handleMassExplosion(ev.immuneId, ev.immuneName);
+  });
 } 
 
 function startActualGame() {
@@ -1737,6 +1857,10 @@ function tick() {
     currentSpeed = PLAYER_SPEED * 2;
   } else if (sprintCooldown > 0) {
     sprintCooldown--;
+  }
+  // Bloquear sprint si el rival tiene la pistola activa
+  if (gunState && gunState.active && gunState.ownerId !== myId) {
+    currentSpeed = PLAYER_SPEED;
   }
   const sprintBarPct = sprintActive
     ? sprintTimer / 180
@@ -1965,6 +2089,23 @@ function checkHoop() {
     } else if (scoringTeam === 'B' && newB > 0 && newB % 6 === 0) {
       assignGunToTeam('A');
     }
+    // ── Mass Explosion: cuando un equipo llega a 15 ─────────
+    const MASS_EXPLOSION_THRESHOLD = 15;
+    const shouldExplodeA = scoringTeam === 'A' && newA >= MASS_EXPLOSION_THRESHOLD && !massExplosionTriggeredA;
+    const shouldExplodeB = scoringTeam === 'B' && newB >= MASS_EXPLOSION_THRESHOLD && !massExplosionTriggeredB;
+    if (shouldExplodeA || shouldExplodeB) {
+      if (shouldExplodeA) massExplosionTriggeredA = true;
+      if (shouldExplodeB) massExplosionTriggeredB = true;
+      // El inmune es el que metió el gol (lastShooter)
+      const immuneId   = localBall.lastShooter || myId;
+      const immunePlayer = playersData[immuneId];
+      const immuneName = immunePlayer ? immunePlayer.name : '???';
+      set(ref(db, `rooms/${roomId}/massExplosionEvent`), {
+        immuneId,
+        immuneName,
+        t: Date.now()
+      }).catch(() => {});
+    }
     update(ref(db, `rooms/${roomId}/ball`), {
       possessedBy: null,
       x: W/2, y: H/2,
@@ -2022,7 +2163,7 @@ async function assignGunToTeam(team) {
     ownerId:  lucky.id,
     aimX:     lucky.x,
     aimY:     lucky.y,
-    timeLeft: 3,
+    timeLeft: 4,
     active:   true
   });
   onDisconnect(gunRef).remove();
@@ -2199,7 +2340,91 @@ function triggerExplosion(x, y) {
     });
   }
 }
+// ─── MASS EXPLOSION HANDLER ───────────────────────────────────
+function handleMassExplosion(immuneId, immuneName) {
+  // Mostrar alerta llamativa 0.75s
+  showMassExplosionAlert(immuneName);
+  playMassExplosionSound();
 
+  // Matar a todos excepto al inmune (después de 0.75s para que vean la alerta)
+  setTimeout(() => {
+    // Cada cliente se mata a sí mismo si no es el inmune
+    if (myId !== immuneId) {
+      const me = playersData[myId];
+      if (me && !me.dead) {
+        killPlayer(myId);
+        emitSoundEvent('muerte');
+      }
+    } else {
+      // El inmune: efecto de brillo especial
+      showToast(`🛡️ ¡${immuneName} ES INMUNE!`, 2000);
+    }
+    // Explosiones visuales para todos los no-inmunes (solo visual, cada cliente)
+    Object.values(playersData).forEach(p => {
+      if (p.id === immuneId || p.dead) return;
+      triggerExplosion(p.x, p.y);
+    });
+  }, 750);
+}
+
+function showMassExplosionAlert(immuneName) {
+  const el = document.getElementById('massExplosionAlert');
+  const nameEl = document.getElementById('massExplosionImmuneName');
+  if (nameEl) nameEl.textContent = `🛡️ ${immuneName || '???'} SOBREVIVE`;
+  el.classList.add('show');
+  // Pantalla tiembla brevemente
+  document.getElementById('gameScreen').style.animation = 'none';
+  document.getElementById('gameCanvas').style.filter = 'brightness(2)';
+  setTimeout(() => {
+    el.classList.remove('show');
+    document.getElementById('gameCanvas').style.filter = '';
+  }, 750);
+}
+
+function playMassExplosionSound() {
+    const a = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-explosion-hit-1694.mp3');
+  a.volume = 0.9;
+  a.play().catch(() => {});
+  // Sonido sintético de explosión masiva (Web Audio API — sin descarga)
+  try {
+    const ctx2 = new (window.AudioContext || window.webkitAudioContext)();
+    // Boom grave
+    const buf = ctx2.createBuffer(1, ctx2.sampleRate * 1.5, ctx2.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const t = i / ctx2.sampleRate;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 3.5) * 0.9;
+    }
+    const src = ctx2.createBufferSource();
+    src.buffer = buf;
+    // Filtro grave para sonido de explosión
+    const filter = ctx2.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 200;
+    filter.Q.value = 0.5;
+    // Ganancia
+    const gain = ctx2.createGain();
+    gain.gain.setValueAtTime(1.2, ctx2.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + 1.5);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx2.destination);
+    src.start();
+    // Capa 2: crackle agudo
+    const buf2 = ctx2.createBuffer(1, ctx2.sampleRate * 0.4, ctx2.sampleRate);
+    const d2 = buf2.getChannelData(0);
+    for (let i = 0; i < d2.length; i++) {
+      d2[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx2.sampleRate * 0.08)) * 0.5;
+    }
+    const src2 = ctx2.createBufferSource();
+    src2.buffer = buf2;
+    const g2 = ctx2.createGain();
+    g2.gain.value = 0.8;
+    src2.connect(g2);
+    g2.connect(ctx2.destination);
+    src2.start();
+  } catch(e) {}
+}
 function drawParticles() {
   ctx.save();
   for (let i = particles.length - 1; i >= 0; i--) {
@@ -2248,7 +2473,7 @@ function drawGunOverlay(W, H) {
   if (gunState && gunState.active) {
     const cx = gunState.aimX || W / 2;
     const cy = gunState.aimY || H / 2;
-    const r  = PLAYER_RADIUS;
+    const r  = PLAYER_RADIUS * 1.25;
     ctx.save();
     ctx.strokeStyle = '#00cc44';
     ctx.fillStyle   = '#00cc44';
@@ -2728,11 +2953,12 @@ async function cleanup() {
       }
     } catch(e) {}
   }
-  if (unsubPlayers) { unsubPlayers(); }
-  if (unsubBall)    { unsubBall(); }
-  if (unsubRoom)    { unsubRoom(); }
-  if (unsubGun)     { unsubGun(); }
-  if (unsubBullets) { unsubBullets(); }
+  if (unsubPlayers)       { unsubPlayers(); }
+  if (unsubBall)          { unsubBall(); }
+  if (unsubRoom)          { unsubRoom(); }
+  if (unsubGun)           { unsubGun(); }
+  if (unsubBullets)       { unsubBullets(); }
+  if (unsubMassExplosion) { unsubMassExplosion(); }
 }
 window.addEventListener('beforeunload', cleanup);
 // ─── PLAY AGAIN: eliminar sala para todos ─────────────────────
@@ -2751,3 +2977,4 @@ resizeCanvas();
 </script>
 </body>
 </html>
+""""""
