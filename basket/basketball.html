@@ -1005,6 +1005,38 @@
     color: var(--text-dim); text-align: center;
     margin-top: 10px;
   }
+  /* ─── SKIN MINI PREVIEW STRIP ─── */
+  .skin-btn-wrap {
+    position: relative;
+    display: inline-block;
+    margin-top: 8px;
+  }
+  .skin-strip {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 7px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .skin-strip-thumb {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.08);
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    background: #111;
+  }
+  .skin-strip-thumb:hover {
+    transform: scale(1.25) translateY(-2px);
+    border-color: var(--neon-orange);
+    box-shadow: 0 0 8px rgba(255,107,0,0.6);
+  }
+  .skin-strip-thumb.active {
+    border-color: var(--neon-yellow);
+    box-shadow: 0 0 10px rgba(255,215,0,0.5);
+    transform: scale(1.15);
+  }
 </style>
 </head>
 <body>
@@ -1049,7 +1081,10 @@
             <div class="skin-name" id="skinName">Skin por defecto</div>
             <div class="skin-hint">Sube tu propia imagen</div>
             <input type="file" id="skinFile" accept="image/*" style="display:none"/>
-            <button class="btn btn-secondary" style="width:auto;margin-top:8px;" onclick="window.openSkinModal()">🎭 Cambiar Skin</button>
+            <div class="skin-btn-wrap">
+              <div class="skin-strip" id="skinStrip"></div>
+              <button class="btn btn-secondary" style="width:auto;" onclick="window.openSkinModal()">🎭 Cambiar Skin</button>
+            </div>
           </div>
         </div>
 
@@ -1338,6 +1373,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const nameEl  = document.getElementById('skinName');
   if (preview) preview.src = selectedSkinFile;
   if (nameEl)  nameEl.textContent = selectedSkinName;
+  buildSkinStrip();
 });
 // Mouse (aim)
 let mouseX = 600, mouseY = 300;
@@ -1437,17 +1473,46 @@ window.closeSkinModal = function() {
   document.getElementById('skinModal').classList.remove('open');
 }
 
+function buildSkinStrip() {
+  const strip = document.getElementById('skinStrip');
+  if (!strip) return;
+  strip.innerHTML = '';
+  SKINS.forEach(sk => {
+    const img = document.createElement('img');
+    img.src = sk.file;
+    img.alt = sk.name;
+    img.title = sk.name;
+    img.className = 'skin-strip-thumb' + (sk.file === selectedSkinFile ? ' active' : '');
+    img.onerror = function() { this.style.display = 'none'; };
+    img.addEventListener('click', () => {
+      selectSkin(sk.file, sk.name, null);
+    });
+    strip.appendChild(img);
+  });
+}
+
 function selectSkin(file, name, card) {
   selectedSkinFile = file;
   selectedSkinName = name;
-  
+
   skinBase64 = null;
   skinImg.src = file;
   document.getElementById('skinPreview').src = file;
   document.getElementById('skinName').textContent = name;
-  document.querySelectorAll('.skin-option').forEach(el => el.classList.remove('selected'));
-  if (card) card.classList.add('selected');
-  setTimeout(window.closeSkinModal, 300);
+
+  // Actualizar activo en el modal
+  if (card) {
+    document.querySelectorAll('.skin-option').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  }
+
+  // Actualizar activo en el strip
+  document.querySelectorAll('.skin-strip-thumb').forEach(img => {
+    img.classList.toggle('active', img.src.endsWith(file) || img.getAttribute('src') === file);
+  });
+
+  window.closeSkinModal();
+  buildSkinStrip();
 }
 
 
