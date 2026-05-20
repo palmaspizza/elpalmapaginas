@@ -759,9 +759,9 @@
         <div class="input-group">
           <div class="input-label">Modalidad</div>
           <select class="select-field" id="gameMode">
-            <option value="1v1">1 vs 1</option>
+            <option value="1v1"selected>1 vs 1</option>
             <option value="2v2">2 vs 2</option>
-            <option value="3v3" selected>3 vs 3</option>
+            <option value="3v3" >3 vs 3</option>
             <option value="4v4">4 vs 4</option>
           </select>
           <div class="input-group">
@@ -991,8 +991,15 @@ const SKINS = [
   { file: 'corxea.jpg',         name: 'Corxea'           },
 ];
 
-let selectedSkinFile = 'tiorenechibi.jpg';
-let selectedSkinName = 'Tiorene Chibi';
+const _randomSkin = SKINS[Math.floor(Math.random() * SKINS.length)];
+let selectedSkinFile = _randomSkin.file;
+let selectedSkinName = _randomSkin.name;
+document.addEventListener('DOMContentLoaded', () => {
+  const preview = document.getElementById('skinPreview');
+  const nameEl  = document.getElementById('skinName');
+  if (preview) preview.src = selectedSkinFile;
+  if (nameEl)  nameEl.textContent = selectedSkinName;
+});
 // Mouse (aim)
 let mouseX = 600, mouseY = 300;
 let lastAimPush   = 0;   // throttle 50 ms
@@ -1095,6 +1102,7 @@ window.closeSkinModal = function() {
 function selectSkin(file, name, card) {
   selectedSkinFile = file;
   selectedSkinName = name;
+  
   skinBase64 = null;
   skinImg.src = file;
   document.getElementById('skinPreview').src = file;
@@ -1138,6 +1146,7 @@ function playRandomAudio(prefix, count, lastRef) {
 }
 const lastRunRef  = { val: -1 };
 const lastWinRef  = { val: -1 };
+const lastDeathRef = { val: -1 };
 
 function playRunAudio()  { playRandomAudio('correr', 3, lastRunRef); }
 function playWinAudio()  { playRandomAudio('ganar',  3, lastWinRef); }
@@ -1169,19 +1178,24 @@ document.getElementById('skinFile').addEventListener('change', e => {
 function emitSoundEvent(name) {
   set(ref(db, `rooms/${roomId}/soundEvent`), { name, t: Date.now() }).catch(() => {});
 }
+
+
 function getPlayerImg(p) {
-  const src = p.skin || 'tiorenechibi.png';
-  if (playerImgCache[src] && playerImgCache[src].complete && playerImgCache[src].naturalWidth > 0) {
+  const src = p.skin || selectedSkinFile;
+  // Si ya está en caché y cargó bien, devolverla
+  if (playerImgCache[src] && playerImgCache[src].naturalWidth > 0) {
     return playerImgCache[src];
   }
-  if (!playerImgCache[src]) {
+  // Si no existe en caché o falló, crear nueva
+  if (!playerImgCache[src] || playerImgCache[src]._failed) {
     const img = new Image();
-    img.onload  = () => { playerImgCache[src] = img; };
-    img.onerror = () => { playerImgCache[src] = skinImg; };
+    img.onload  = () => { img._failed = false; playerImgCache[src] = img; };
+    img.onerror = () => { img._failed = true;  playerImgCache[src] = skinImg; };
     img.src = src;
     playerImgCache[src] = img;
   }
-  return playerImgCache[src];
+  // Mientras carga, devolver skinImg como fallback
+  return playerImgCache[src].naturalWidth > 0 ? playerImgCache[src] : skinImg;
 }
 
 // ─── LOBBY: List rooms ─────────────────────────────────────────
@@ -1283,7 +1297,7 @@ async function joinRoom(rid, r) {
   const playerObj = {
     id: myId,
     name,
-    skin: skinBase64 || null,
+    skin: skinBase64 || selectedSkinFile,
     team: myTeam,
     x: spawnX, y: 280 + existingPlayers.length * 40,
     hasBall: false
@@ -1308,6 +1322,8 @@ function enterGame(rName, mode) {
   // onDisconnect: remove player & release ball
   const myPlayerRef = ref(db, `rooms/${roomId}/players/${myId}`);
   onDisconnect(myPlayerRef).remove();
+  // Si soy el último jugador, borrar la sala entera al desconectarme
+  onDisconnect(ref(db, `rooms/${roomId}`)).remove();
   // Release ball if I have it
   const ballRef = ref(db, `rooms/${roomId}/ball`);
   // We'll update onDisconnect dynamically when I grab ball
@@ -1369,6 +1385,11 @@ Object.values(playersData).forEach(p => {
     const count = Object.keys(playersData).length;
     if (count >= total && !gameRunning) {
       startActualGame();
+    }
+    if (count === 0) {
+      // Sala vacía: eliminarla
+      remove(ref(db, `rooms/${roomId}`)).catch(() => {});
+      return;
     }
     if (count < total) {
       document.getElementById('waiting-overlay').style.display = 'flex';
@@ -1516,7 +1537,7 @@ onValue(ref(db, `rooms/${roomId}/soundEvent`), snap => {
     if (!ev) return;
     if (ev.name === 'ganar')   playWinAudio();
     if (ev.name === 'encesta') playScoreAudio();
-    if (ev.name === 'muerte')  { const a = new Audio('muerte1.mp3'); a.volume=0.8; a.play().catch(()=>{}); }
+    if (ev.name === 'muerte')  { playRandomAudio('muerte', 4, lastDeathRef); }
     if (ev.name === 'pistola') playGunGrantAudio();
     if (ev.name === 'disparo') playGunShotAudio();
   });
@@ -2093,9 +2114,7 @@ async function killPlayer(pid) {
   const p = playersData[pid];
   if (!p || p.dead) return;
   triggerExplosion(p.x, p.y);
-    const deathAudio = new Audio('muerte1.mp3'); // o playRandomAudio('muerte', 3, ...) si quieres varios
-  deathAudio.volume = 0.8;
-  deathAudio.play().catch(() => {});
+  playRandomAudio('muerte', 4, lastDeathRef);
   // Soltar el balón si lo tenía
   if (localBall.possessedBy === pid) {
     await update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
