@@ -809,10 +809,223 @@
   margin-top: 8px;
   text-shadow: 0 0 20px #ffd700, 2px 2px 0 #7a5a00;
 }
+/* ══════════════════════════════════════════════
+     REDISEÑO UI IN-GAME — POSSESSION / BARRAS / HUD / CONTROLS
+  ══════════════════════════════════════════════ */
+
+  /* ─── POSSESSION TIMER (reemplaza los 2 bloques anteriores) ─── */
+  #possessionTimer {
+    position: absolute;
+    top: 74px; left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center; gap: 10px;
+    background: rgba(10,10,20,0.72);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 30px;
+    padding: 6px 18px 6px 14px;
+    pointer-events: none; z-index: 10;
+    backdrop-filter: blur(6px);
+  }
+  #possessionTimer .poss-icon {
+    font-size: 15px; line-height: 1;
+  }
+  #possessionTimer .poss-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 3px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+  }
+  #possessionTimer .poss-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 2px;
+    color: #fff;
+    min-width: 32px; text-align: right;
+    line-height: 1;
+  }
+  #possessionTimer .poss-bar-track {
+    width: 64px; height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px; overflow: hidden;
+    align-self: center;
+  }
+  #possessionTimer .poss-bar-fill {
+    height: 100%; width: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #00e5ff, #00ff88);
+    transition: width 0.1s linear, background 0.4s ease;
+  }
+  #possessionTimer.urgent {
+    border-color: rgba(255,60,60,0.5);
+    box-shadow: 0 0 16px rgba(255,40,40,0.25);
+  }
+  #possessionTimer.urgent .poss-bar-fill {
+    background: linear-gradient(90deg, #ff4444, #ff9900);
+  }
+  #possessionTimer.urgent .poss-time {
+    color: #ff5555;
+    animation: possUrgentNum 0.35s ease infinite alternate;
+  }
+  @keyframes possUrgentNum {
+    from { transform: scale(1);   opacity: 1; }
+    to   { transform: scale(1.1); opacity: 0.7; }
+  }
+
+  /* ─── STATUS BARS (Sprint + Robo) ─── */
+  #statusBars {
+    position: absolute;
+    bottom: 48px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 10px;
+    pointer-events: none; z-index: 10;
+  }
+  .status-bar-wrap {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(10,10,20,0.65);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 5px 12px 5px 10px;
+    backdrop-filter: blur(4px);
+  }
+  .status-bar-icon {
+    font-size: 13px; line-height: 1;
+  }
+  .status-bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; letter-spacing: 2px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+  }
+  .status-bar-track {
+    width: 70px; height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px; overflow: hidden;
+  }
+  .status-bar-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.08s linear;
+  }
+  #sprintBarFill { background: linear-gradient(90deg,#00e5ff,#00ff88); }
+  #stealBarFill  { background: linear-gradient(90deg,#ff6b00,#ffd700); }
+
+  /* ─── CONTROLS HINT ─── */
+  #controlsHint {
+    position: absolute;
+    bottom: 14px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 5px;
+    pointer-events: none; z-index: 10;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .hint-key {
+    background: rgba(10,10,20,0.62);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 4px 11px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+    transition: border-color 0.2s;
+  }
+  .hint-key span {
+    color: rgba(255,215,0,0.85);
+    font-weight: 700;
+  }
+
+  /* ─── HUD score labels más legibles ─── */
+  .hud-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.3);
+  }
+  .hud-maxscore {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: rgba(255,215,0,0.3);
+    margin-top: 1px;
+  }
+  /* ─── NAME GATE ─── */
+  #nameGate {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 0%, #1a1030 0%, #0a0a12 70%);
+    z-index: 200;
+    animation: fadeUp 0.5s ease both;
+  }
+  #nameGate::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ff6b00' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .name-gate-box {
+    display: flex; flex-direction: column; align-items: center; gap: 24px;
+    width: min(420px, 92vw);
+    animation: fadeUp 0.6s ease both;
+  }
+  .name-gate-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px; line-height: 1; letter-spacing: 4px;
+    background: linear-gradient(135deg, #ff6b00 0%, #ffd700 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 30px rgba(255,107,0,0.4));
+  }
+  .name-gate-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 6px;
+    color: var(--text-dim); text-transform: uppercase;
+    margin-top: -20px;
+  }
+  .name-gate-panel {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 14px;
+    padding: 28px 28px 24px;
+    width: 100%;
+    position: relative; overflow: hidden;
+  }
+  .name-gate-panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-orange), transparent);
+  }
+  .name-gate-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px; letter-spacing: 4px;
+    color: var(--text-dim); text-align: center;
+    margin-bottom: 18px;
+  }
+  .name-gate-hint {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--text-dim); text-align: center;
+    margin-top: 10px;
+  }
 </style>
 </head>
 <body>
-
+<!-- ═══════════ NAME GATE ═══════════ -->
+<div id="nameGate">
+  <div class="name-gate-box">
+    <div class="name-gate-logo">PALMA BASKET</div>
+    <div class="name-gate-sub">Online Basketball · Multijugador</div>
+    <div class="name-gate-panel">
+      <div class="name-gate-title">¿CÓMO TE LLAMAS?</div>
+      <div class="input-group" style="margin-bottom:16px;">
+        <div class="input-label">Tu apodo</div>
+        <input class="input-field" id="nameGateInput" type="text"
+          placeholder="Escribe tu nombre..." maxlength="16" autocomplete="off"/>
+        <div class="name-error" id="nameGateError">El nombre no puede estar vacío</div>
+      </div>
+      <button class="btn btn-primary" id="nameGateBtn">🏀 Entrar al Lobby</button>
+      <div class="name-gate-hint">Puedes cambiarlo después</div>
+    </div>
+  </div>
+</div>
 <!-- ═══════════ LOBBY ═══════════ -->
 <div id="lobby">
   <div class="lobby-container">
@@ -855,7 +1068,7 @@
           </select>
           <div class="input-group">
           <div class="input-label">Puntos para ganar</div>
-          <input class="input-field" id="maxScore" type="number" min="5" max="100" value="21" step="1"/>
+          <input class="input-field" id="maxScore" type="number" min="5" max="100" value="50" step="1"/>
         </div>
         </div>
 
@@ -898,9 +1111,9 @@
   <div id="hud">
     <div class="hud-team">
       <div>
-        <div class="hud-label">EQUIPO A</div>
+        <div class="hud-label">EQUIPO ROJO</div>
         <div class="hud-score score-a" id="scoreA">0</div>
-        <div class="hud-maxscore" id="hudMaxScore">/ 21 pts</div>
+        <div class="hud-maxscore" id="hudMaxScore">/ 50 pts</div>
       </div>
     </div>
     <div class="hud-center">
@@ -909,28 +1122,35 @@
     </div>
     <div class="hud-team">
       <div style="text-align:right;">
-        <div class="hud-label">EQUIPO B</div>
+        <div class="hud-label">EQUIPO AZUL</div>
         <div class="hud-score score-b" id="scoreB">0</div>
-        <div class="hud-maxscore" style="text-align:right;" id="hudMaxScoreB">/ 21 pts</div>
+        <div class="hud-maxscore" style="text-align:right;" id="hudMaxScoreB">/ 50 pts</div>
       </div>
     </div>
   </div>
 
   <!-- Possession timer -->
-  <div id="possessionTimer">⏱ <span id="possTimerVal">4.0</span>s</div>
+<!-- Possession timer -->
+  <div id="possessionTimer" style="display:none;">
+    <span class="poss-icon">🏀</span>
+    <span class="poss-label">POSESIÓN</span>
+    <div class="poss-bar-track"><div class="poss-bar-fill" id="possBarFill"></div></div>
+    <span class="poss-time" id="possTimerVal">4.0</span>
+  </div>
 
   <!-- Sprint / Steal status bars -->
   <div id="statusBars">
     <div class="status-bar-wrap">
+      <span class="status-bar-icon">⚡</span>
       <div class="status-bar-label">SPRINT</div>
       <div class="status-bar-track"><div class="status-bar-fill" id="sprintBarFill" style="width:100%"></div></div>
     </div>
     <div class="status-bar-wrap">
+      <span class="status-bar-icon">🤚</span>
       <div class="status-bar-label">ROBO</div>
       <div class="status-bar-track"><div class="status-bar-fill" id="stealBarFill" style="width:100%"></div></div>
     </div>
   </div>
-
   <!-- Winner overlay -->
   <div id="winner-overlay">
     <div class="winner-trophy">🏆</div>
@@ -1023,9 +1243,12 @@ const BALL_BOUNCE   = 0.55;
 const HOOP_HEIGHT_3D = 30; // visual 3D effect
 const LOGIC_W = 1200;
 const LOGIC_H = 600;
+const playersVelocity = {};   // { playerId: {vx, vy} }
+const playersLastUpdate = {};
 // ─── STATE ────────────────────────────────────────────────────
 let myId        = null;
 let roomId      = null;
+let ballLastShotTime = 0;
 let roomData    = null;
 let playersData = {};
 let playersRenderPos = {}; 
@@ -1034,7 +1257,7 @@ let localBall   = { x: 0, y: 0, vx: 0, vy: 0, vz: 0, z: 0, possessedBy: null, sc
 let myTeam      = 'A';
 let gameRunning = false;
 let animId      = null;
-
+let iAmBallAuthority = false;
 // Skin
 let skinBase64 = null;
 let skinImg    = new Image();
@@ -1150,14 +1373,12 @@ async function passBall() {
   if (localBall.possessedBy !== myId) return;
   const me = playersData[myId];
   if (!me || me.dead) return;
-  if (!me) return;
 
-  // Buscar el compañero de equipo más cercano
   let nearestId   = null;
   let nearestDist = Infinity;
   Object.values(playersData).forEach(p => {
     if (p.id === myId) return;
-    if (p.team !== myTeam) return;  // solo compañeros
+    if (p.team !== myTeam) return;
     const d = dist(me, p);
     if (d < nearestDist) { nearestDist = d; nearestId = p.id; }
   });
@@ -1165,17 +1386,20 @@ async function passBall() {
   if (!nearestId) { showToast('❌ No hay compañeros'); return; }
 
   const target = playersData[nearestId];
-  // Lanzar el balón hacia el compañero con velocidad alta
   const dx = target.x - me.x;
   const dy = target.y - me.y;
   const d  = Math.hypot(dx, dy) || 1;
   const speed = 10;
 
+  iAmBallAuthority = true;
+  ballLastShotTime = Date.now();
+
   await update(ref(db, `rooms/${roomId}/ball`), {
     possessedBy: null,
     x: me.x, y: me.y,
     vx: (dx/d)*speed, vy: (dy/d)*speed,
-    vz: 1.5, z: 0
+    vz: 1.5, z: 0,
+    updatedAt: Date.now()
   });
 
   localBall.possessedBy = null;
@@ -1184,8 +1408,6 @@ async function passBall() {
   possessionFrames = 0;
   document.getElementById('possessionTimer').style.display = 'none';
 
-  // El compañero agarra automáticamente (simular: cuando la pelota llega, el server la detectará)
-  // Marcar en firebase que va dirigida a ese jugador
   await update(ref(db, `rooms/${roomId}/ball`), { passTarget: nearestId });
   onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
   showToast(`📤 Pase a ${target.name}`);
@@ -1377,7 +1599,43 @@ function getPlayerImg(p) {
   // Mientras carga, devolver skinImg como fallback
   return playerImgCache[src].naturalWidth > 0 ? playerImgCache[src] : skinImg;
 }
+// ─── NAME GATE ────────────────────────────────────────────────
+(function() {
+  const gate      = document.getElementById('nameGate');
+  const lobby     = document.getElementById('lobby');
+  const input     = document.getElementById('nameGateInput');
+  const btn       = document.getElementById('nameGateBtn');
+  const errorEl   = document.getElementById('nameGateError');
+  const lobbyInput = document.getElementById('playerName');
 
+  // Ocultar lobby hasta que pasen el gate
+  lobby.style.display = 'none';
+
+  function confirm() {
+    const name = input.value.trim();
+    if (!name) {
+      errorEl.classList.add('show');
+      input.classList.add('invalid');
+      setTimeout(() => input.classList.remove('invalid'), 400);
+      input.focus();
+      return;
+    }
+    errorEl.classList.remove('show');
+    // Pasar el nombre al campo del lobby
+    lobbyInput.value = name;
+    // Ocultar gate, mostrar lobby
+    gate.style.opacity = '0';
+    gate.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => {
+      gate.style.display = 'none';
+      lobby.style.display = '';
+    }, 300);
+  }
+
+  btn.addEventListener('click', confirm);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') confirm(); });
+  input.focus();
+})();
 // ─── LOBBY: List rooms ─────────────────────────────────────────
 const roomsRef = ref(db, 'rooms');
 onValue(roomsRef, snap => {
@@ -1490,6 +1748,7 @@ async function joinRoom(rid, r) {
 }
 // ─── ENTER GAME ────────────────────────────────────────────────
 function enterGame(rName, mode) {
+  if (typeof unsubLobby === 'function') unsubLobby();
   document.getElementById('lobby').style.display = 'none';
   const gs = document.getElementById('gameScreen');
   gs.style.display = 'flex';
@@ -1539,13 +1798,25 @@ function setupListeners() {
   // Players
   unsubPlayers = onValue(ref(db, `rooms/${roomId}/players`), snap => {
     playersData = snap.val() || {};
-    // Inicializar posición de render si es jugador nuevo
-Object.values(playersData).forEach(p => {
-  if (!playersRenderPos[p.id]) {
-    playersRenderPos[p.id] = { x: p.x, y: p.y };
-  }
-});
-// ── Detectar jugadores que acaban de morir (explosión para todos) ──
+
+    // Inicializar posición de render y velocidad si es jugador nuevo
+    Object.values(playersData).forEach(p => {
+      if (!playersRenderPos[p.id]) {
+        playersRenderPos[p.id] = { x: p.x, y: p.y };
+        playersVelocity[p.id]  = { vx: 0, vy: 0 };
+        playersLastUpdate[p.id] = Date.now();
+        return;
+      }
+      // Calcular velocidad basada en el delta de posición para extrapolación
+      const oldPos = playersRenderPos[p.id];
+      playersVelocity[p.id] = {
+        vx: (p.x - oldPos.x) * 0.6,
+        vy: (p.y - oldPos.y) * 0.6
+      };
+      playersLastUpdate[p.id] = Date.now();
+    });
+
+    // Detectar jugadores que acaban de morir (explosión para todos)
     Object.values(playersData).forEach(p => {
       if (p.dead && !prevDeadStates[p.id]) {
         triggerExplosion(p.x, p.y);
@@ -1560,6 +1831,7 @@ Object.values(playersData).forEach(p => {
       }
       prevDeadStates[p.id] = !!p.dead;
     });
+
     // Waiting overlay
     const total = roomData ? MAX_PER_SIDE[roomData.mode] * 2 : 2;
     const count = Object.keys(playersData).length;
@@ -1567,7 +1839,6 @@ Object.values(playersData).forEach(p => {
       startActualGame();
     }
     if (count === 0) {
-      // Sala vacía: eliminarla
       remove(ref(db, `rooms/${roomId}`)).catch(() => {});
       return;
     }
@@ -1576,51 +1847,53 @@ Object.values(playersData).forEach(p => {
       gameRunning = false;
     }
 
-// Rebuild image cache for new players
-Object.values(playersData).forEach(p => {
-  if (p.skin && (!playerImgCache[p.skin] || playerImgCache[p.skin].naturalWidth === 0)) {
-    const img = new Image();
-    img.onload  = () => { playerImgCache[p.skin] = img; };
-    img.onerror = () => { playerImgCache[p.skin] = skinImg; };
-    img.src = p.skin;
-    playerImgCache[p.skin] = img;
-  }
-});
+    // Rebuild image cache for new players
+    Object.values(playersData).forEach(p => {
+      if (p.skin && (!playerImgCache[p.skin] || playerImgCache[p.skin].naturalWidth === 0)) {
+        const img = new Image();
+        img.onload  = () => { playerImgCache[p.skin] = img; };
+        img.onerror = () => { playerImgCache[p.skin] = skinImg; };
+        img.src = p.skin;
+        playerImgCache[p.skin] = img;
+      }
+    });
   });
 
   // Ball (source of truth)
   unsubBall = onValue(ref(db, `rooms/${roomId}/ball`), snap => {
     const d = snap.val();
     if (!d) return;
-    // Only update local ball physics from DB if nobody local is controlling it
-    // OR if possessedBy changed
+
     const prevPossessed = localBall.possessedBy;
     localBall.possessedBy = d.possessedBy;
+
+    // Si alguien más agarró la pelota, perder autoridad
+    if (d.possessedBy && d.possessedBy !== myId) {
+      iAmBallAuthority = false;
+    }
+
     if (d.possessedBy !== myId) {
-      // Someone else controls it or it's free — accept DB position
       if (!d.possessedBy) {
-        // Free ball: update if not our local simulation
-        if (prevPossessed !== null && prevPossessed !== myId) {
-          localBall.x  = d.x;
-          localBall.y  = d.y;
-          localBall.vx = d.vx || 0;
-          localBall.vy = d.vy || 0;
-          localBall.vz = d.vz || 0;
-          localBall.z  = d.z  || 0;
-        } else if (prevPossessed !== myId) {
-          localBall.x  = d.x;
-          localBall.y  = d.y;
-          localBall.vx = d.vx || 0;
-          localBall.vy = d.vy || 0;
-          localBall.vz = d.vz || 0;
-          localBall.z  = d.z  || 0;
-        }
+        // Pelota libre: ignorar actualizaciones por 200ms tras un disparo/pase mío
+        if (iAmBallAuthority && Date.now() - ballLastShotTime < 200) return;
+
+        // Aceptar posición de Firebase
+        localBall.x  = d.x;
+        localBall.y  = d.y;
+        localBall.vx = d.vx || 0;
+        localBall.vy = d.vy || 0;
+        localBall.vz = d.vz || 0;
+        localBall.z  = d.z  || 0;
       } else {
-        // Possessed by someone else — follow their player position
-        const owner = playersData[d.possessedBy];
-        if (owner) {
-          localBall.x = owner.x;
-          localBall.y = owner.y + 10;
+        // Poseída por otro — seguir su posición de render interpolada
+        const ownerRender = playersRenderPos[d.possessedBy];
+        const ownerData   = playersData[d.possessedBy];
+        if (ownerRender) {
+          localBall.x = ownerRender.x;
+          localBall.y = ownerRender.y + 10;
+        } else if (ownerData) {
+          localBall.x = ownerData.x;
+          localBall.y = ownerData.y + 10;
         } else {
           localBall.x = d.x;
           localBall.y = d.y;
@@ -1628,16 +1901,15 @@ Object.values(playersData).forEach(p => {
         localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
       }
     }
+
     // Auto-agarrar pases dirigidos a mí
     if (d.passTarget === myId && !d.possessedBy) {
       const me = playersData[myId];
       if (me) {
-        const ballPos = { x: d.x, y: d.y };
-        // Auto-grab: actualizar possessedBy a mí
         setTimeout(async () => {
           const snap2 = await get(ref(db, `rooms/${roomId}/ball`));
           const b = snap2.val();
-          if (!b || b.possessedBy) return; // alguien ya lo agarró
+          if (!b || b.possessedBy) return;
           await update(ref(db, `rooms/${roomId}/ball`), {
             possessedBy: myId, passTarget: null,
             x: playersData[myId]?.x || b.x,
@@ -1646,36 +1918,35 @@ Object.values(playersData).forEach(p => {
           localBall.possessedBy = myId;
           localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
           possessionFrames = 0;
-          document.getElementById('possessionTimer').style.display = 'block';
+          iAmBallAuthority = true;
+          document.getElementById('possessionTimer').style.display = 'flex';
           showToast('📥 ¡Pase recibido!');
-        }, 400); // pequeño delay para que la animación de vuelo se vea
+        }, 400);
       }
     }
   });
 
-  // Room data (score, mode)
-    unsubRoom = onValue(ref(db, `rooms/${roomId}`), snap => {
-  roomData = snap.val();
-  // Si alguien presionó jugar de nuevo → recargar para todos
-  if (roomData && roomData.reloadAll) {
-    location.reload();
-    return;
-  }
-  // Si la sala fue eliminada → recargar para todos
-  if (!roomData && gameRunning) {
-    location.reload();
-    return;
-  }
+  // Room data (score, mode, reload)
+  unsubRoom = onValue(ref(db, `rooms/${roomId}`), snap => {
+    roomData = snap.val();
+    if (roomData && roomData.reloadAll) {
+      location.reload();
+      return;
+    }
+    if (!roomData && gameRunning) {
+      location.reload();
+      return;
+    }
     if (!roomData) return;
     document.getElementById('scoreA').textContent = roomData.score?.A ?? 0;
     document.getElementById('scoreB').textContent = roomData.score?.B ?? 0;
-    // Leer maxScore dinámico
     maxScore = roomData.maxScore || 21;
     const label = `/ ${maxScore} pts`;
     document.getElementById('hudMaxScore').textContent  = label;
     document.getElementById('hudMaxScoreB').textContent = label;
   });
-// ── Gun listener ────────────────────────────────────────────
+
+  // Gun listener
   unsubGun = onValue(ref(db, `rooms/${roomId}/gun`), snap => {
     const prev = gunState;
     gunState = snap.val() || null;
@@ -1689,17 +1960,14 @@ Object.values(playersData).forEach(p => {
     }
   });
 
-  // ── Suscripción a balas de red (para ver balas de otros jugadores) ──
+  // Balas de red
   unsubBullets = onValue(ref(db, `rooms/${roomId}/bullets`), snap => {
     const data = snap.val() || {};
-    // Detectar balas nuevas disparadas por OTROS jugadores
     Object.entries(data).forEach(([bid, b]) => {
-      if (b.ownerId === myId) return; // mi propia bala ya la manejo local
+      if (b.ownerId === myId) return;
       if (!networkBullets[bid]) {
-        // Bala nueva: crear entrada local
         playGunShotAudio();
         networkBullets[bid] = {
-          
           x: b.x, y: b.y,
           vx: b.vx, vy: b.vy,
           ownerTeam: b.ownerTeam,
@@ -1708,12 +1976,12 @@ Object.values(playersData).forEach(p => {
         };
       }
     });
-    // Eliminar balas que ya no están en Firebase
     Object.keys(networkBullets).forEach(bid => {
       if (!data[bid]) delete networkBullets[bid];
     });
   });
-onValue(ref(db, `rooms/${roomId}/soundEvent`), snap => {
+
+  onValue(ref(db, `rooms/${roomId}/soundEvent`), snap => {
     const ev = snap.val();
     if (!ev) return;
     if (ev.name === 'ganar')   playWinAudio();
@@ -1722,19 +1990,21 @@ onValue(ref(db, `rooms/${roomId}/soundEvent`), snap => {
     if (ev.name === 'pistola') playGunGrantAudio();
     if (ev.name === 'disparo') playGunShotAudio();
   });
-// ── Mass Explosion Event (escucha a todos los clientes) ──────
-unsubMassExplosion = onValue(ref(db, `rooms/${roomId}/massExplosionEvent`), snap => {
+
+  // Mass Explosion Event
+  unsubMassExplosion = onValue(ref(db, `rooms/${roomId}/massExplosionEvent`), snap => {
     const ev = snap.val();
     if (!ev) return;
-    if (ev.t === lastMassExplosionT) return; // evitar duplicado
+    if (ev.t === lastMassExplosionT) return;
     lastMassExplosionT = ev.t;
     handleMassExplosion(ev.immuneId, ev.immuneName);
   });
-  // ── Listener power-ups ──────────────────────────────────────
-  unsubPowerups = onValue(ref(db,`rooms/${roomId}/powerups`), snap => {
+
+  // Power-ups
+  unsubPowerups = onValue(ref(db, `rooms/${roomId}/powerups`), snap => {
     activePowerups = snap.val() || {};
   });
-} 
+}
 
 function startActualGame() {
   gameRunning = true;
@@ -1810,6 +2080,7 @@ function onKeyUp(e) {
 
 // ─── GRAB / STEAL ─────────────────────────────────────────────
 async function handleGrabSteal() {
+  iAmBallAuthority = true;
   const me = playersData[myId];
   if (!me) return;
 
@@ -1854,7 +2125,7 @@ async function grabBall() {
   possessionFrames = 0;  // ← reiniciar reloj de 4s
 
   // Mostrar el timer de posesión
-  document.getElementById('possessionTimer').style.display = 'block';
+  document.getElementById('possessionTimer').style.display = 'flex';
   onDisconnect(ref(db, `rooms/${roomId}/ball`)).update({ possessedBy: null });
 }
 
@@ -1874,6 +2145,7 @@ function getHoopTarget() {
 }
 
 async function shootBall() {
+  iAmBallAuthority = true;
   if (localBall.possessedBy !== myId) return;
   const me = playersData[myId];
   if (!me) return;
@@ -1890,6 +2162,7 @@ async function shootBall() {
   const vy = (dy / d) * speed;
   const vz = 3 + power * 0.05; // arc height
 localBall.lastShooter = myId;
+ballLastShotTime = Date.now();
   await update(ref(db, `rooms/${roomId}/ball`), {
     possessedBy: null,
     x: me.x, y: me.y,
@@ -2014,6 +2287,8 @@ function tick() {
     const secsLeft = Math.max(0, (POSSESSION_FRAMES - possessionFrames) / 60).toFixed(1);
     const timerEl  = document.getElementById('possessionTimer');
     document.getElementById('possTimerVal').textContent = secsLeft;
+    const possBarFill = document.getElementById('possBarFill');
+    if (possBarFill) possBarFill.style.width = (Math.max(0, (POSSESSION_FRAMES - possessionFrames) / POSSESSION_FRAMES) * 100) + '%';
     timerEl.classList.toggle('urgent', possessionFrames > POSSESSION_FRAMES * 0.65);
     if (possessionFrames >= POSSESSION_FRAMES) {
       possessionFrames = 0;
@@ -2021,6 +2296,7 @@ function tick() {
       timerEl.classList.remove('urgent');
       update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(()=>{});
       localBall.possessedBy = null;
+      iAmBallAuthority = false;
       showToast('⏱ ¡Tiempo de posesión agotado!');
       onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
     }
@@ -2034,7 +2310,6 @@ function tick() {
   const courtLeft = 60, courtRight = W - 60;
   const courtTop  = 80, courtBottom = H - 40;
 
-  // ── Bala local (solo en el shooter) ──────
   // ── Bala local (solo en el shooter) ──────
   if (gunBullet) {
     if (gunBullet.targetId) {
@@ -2059,13 +2334,11 @@ function tick() {
     let bulletHit = false;
     Object.values(playersData).forEach(p => {
       if (bulletHit) return;
-      // Saltarse aliados (la ownerTeam puede cambiar si hay escudo)
       if (p.team === gunBullet.ownerTeam || p.dead) return;
       if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS * 0.5) {
         if (p.shield) {
-          // ── ESCUDO: redirigir bala al tirador original ──
-          gunBullet.ownerTeam = p.team;      // ahora persigue al equipo contrario (el mío)
-          gunBullet.targetId  = myId;        // apunta directamente a mí
+          gunBullet.ownerTeam = p.team;
+          gunBullet.targetId  = myId;
           const rx = playersData[myId].x - gunBullet.x;
           const ry = playersData[myId].y - gunBullet.y;
           const rd = Math.hypot(rx, ry) || 1;
@@ -2074,7 +2347,6 @@ function tick() {
           playShieldDeflectAudio();
           showToast('🛡️ ¡ESCUDO desvió la bala!', 2000);
           triggerPowerupActivation(p.x, p.y, '#00ccff');
-          // NO poner bulletHit = true → la bala sigue viva
         } else {
           bulletHit = true;
           killPlayer(p.id);
@@ -2116,14 +2388,12 @@ function tick() {
       if (nbHit || p.team === nb.ownerTeam || p.dead || p.id !== myId) return;
       if (Math.hypot(p.x-nb.x, p.y-nb.y) < PLAYER_RADIUS*0.5) {
         if (myPowerups['shield'] && myPowerups['shield'].expiresAt > Date.now()) {
-          // Escudo: crear bala nueva que persigue al tirador original
           nbHit = true;
           remove(ref(db,`rooms/${roomId}/bullets/${bid}`)).catch(()=>{});
           delete networkBullets[bid];
           playShieldDeflectAudio();
           showToast('🛡️ ¡ESCUDO desvió la bala!',2000);
           triggerPowerupActivation(p.x,p.y,'#00ccff');
-          // Bala de retorno local
           const shooter = playersData[nb.ownerId];
           if (shooter && !shooter.dead) {
             const rdx=shooter.x-p.x, rdy=shooter.y-p.y, rd=Math.hypot(rdx,rdy)||1;
@@ -2163,7 +2433,7 @@ function tick() {
       playersData[myId].y = newY;
       const dd  = Math.hypot(newX - lastPushedX, newY - lastPushedY);
       const now = Date.now();
-      if (dd > 2 && now - lastPushTime > 30) {
+      if (dd > 1.5 && now - lastPushTime > 50) {
         update(ref(db, `rooms/${roomId}/players/${myId}`), { x: newX, y: newY, sprinting: sprintActive }).catch(()=>{});
         lastPushedX  = newX;
         lastPushedY  = newY;
@@ -2171,7 +2441,8 @@ function tick() {
       }
     }
   }
-// ── Empuje gigante ───────────────────────────────────────────
+
+  // ── Empuje gigante ───────────────────────────────────────────
   if (myPowerups['giant'] && myPowerups['giant'].expiresAt > Date.now()) {
     const me2 = playersData[myId];
     const nowP = Date.now();
@@ -2198,6 +2469,7 @@ function tick() {
       });
     }
   }
+
   // ── Power bar ───────────────────────────
   if (spacePressing && localBall.possessedBy === myId) {
     powerLevel = Math.min(MAX_POWER, powerLevel + POWER_RATE);
@@ -2234,35 +2506,43 @@ function tick() {
         x: localBall.x, y: localBall.y,
         vx: localBall.vx, vy: localBall.vy,
         vz: localBall.vz, z: localBall.z,
-        possessedBy: null
+        possessedBy: null,
+        updatedAt: Date.now()
       }).catch(()=>{});
     }
   } else if (localBall.possessedBy === myId) {
     localBall.x = playersData[myId].x;
     localBall.y = playersData[myId].y + 10;
   } else {
-    const owner = playersData[localBall.possessedBy];
-    if (owner) {
-      localBall.x = owner.x;
-      localBall.y = owner.y + 10;
+    const ownerRender = playersRenderPos[localBall.possessedBy];
+    const ownerData   = playersData[localBall.possessedBy];
+    if (ownerRender) {
+      localBall.x = ownerRender.x;
+      localBall.y = ownerRender.y + 10;
+    } else if (ownerData) {
+      localBall.x = ownerData.x;
+      localBall.y = ownerData.y + 10;
     }
   }
-  // ── Interpolación de posiciones rivales ──
-Object.values(playersData).forEach(p => {
-  if (p.id === myId) {
-    // Yo me muevo instantáneo
-    playersRenderPos[myId] = { x: p.x, y: p.y };
-    return;
-  }
-  if (!playersRenderPos[p.id]) {
-    playersRenderPos[p.id] = { x: p.x, y: p.y };
-    return;
-  }
-  // Deslizar 25% hacia la posición real cada frame
-  playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * 0.40;
-  playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * 0.40;
-});
-// ── Traición ─────────────────────────────────────────────────
+
+  // ── Interpolación con extrapolación predictiva ──
+  Object.values(playersData).forEach(p => {
+    if (p.id === myId) {
+      playersRenderPos[myId] = { x: p.x, y: p.y };
+      return;
+    }
+    if (!playersRenderPos[p.id]) {
+      playersRenderPos[p.id] = { x: p.x, y: p.y };
+      return;
+    }
+    const vel    = playersVelocity[p.id] || { vx: 0, vy: 0 };
+    const lagMs  = Date.now() - (playersLastUpdate[p.id] || Date.now());
+    const factor = lagMs < 100 ? 0.25 : 0.15;
+    playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * factor + vel.vx * 0.1;
+    playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * factor + vel.vy * 0.1;
+  });
+
+  // ── Traición ─────────────────────────────────────────────────
   const nowTr = Date.now();
   if (gameRunning && nextTraicionTime === 0)
     nextTraicionTime = nowTr + 45000 + Math.random()*15000;
@@ -2287,7 +2567,7 @@ Object.values(playersData).forEach(p => {
     playTraicionEndAudio();
     nextTraicionTime = Date.now()+45000+Math.random()*15000;
   }
-  checkPowerupPickup(); 
+  checkPowerupPickup();
 }
 
 
