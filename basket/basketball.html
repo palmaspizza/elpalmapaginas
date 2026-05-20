@@ -2498,7 +2498,7 @@ function tick() {
       playersData[myId].y = newY;
       const dd  = Math.hypot(newX - lastPushedX, newY - lastPushedY);
       const now = Date.now();
-      if (dd > 1.5 && now - lastPushTime > 50) {
+      if (dd > 0.5 && now - lastPushTime > 17) {
         update(ref(db, `rooms/${roomId}/players/${myId}`), { x: newX, y: newY, sprinting: sprintActive }).catch(()=>{});
         lastPushedX  = newX;
         lastPushedY  = newY;
@@ -2602,9 +2602,9 @@ function tick() {
     }
     const vel    = playersVelocity[p.id] || { vx: 0, vy: 0 };
     const lagMs  = Date.now() - (playersLastUpdate[p.id] || Date.now());
-    const factor = lagMs < 100 ? 0.25 : 0.15;
-    playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * factor + vel.vx * 0.1;
-    playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * factor + vel.vy * 0.1;
+    const factor = lagMs < 120 ? 0.18 : 0.10;
+    playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * factor + vel.vx * 0.08;
+    playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * factor + vel.vy * 0.08;
   });
 
   // ── Traición ─────────────────────────────────────────────────
@@ -2781,8 +2781,6 @@ if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
 // ─── GUN MECHANICS ────────────────────────────────────────────
 
 async function assignGunToTeam(team) {
-  // Solo el cliente que detectó el gol asigna la pistola
-  // (checkHoop solo corre en el cliente que tiene el balón libre → el que empujó el update)
   const teamPlayers = Object.values(playersData).filter(p => p.team === team && !p.dead);
   if (!teamPlayers.length) return;
   const lucky = teamPlayers[Math.floor(Math.random() * teamPlayers.length)];
@@ -2801,6 +2799,23 @@ async function assignGunToTeam(team) {
   } else {
     showToast(`🔫 ${lucky.name} tiene la pistola!`, 2500);
   }
+
+  // Spawnear 2 escudos inmediatamente cerca del centro para que alguien los agarre
+  const W = LOGIC_W, H = LOGIC_H;
+  const shieldPositions = [
+    { x: W / 2 - 120, y: H / 2 + (Math.random() > 0.5 ? 80 : -80) },
+    { x: W / 2 + 120, y: H / 2 + (Math.random() > 0.5 ? 80 : -80) },
+  ];
+  shieldPositions.forEach(pos => {
+    const id = uid();
+    set(ref(db, `rooms/${roomId}/powerups/${id}`), {
+      id, type: 'shield',
+      x: pos.x, y: pos.y,
+      spawnedAt: Date.now()
+    }).catch(() => {});
+    // Duran 4s — justo mientras existe la pistola
+    setTimeout(() => remove(ref(db, `rooms/${roomId}/powerups/${id}`)).catch(() => {}), 4000);
+  });
 }
 
 function startGunCountdown() {
@@ -3098,26 +3113,26 @@ function drawParticles() {
 }
 
 function drawGunOverlay(W, H) {
-  // Mira (crosshair) en la posición del aim, visible para todos
   if (gunState && gunState.active) {
-    const cx = gunState.aimX || W / 2;
-    const cy = gunState.aimY || H / 2;
-    const r  = PLAYER_RADIUS * 1.25;
+    const cx  = gunState.aimX || W / 2;
+    const cy  = gunState.aimY || H / 2;
+    const r   = PLAYER_RADIUS * 3;   // 2x más grande
+    const gap = 14;                     // hueco central más amplio
     ctx.save();
     ctx.strokeStyle = '#00cc44';
     ctx.fillStyle   = '#00cc44';
     ctx.shadowColor = '#00ff66';
-    ctx.shadowBlur  = 12;
-    ctx.lineWidth   = 2.5;
-    // Brazos de la cruz (con hueco central)
-    ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx - 7, cy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + 7, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy - 7); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx, cy + 7); ctx.lineTo(cx, cy + r); ctx.stroke();
+    ctx.shadowBlur  = 18;
+    ctx.lineWidth   = 3;
+    // Brazos de la cruz
+    ctx.beginPath(); ctx.moveTo(cx - r, cy);   ctx.lineTo(cx - gap, cy);   ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + gap, cy);  ctx.lineTo(cx + r, cy);    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - r);    ctx.lineTo(cx, cy - gap);  ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy + gap);  ctx.lineTo(cx, cy + r);    ctx.stroke();
     // Punto central
-    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
-    // Círculo exterior (scope)
-    ctx.globalAlpha = 0.35;
+    ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+    // Círculo exterior
+    ctx.globalAlpha = 0.3;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
