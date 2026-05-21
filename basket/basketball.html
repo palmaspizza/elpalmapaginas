@@ -1037,6 +1037,74 @@
     box-shadow: 0 0 10px rgba(255,215,0,0.5);
     transform: scale(1.15);
   }
+  /* ─── PERROS CTM EVENT ──────────────────────────────────────── */
+#perros-banner {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.4);
+  background: rgba(0, 0, 0, 0.93);
+  border: 3px solid #ff2200;
+  border-radius: 18px;
+  padding: 26px 48px 22px;
+  text-align: center;
+  z-index: 300;
+  pointer-events: none;
+  display: none;
+  opacity: 0;
+  box-shadow:
+    0 0 50px rgba(255, 34, 0, 0.75),
+    0 0 120px rgba(255, 34, 0, 0.3),
+    inset 0 0 40px rgba(255,60,0,0.12);
+  transition: opacity 0.25s ease, transform 0.35s cubic-bezier(.36,.07,.19,.97);
+}
+#perros-banner.show {
+  display: block;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  animation: perrosBannerIn 0.42s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes perrosBannerIn {
+  0%   { transform: translate(-50%,-50%) scale(0.2) rotate(-8deg); opacity: 0; }
+  60%  { transform: translate(-50%,-50%) scale(1.08) rotate(2deg); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(1)   rotate(0deg); opacity: 1; }
+}
+.perros-banner-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 62px;
+  letter-spacing: 5px;
+  color: #ff2200;
+  text-shadow:
+    0 0 20px #ff4400,
+    0 0 55px #ff0000,
+    2px 2px 0 #7a0000;
+  line-height: 1;
+  animation: perrosTitlePulse 0.3s ease infinite alternate;
+}
+@keyframes perrosTitlePulse {
+  from { text-shadow: 0 0 20px #ff4400, 0 0 55px #ff0000; }
+  to   { text-shadow: 0 0 40px #ff6600, 0 0 90px #ff2200, 0 0 10px #fff; }
+}
+.perros-banner-sub {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 34px;
+  letter-spacing: 4px;
+  color: #ffd700;
+  text-shadow: 0 0 18px #ff8800, 1px 1px 0 #7a4400;
+  margin-top: 10px;
+}
+/* Flash de mordida */
+#perro-mordida-flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 0, 0, 0.72);
+  z-index: 250;
+  pointer-events: none;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+/* Referencia CSS para mojones (el dibujo es en canvas) */
+.mojon { display: none; }
 </style>
 </head>
 <body>
@@ -1162,6 +1230,13 @@
         <div class="hud-maxscore" style="text-align:right;" id="hudMaxScoreB">/ 50 pts</div>
       </div>
     </div>
+    <!-- ═══════════ PERROS CTM BANNER ═══════════ -->
+<div id="perros-banner">
+  <div class="perros-banner-title">🚨 ¡SALGAN PERROS CTM! 🚨</div>
+  <div class="perros-banner-sub">¡SALGAN SALGAAAN! 🐕🐕🐕</div>
+</div>
+<!-- Flash rojo de mordida -->
+<div id="perro-mordida-flash"></div>
   </div>
 
   <!-- Possession timer -->
@@ -1207,8 +1282,9 @@
 <!-- Dead overlay -->
 
   <div id="dead-overlay">
-    <div class="dead-title">ESTÁS MUERTO</div>
+    <div class="dead-title">TE MORISTE JAJAJA</div>
     <div class="dead-sub" id="dead-countdown">Reapareciendo en 3...</div>
+    <div id="dead-reason" style="font-family:'Space Mono',monospace;font-size:15px;letter-spacing:2px;color:#ffaa44;text-align:center;max-width:340px;margin-top:4px;"></div>
   </div>
   <!-- Controls hint -->
   <div id="controlsHint">
@@ -1293,6 +1369,24 @@ let myTeam      = 'A';
 let gameRunning = false;
 let animId      = null;
 let iAmBallAuthority = false;
+let lastDeathReason = '';
+let lastRagePushTime = 0;
+// ─── PERROS CTM — ESTADO DEL EVENTO ────────────────────────────
+let perrosEventActive    = false;
+let perros               = [];       // [{id,x,y,vx,vy,imgIndex,sprinting,sprintTimer,targetId,lastBiteTime}]
+let mojones              = [];       // [{x,y,spawnedAt}]
+let perrosSpawnTime      = 0;
+let perrosComilon        = null;     // playerId del "comilón"
+let perrosTriggerReason  = '';       // 'comilon' | 'remontada'
+let perrosBannerVisible  = false;
+let perrosBannerTimeout  = null;
+let perrosCleanupTimeout = null;
+let unsubPerrosEvent     = null;
+let perroMordidaFrames   = {};       // {playerId: framesRestantes}  (ralentización)
+let perroMordidaCount    = {};       // {playerId: nMordidas}        (en el evento)
+let perroRageModeActive  = false;
+let perroRageModeUntil   = 0;
+let perroMojonPisadoUntil = {};      // {playerId: timestamp}        (pérdida control)
 // Skin
 let skinBase64 = null;
 let skinImg    = new Image();
@@ -1315,8 +1409,11 @@ let lastRunAudio     = -1;
 let stealCooldownFrames = 0;       // 60fps × 3s = 180
 let lastWinAudio     = -1;
 
-// Possession timer (4 segundos = 240 frames a 60fps)
-const POSSESSION_FRAMES = 240;
+// Possession timer (3 segundos para perros, aviso a 2.3s)
+const POSSESSION_FRAMES         = 102;  // 1.7s
+const POSSESSION_WARNING_FRAMES = 60;   // 1.0s → UI urgente
+const POSSESSION_MAX_FRAMES     = 102;  // 1.7s → activa perros
+const POSSESSION_LAST_WARNING   = 84;   // 1.4s → último aviso // 2.3s → "último aviso WN"
 let possessionFrames = 0;          // frames que lleva el jugador con el balón
 
 // Max score (se leerá del room)
@@ -1353,6 +1450,14 @@ let nextTraicionTime     = 0;
 const gunImg  = new Image(); gunImg.src  = 'pistola.png';
 const deadImg = new Image(); deadImg.src = 'muerto.png';
 const bulletImg = new Image(); bulletImg.src = 'bala.png';
+// Imágenes de perros (perro1.png … perro5.png)
+const perroImgs = [];
+for (let _pi = 1; _pi <= 5; _pi++) {
+  const _pimg = new Image();
+  _pimg.src = `perro${_pi}.png`;
+  perroImgs.push(_pimg);
+}
+const PERRO_RADIUS = Math.round(PLAYER_RADIUS * 1.1); // 10% más grande que jugador
 const SKINS = [
   { file: 'tiorenechibi.jpg',   name: 'Tiorene Chibi'    },
   { file: 'jbthevoice.jpg',     name: 'JB The Voice'     },
@@ -1391,6 +1496,75 @@ let prevDeadStates   = {};
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
 
+// ─── OFFSCREEN COURT (pre-render para evitar lag) ─────────────
+let courtOffscreen    = null;
+let courtOffscreenW   = 0;
+let courtOffscreenH   = 0;
+function buildCourtOffscreen(W, H) {
+  if (courtOffscreenW === W && courtOffscreenH === H && courtOffscreen) return;
+  courtOffscreenW = W; courtOffscreenH = H;
+  courtOffscreen  = document.createElement('canvas');
+  courtOffscreen.width  = W;
+  courtOffscreen.height = H;
+  const cx = courtOffscreen.getContext('2d');
+  _drawCourtToCtx(cx, W, H);
+}
+function _drawCourtToCtx(cx, W, H) {
+  const woodGrad = cx.createLinearGradient(0, 0, 0, H);
+  woodGrad.addColorStop(0,   '#c8813a');
+  woodGrad.addColorStop(0.5, '#d4924a');
+  woodGrad.addColorStop(1,   '#b87030');
+  cx.fillStyle = woodGrad;
+  cx.fillRect(0, 0, W, H);
+  // Wood planks
+  cx.save();
+  cx.globalAlpha = 0.12;
+  for (let i = 0; i < H; i += 12) {
+    const shade = i % 24 < 12;
+    cx.fillStyle = shade ? '#fff' : '#000';
+    cx.fillRect(60, i, W - 120, 6);
+  }
+  // Vertical grain lines
+  cx.globalAlpha = 0.06;
+  for (let x = 60; x < W - 60; x += 4) {
+    cx.strokeStyle = '#000';
+    cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x + 8, H); cx.stroke();
+  }
+  cx.restore();
+  // Court boundary
+  cx.save();
+  cx.strokeStyle = '#fff';
+  cx.lineWidth = 3;
+  cx.shadowColor = 'rgba(255,255,255,0.5)';
+  cx.shadowBlur  = 6;
+  cx.strokeRect(70, 80, W - 140, H - 120);
+  cx.beginPath(); cx.arc(W/2, H/2, 70, 0, Math.PI * 2); cx.stroke();
+  cx.fillStyle = '#fff';
+  cx.beginPath(); cx.arc(W/2, H/2, 6, 0, Math.PI * 2); cx.fill();
+  cx.beginPath(); cx.moveTo(W/2, 80); cx.lineTo(W/2, H - 40); cx.stroke();
+  const pW = 180, pH = 200;
+  cx.shadowBlur = 0;
+  cx.fillStyle = 'rgba(200,60,60,0.15)';
+  cx.fillRect(70, H/2 - pH/2, pW, pH);
+  cx.strokeRect(70, H/2 - pH/2, pW, pH);
+  cx.fillStyle = 'rgba(60,100,200,0.15)';
+  cx.fillRect(W - 70 - pW, H/2 - pH/2, pW, pH);
+  cx.strokeRect(W - 70 - pW, H/2 - pH/2, pW, pH);
+  cx.beginPath(); cx.arc(70 + pW, H/2, pH/2, -Math.PI/2, Math.PI/2); cx.stroke();
+  cx.beginPath(); cx.arc(W - 70 - pW, H/2, pH/2, Math.PI/2, Math.PI * 1.5); cx.stroke();
+  cx.lineWidth = 2.5;
+  cx.beginPath(); cx.arc(90, H/2, 200, -Math.PI/2 + 0.3, Math.PI/2 - 0.3); cx.stroke();
+  cx.beginPath(); cx.arc(W - 90, H/2, 200, Math.PI/2 + 0.3, Math.PI * 1.5 - 0.3); cx.stroke();
+  // 3pt corner lines
+  cx.lineWidth = 2;
+  cx.beginPath(); cx.moveTo(70, H/2 - 200); cx.lineTo(70 + 120, H/2 - 200); cx.stroke();
+  cx.beginPath(); cx.moveTo(70, H/2 + 200); cx.lineTo(70 + 120, H/2 + 200); cx.stroke();
+  cx.beginPath(); cx.moveTo(W - 70, H/2 - 200); cx.lineTo(W - 70 - 120, H/2 - 200); cx.stroke();
+  cx.beginPath(); cx.moveTo(W - 70, H/2 + 200); cx.lineTo(W - 70 - 120, H/2 + 200); cx.stroke();
+  cx.restore();
+}
+
 // Player image cache
 const playerImgCache = {};
 
@@ -1407,6 +1581,10 @@ function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 
 async function passBall() {
   if (localBall.possessedBy !== myId) return;
+  if (perrosEventActive) {
+    showToast('🐕 ¡NO PUEDES SOLTAR LA PELOTA! Los perros te la cuidan 😈', 2000);
+    return;
+  }
   const me = playersData[myId];
   if (!me || me.dead) return;
 
@@ -1856,7 +2034,7 @@ function resizeCanvas() {
   canvas.style.top      = ((window.innerHeight - LOGIC_H * scale) / 2) + 'px';
   canvas._scale = scale;
 }
-window.addEventListener('resize', () => { resizeCanvas(); });
+window.addEventListener('resize', () => { resizeCanvas(); courtOffscreen = null; });
 
 // ─── FIREBASE LISTENERS ───────────────────────────────────────
 function setupListeners() {
@@ -1888,7 +2066,7 @@ function setupListeners() {
         if (p.id === myId && !deadOverlayShown) {
           deadOverlayShown = true;
           myDeadUntil = p.respawnAt || (Date.now() + 3000);
-          showDeadOverlay(p.respawnAt || (Date.now() + 3000));
+          showDeadOverlay(p.respawnAt || (Date.now() + 3000), lastDeathReason);
         }
       }
       if (!p.dead && prevDeadStates[p.id]) {
@@ -2068,6 +2246,49 @@ function setupListeners() {
   // Power-ups
   unsubPowerups = onValue(ref(db, `rooms/${roomId}/powerups`), snap => {
     activePowerups = snap.val() || {};
+  });
+  // ── Listener de Perros CTM ───────────────────────────────────
+  unsubPerrosEvent = onValue(ref(db, `rooms/${roomId}/perrosEvent`), snap => {
+    const ev = snap.val();
+    if (!ev) return;
+
+    if (ev.active && !perrosEventActive) {
+      // ── ACTIVAR EVENTO ──────────────────────────────────────
+      perrosEventActive = true;
+      perrosSpawnTime   = ev.startTime || Date.now();
+
+      // Audio — no bloquea otros sonidos (ver Sección 11)
+      const audioPerros = new Audio('salganperrosctm.mp3');
+      audioPerros.volume = 0.85;
+      audioPerros.play().catch(() => {});
+
+      // Banner visible 3 segundos
+      const banner = document.getElementById('perros-banner');
+      if (banner) {
+        banner.classList.add('show');
+        perrosBannerVisible = true;
+        perrosBannerTimeout = setTimeout(() => {
+          banner.classList.remove('show');
+          perrosBannerVisible = false;
+        }, 3000);
+      }
+
+      // Generar los 5 perros
+      spawnearPerros(ev.triggeredBy || 'remontada', ev.comilon || null);
+
+      // Limpiar a los 9 segundos
+      perrosCleanupTimeout = setTimeout(() => {
+        limpiarPerros();
+        // Solo el host escribe active: false en Firebase
+        if (roomData && roomData.host === myId) {
+          update(ref(db, `rooms/${roomId}/perrosEvent`), { active: false }).catch(() => {});
+        }
+      }, 9000);
+
+    } else if (ev.active === false && perrosEventActive) {
+      // ── DESACTIVAR EVENTO (señal de otro cliente) ───────────
+      limpiarPerros();
+    }
   });
 }
 
@@ -2337,32 +2558,57 @@ function tick() {
   } else if (sprintCooldown > 0) {
     sprintCooldown--;
   }
-  // Bloquear sprint si el rival tiene la pistola activa
-  if (gunState && gunState.active && gunState.ownerId !== myId) {
-    currentSpeed = PLAYER_SPEED;
-  }
+
   const sprintBarPct = sprintActive
     ? sprintTimer / 180
     : (sprintCooldown > 0 ? 1 - sprintCooldown / 240 : 1);
   document.getElementById('sprintBarFill').style.width = (sprintBarPct * 100) + '%';
-
-  // ── Possession timer (4 segundos) ───────
+  // ── Velocidad modificada por perros ─────────────────────────
+  if (perrosEventActive) {
+    if (perroRageModeActive) {
+      currentSpeed = PLAYER_SPEED * 2.5;         // Modo Rabia: velocidad ×2
+    } else if (perroMordidaFrames[myId] > 0) {
+      currentSpeed *= 0.70;        // Mordida: -30% velocidad
+    }
+  }
+  // Bloquear sprint si el rival tiene la pistola activa
+  if (gunState && gunState.active && gunState.ownerId !== myId) {
+    currentSpeed = PLAYER_SPEED;
+  }
+  // ── Possession timer (5 seg: aviso 3s, perros 5s) ───────────
   if (localBall.possessedBy === myId) {
     possessionFrames++;
-    const secsLeft = Math.max(0, (POSSESSION_FRAMES - possessionFrames) / 60).toFixed(1);
-    const timerEl  = document.getElementById('possessionTimer');
+    const totalFrames = POSSESSION_MAX_FRAMES;  // 300 frames = 5 seg
+    const secsLeft    = Math.max(0, (totalFrames - possessionFrames) / 60).toFixed(1);
+    const timerEl     = document.getElementById('possessionTimer');
     document.getElementById('possTimerVal').textContent = secsLeft;
     const possBarFill = document.getElementById('possBarFill');
-    if (possBarFill) possBarFill.style.width = (Math.max(0, (POSSESSION_FRAMES - possessionFrames) / POSSESSION_FRAMES) * 100) + '%';
-    timerEl.classList.toggle('urgent', possessionFrames > POSSESSION_FRAMES * 0.65);
-    if (possessionFrames >= POSSESSION_FRAMES) {
+    if (possBarFill) {
+      possBarFill.style.width =
+        (Math.max(0, (totalFrames - possessionFrames) / totalFrames) * 100) + '%';
+    }
+    timerEl.classList.toggle('urgent', possessionFrames >= POSSESSION_WARNING_FRAMES);
+
+    // Advertencia a 1.0 segundo (60 frames)
+    if (possessionFrames === 60 && !perrosEventActive) {
+      showToast('⚠️ ¡SUELTA LA WEÁ O VIENEN LOS PERROS!', 1400);
+    }
+    // Último aviso a 1.4 segundos (84 frames)
+    if (possessionFrames === POSSESSION_LAST_WARNING && !perrosEventActive) {
+      showToast('🐕🚨 ¡ÚLTIMO AVISO WN! ¡SUELTAAAAA!', 700);
+    }
+
+    // Activar perros a los 5 segundos
+    if (possessionFrames >= totalFrames) {
       possessionFrames = 0;
       timerEl.style.display = 'none';
       timerEl.classList.remove('urgent');
-      update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(()=>{});
+      if (!perrosEventActive) {
+        iniciarEventoPerros('comilon');   // ← escribe en Firebase
+      }
+      update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
       localBall.possessedBy = null;
-      iAmBallAuthority = false;
-      showToast('⏱ ¡Tiempo de posesión agotado!');
+      iAmBallAuthority      = false;
       onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
     }
   }
@@ -2400,7 +2646,7 @@ function tick() {
     Object.values(playersData).forEach(p => {
       if (bulletHit) return;
       if (p.team === gunBullet.ownerTeam || p.dead) return;
-      if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS * 0.5) {
+      if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS * 3) {
         if (p.shield) {
           gunBullet.ownerTeam = p.team;
           gunBullet.targetId  = myId;
@@ -2451,7 +2697,7 @@ function tick() {
     let nbHit = false;
     Object.values(playersData).forEach(p => {
       if (nbHit || p.team === nb.ownerTeam || p.dead || p.id !== myId) return;
-      if (Math.hypot(p.x-nb.x, p.y-nb.y) < PLAYER_RADIUS*0.5) {
+      if (Math.hypot(p.x-nb.x, p.y-nb.y) < PLAYER_RADIUS*3) {
         if (myPowerups['shield'] && myPowerups['shield'].expiresAt > Date.now()) {
           nbHit = true;
           remove(ref(db,`rooms/${roomId}/bullets/${bid}`)).catch(()=>{});
@@ -2470,8 +2716,8 @@ function tick() {
             gunBullet={...retData,bulletId:retBulletId};
           }
         } else {
-          nbHit = true;
-          killPlayer(p.id);
+        nbHit = true;
+          killPlayer(p.id, '🔫 TE PUSIERON SENDO TUNASO XD');
           remove(ref(db,`rooms/${roomId}/bullets/${bid}`)).catch(()=>{});
         }
       }
@@ -2483,7 +2729,11 @@ function tick() {
   });
 
   // ── Movimiento del jugador ───────────────
-  if (!amIDead) {
+// Pérdida de control por mojón (1.5 s)
+  const lostControl = perrosEventActive
+    && (perroMojonPisadoUntil[myId] || 0) > Date.now();
+
+  if (!amIDead && !lostControl) {
     let dx = 0, dy = 0;
     if (keys.a) dx -= currentSpeed;
     if (keys.d) dx += currentSpeed;
@@ -2534,7 +2784,25 @@ function tick() {
       });
     }
   }
-
+// ── Empuje Modo Rabia (cooldown 300ms para no saturar Firebase) ──
+  if (perroRageModeActive) {
+    const nowR = Date.now();
+    const meR  = playersData[myId];
+    if (meR && !meR.dead && nowR - lastRagePushTime > 300) {
+      Object.values(playersData).forEach(p => {
+        if (p.id === myId || p.dead) return;
+        if (Math.hypot(meR.x - p.x, meR.y - p.y) < PLAYER_RADIUS * 2.4) {
+          lastRagePushTime = nowR;
+          const rdx = p.x - meR.x, rdy = p.y - meR.y;
+          const rd  = Math.hypot(rdx, rdy) || 1;
+          const nx  = clamp(p.x + (rdx/rd)*14, 60+PLAYER_RADIUS, LOGIC_W-60-PLAYER_RADIUS);
+          const ny  = clamp(p.y + (rdy/rd)*14, 80+PLAYER_RADIUS, LOGIC_H-40-PLAYER_RADIUS);
+          update(ref(db, `rooms/${roomId}/players/${p.id}`), { x:nx, y:ny }).catch(()=>{});
+          if (playersData[p.id]) { playersData[p.id].x = nx; playersData[p.id].y = ny; }
+        }
+      });
+    }
+  }
   // ── Power bar ───────────────────────────
   if (spacePressing && localBall.possessedBy === myId) {
     powerLevel = Math.min(MAX_POWER, powerLevel + POWER_RATE);
@@ -2633,6 +2901,8 @@ function tick() {
     nextTraicionTime = Date.now()+45000+Math.random()*15000;
   }
   checkPowerupPickup();
+  // ── Evento Perros CTM ─────────────────────────────────────────
+  if (perrosEventActive) actualizarPerros();
 }
 
 
@@ -2646,7 +2916,7 @@ function drawPowerups() {
     const pulse   = 0.7 + Math.sin(now*0.006)*0.3;
     const timePct = Math.max(0, 1 - (now-spawnedAt)/5000);
     const color   = type==='giant' ? '#ffd700' : '#00ccff';
-    const letter  = type==='giant' ? 'G' : 'E';
+    const letter  = type==='giant' ? 'G' : '🛡️';
 
     ctx.save();
 
@@ -2668,10 +2938,14 @@ function drawPowerups() {
     ctx.globalAlpha  = 1;
     ctx.shadowBlur   = 10;
     ctx.fillStyle    = '#fff';
-    ctx.font         = 'bold 15px Bebas Neue, sans-serif';
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(letter, x, y);
+    if (type === 'shield') {
+  ctx.font = '20px sans-serif';
+} else {
+  ctx.font = 'bold 15px Bebas Neue, sans-serif';
+}
+ctx.textAlign    = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText(letter, x, y);
 
     // Arco de tiempo restante
     ctx.strokeStyle  = color;
@@ -2734,15 +3008,27 @@ if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
         t: Date.now()
       }).catch(() => {});
     }
-    update(ref(db, `rooms/${roomId}/ball`), {
-      possessedBy: null,
-      x: W/2, y: H/2,
-      vx: 0, vy: 0, vz: 0, z: 0
-    });
+    // ── Remontada desesperada: a 1 canasta de ganar ─────────────
+    // (1 canasta = 2 pts → condición: newScore >= maxScore - 2)
+    if (!perrosEventActive) {
+      const closeA = (newA >= maxScore - 2) && (newA < maxScore);
+      const closeB = (newB >= maxScore - 2) && (newB < maxScore);
+      if (closeA || closeB) {
+        iniciarEventoPerros('remontada');
+      }
+    }
+    // Reset pelota al centro — inmediato, antes de cualquier otra cosa
     localBall.x = W/2; localBall.y = H/2;
     localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
     localBall.possessedBy = null;
+    localBall.lastShooter = null;  // ← evita que checkHoop vuelva a contar
     possessionFrames = 0;
+    update(ref(db, `rooms/${roomId}/ball`), {
+      possessedBy: null,
+      x: W/2, y: H/2,
+      vx: 0, vy: 0, vz: 0, z: 0,
+      lastShooter: null
+    });
     document.getElementById('possessionTimer').style.display = 'none';
 
     const hx = scoringTeam === 'A' ? W - 80 : 80;
@@ -2801,19 +3087,41 @@ async function assignGunToTeam(team) {
   }
 
   // Spawnear 2 escudos inmediatamente cerca del centro para que alguien los agarre
+  // Primero borrar cualquier escudo previo para garantizar máximo 2
+  const existingPuSnap = await get(ref(db, `rooms/${roomId}/powerups`)).catch(() => null);
+  if (existingPuSnap && existingPuSnap.exists()) {
+    const existing = existingPuSnap.val();
+    Object.entries(existing).forEach(([eid, pu]) => {
+      if (pu.type === 'shield') {
+        remove(ref(db, `rooms/${roomId}/powerups/${eid}`)).catch(() => {});
+      }
+    });
+  }
+
+  // Spawnear exactamente 2 escudos a 40% de la cancha de distancia del portador
   const W = LOGIC_W, H = LOGIC_H;
+  const courtW = W - 120;  // ancho útil de la cancha (60px márgenes)
+  const shieldDist = courtW * 0.40;  // 40% del ancho de la cancha
+  const ownerAngle1 = Math.random() * Math.PI * 2;
+  const ownerAngle2 = ownerAngle1 + Math.PI + (Math.random() - 0.5) * 0.8;
   const shieldPositions = [
-    { x: W / 2 - 120, y: H / 2 + (Math.random() > 0.5 ? 80 : -80) },
-    { x: W / 2 + 120, y: H / 2 + (Math.random() > 0.5 ? 80 : -80) },
+    {
+      x: clamp(lucky.x + Math.cos(ownerAngle1) * shieldDist, 80, W - 80),
+      y: clamp(lucky.y + Math.sin(ownerAngle1) * shieldDist, 100, H - 60)
+    },
+    {
+      x: clamp(lucky.x + Math.cos(ownerAngle2) * shieldDist, 80, W - 80),
+      y: clamp(lucky.y + Math.sin(ownerAngle2) * shieldDist, 100, H - 60)
+    },
   ];
   shieldPositions.forEach(pos => {
     const id = uid();
     set(ref(db, `rooms/${roomId}/powerups/${id}`), {
       id, type: 'shield',
       x: pos.x, y: pos.y,
+      emoji: '🛡️',           // ← para el render
       spawnedAt: Date.now()
     }).catch(() => {});
-    // Duran 4s — justo mientras existe la pistola
     setTimeout(() => remove(ref(db, `rooms/${roomId}/powerups/${id}`)).catch(() => {}), 4000);
   });
 }
@@ -2826,11 +3134,12 @@ function startGunCountdown() {
     if (!roomId) { clearInterval(gunCountdownInterval); return; }
     if (secsLeft <= 0) {
       clearInterval(gunCountdownInterval);
-      // Explotar (sin muerte)
       const me = playersData[myId];
       if (me) triggerExplosion(me.x, me.y);
       remove(ref(db, `rooms/${roomId}/gun`)).catch(() => {});
-      showToast('💥 ¡La pistola explotó!', 2000);
+      showToast('💥 ¡La pistola te explotó! Te moriste.', 2500);
+      killPlayer(myId, '💣 TE DEMORASTE MUCHO AWEONAO — la pistola te explotó');   // ← LÍNEA NUEVA: el portador muere
+      emitSoundEvent('muerte');
     } else {
       update(ref(db, `rooms/${roomId}/gun`), { timeLeft: secsLeft }).catch(() => {});
     }
@@ -2857,7 +3166,7 @@ async function fireGun() {
 let targetId = null;
 Object.values(playersData).forEach(p => {
   if (p.team === myTeam || p.dead) return;
-  if (Math.hypot(p.x - mouseX, p.y - mouseY) < PLAYER_RADIUS) {
+  if (Math.hypot(p.x - mouseX, p.y - mouseY) < PLAYER_RADIUS * 3) {
     targetId = p.id;
   }
 });
@@ -2894,8 +3203,18 @@ Object.values(playersData).forEach(p => {
   playGunShotAudio();
     spawnPowerup();
 }
-
-async function killPlayer(pid) {
+function showDeathReason(reason) {
+  const overlay = document.getElementById('dead-overlay');
+  let reasonEl = document.getElementById('dead-reason');
+  if (!reasonEl) {
+    reasonEl = document.createElement('div');
+    reasonEl.id = 'dead-reason';
+    reasonEl.style.cssText = 'font-family:"Space Mono",monospace;font-size:15px;letter-spacing:2px;color:#ffaa44;text-align:center;max-width:340px;margin-top:4px;';
+    overlay.appendChild(reasonEl);
+  }
+  reasonEl.textContent = reason;
+}
+async function killPlayer(pid, reason = '') {
   const p = playersData[pid];
   if (!p || p.dead) return;
   triggerExplosion(p.x, p.y);
@@ -2905,10 +3224,16 @@ async function killPlayer(pid) {
     await update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
     if (pid === myId) localBall.possessedBy = null;
   }
+  if (pid === myId) lastDeathReason = reason;
   // Si era el portador de la pistola, limpiar gun
   if (gunState && gunState.ownerId === pid) {
     clearInterval(gunCountdownInterval);
     await remove(ref(db, `rooms/${roomId}/gun`)).catch(() => {});
+  }
+  // AGREGAR antes de: await update(ref(db, `rooms/${roomId}/players/${pid}`), { dead: true, respawnAt });
+  if (pid === myId && reason) {
+    // La razón se mostrará cuando el overlay aparezca
+    setTimeout(() => showDeathReason(reason), 100);
   }
   const respawnAt = Date.now() + 3000;
   await update(ref(db, `rooms/${roomId}/players/${pid}`), {
@@ -2916,7 +3241,9 @@ async function killPlayer(pid) {
   }).catch(() => {});
 }
 
-function showDeadOverlay(respawnAt) {
+function showDeadOverlay(respawnAt, reason) {
+  const reasonEl = document.getElementById('dead-reason');
+  if (reasonEl) reasonEl.textContent = reason || '';
   const overlay     = document.getElementById('dead-overlay');
   const countdownEl = document.getElementById('dead-countdown');
   overlay.style.display = 'flex';
@@ -2984,8 +3311,354 @@ function triggerExplosion(x, y) {
     });
   }
 }
+
+
+// ─── PERROS CTM — FUNCIONES ─────────────────────────────────────
+
+/** Escribe en Firebase para disparar el evento en todos los clientes. */
+function iniciarEventoPerros(triggerReason) {
+  if (perrosEventActive || !roomId || !gameRunning) return; 
+  // Usar myId como "comilón" solo si el trigger es por posesión propia
+  const comilon = (triggerReason === 'comilon') ? myId : null;
+  set(ref(db, `rooms/${roomId}/perrosEvent`), {
+    active:      true,
+    triggeredBy: triggerReason,   // 'comilon' | 'remontada'
+    comilon:     comilon,
+    startTime:   Date.now(),
+    duration:    9000
+  }).catch(() => {});
+}
+function spawnearPerros(triggerReason, comilon) {
+  perros = [];
+  mojones = [];
+  perrosTriggerReason = triggerReason;
+  perrosComilon       = comilon;
+  const W = LOGIC_W, H = LOGIC_H;
+
+  // 🐕 Escalar perros según cantidad de jugadores
+  const totalPlayers = Object.keys(playersData).length;
+  const numPerros = totalPlayers <= 2 ? 3 : (totalPlayers <= 4 ? 4 : 5);
+
+  for (let i = 0; i < numPerros; i++) {
+    const edge = Math.floor(Math.random() * 4);
+    let sx, sy;
+    if      (edge === 0) { sx = 60 + Math.random() * (W - 120); sy = -PERRO_RADIUS * 3; }
+    else if (edge === 1) { sx = W + PERRO_RADIUS * 3;           sy = 80 + Math.random() * (H - 120); }
+    else if (edge === 2) { sx = 60 + Math.random() * (W - 120); sy = H + PERRO_RADIUS * 3; }
+    else                 { sx = -PERRO_RADIUS * 3;               sy = 80 + Math.random() * (H - 120); }
+
+    perros.push({
+      id:           i,
+      x:            sx,
+      y:            sy,
+      vx:           0,
+      vy:           0,
+      imgIndex:     i % 5,     // perro1.png … perro5.png
+      sprinting:    true,      // entran siempre en sprint
+      sprintTimer:  240,       // 4 segundos de sprint inicial
+      entryMode:    true,      // sprint de entrada (velocidad decae con distancia)
+      targetId:     null,
+      lastBiteTime: 0
+    });
+  }
+
+  Object.keys(playersData).forEach(pid => {
+    perroMordidaFrames[pid]    = 0;
+    perroMordidaCount[pid]     = 0;
+    perroMojonPisadoUntil[pid] = 0;
+  });
+}
+
+/** IA de persecución, sprint, colisiones, spawn de mojones. Llamar cada tick. */
+function actualizarPerros() {
+  if (!perrosEventActive || perros.length === 0) return;
+  const W = LOGIC_W, H = LOGIC_H;
+  const now        = Date.now();
+  const BASE_SPD   = 2.8;
+  const SPRINT_SPD   = BASE_SPD * 1.7;          // sprint normal
+  const ENTRY_SPD    = SPRINT_SPD * 1.24;       // +24% en modo entrada
+  const REACTIVE_SPD = PLAYER_SPEED * 2 * 1.15; // 15% sobre la velocidad sprint del jugador      // +24% en modo entrada
+  const me         = playersData[myId];
+
+  perros.forEach(perro => {
+
+    // ── 1. Determinar targetId ───────────────────────────────
+    const sA       = roomData?.score?.A || 0;
+    const sB       = roomData?.score?.B || 0;
+    const winTeam  = sA > sB ? 'A' : (sB > sA ? 'B' : null);
+
+    if (perrosTriggerReason === 'comilon'
+        && perrosComilon
+        && playersData[perrosComilon]
+        && !playersData[perrosComilon].dead) {
+      perro.targetId = perrosComilon;
+    } else {
+      const carrier = localBall.possessedBy ? playersData[localBall.possessedBy] : null;
+      if (carrier && !carrier.dead && (winTeam === null || carrier.team === winTeam)) {
+        perro.targetId = localBall.possessedBy;
+      } else {
+        let closestId = null, closestD = Infinity;
+        Object.values(playersData).forEach(p => {
+          if (p.dead) return;
+          if (winTeam && p.team !== winTeam) return;
+          const d = dist(perro, p);
+          if (d < closestD) { closestD = d; closestId = p.id; }
+        });
+        perro.targetId = closestId;
+      }
+    }
+
+    // ── 2. Calcular distancia al target ─────────────────────
+    const target    = perro.targetId ? playersData[perro.targetId] : null;
+    const distToTarget = target ? Math.hypot(target.x - perro.x, target.y - perro.y) : 9999;
+
+    // ── 3. Sprint reactivo al objetivo (modo normal) ─────────
+    const targetSprinting = perro.targetId === myId ? sprintActive : (target?.sprinting || false);
+  if (targetSprinting && !perro.sprinting && !perro.entryMode) {
+      perro.sprinting      = true;
+      perro.reactiveSprint = (perro.targetId === myId); // reacciona al sprint del jugador
+      const baseFrames     = (perro.targetId === myId) ? (sprintTimer || 60) : 90;
+      perro.sprintTimer    = baseFrames + 45; // +0.75s extra
+    }
+    if (perro.sprinting) {
+      perro.sprintTimer--;
+      if (perro.sprintTimer <= 0) {
+        perro.sprinting      = false;
+        perro.entryMode      = false;
+        perro.reactiveSprint = false;
+      }
+    }
+
+    // ── 4. Velocidad: entrada con decay, luego normal ────────
+    let speed;
+    if (perro.entryMode && perro.sprinting) {
+      // Velocidad de entrada decae a medida que se acerca al jugador
+      // A distancia >= 300: ENTRY_SPD completo; a distancia <= 80: BASE_SPD
+      const closeFactor = clamp((distToTarget - 80) / 220, 0, 1);
+      speed = BASE_SPD + (ENTRY_SPD - BASE_SPD) * closeFactor;
+      // Desactivar entryMode cuando llega cerca
+      if (distToTarget < 80) {
+        perro.entryMode = false;
+      }
+    } else {
+      speed = (perro.sprinting && perro.reactiveSprint) ? REACTIVE_SPD
+            : perro.sprinting ? SPRINT_SPD
+            : BASE_SPD;
+    }
+    // ── 3. Mover hacia target ────────────────────────────────
+    if (target) {
+      const dx = target.x - perro.x;
+      const dy = target.y - perro.y;
+      const d  = Math.hypot(dx, dy) || 1;
+      perro.vx = (dx / d) * speed;
+      perro.vy = (dy / d) * speed;
+    }
+    perro.x = clamp(perro.x + perro.vx, -PERRO_RADIUS * 4, W + PERRO_RADIUS * 4);
+    perro.y = clamp(perro.y + perro.vy, -PERRO_RADIUS * 4, H + PERRO_RADIUS * 4);
+
+    // ── 4. Colisión mordida (solo contra myId localmente) ────
+    if (me && !me.dead && dist(perro, me) < PERRO_RADIUS + PLAYER_RADIUS) {
+      if (now - perro.lastBiteTime > 2200) {
+        perro.lastBiteTime = now;
+        aplicarMordida(myId);
+      }
+    }
+
+    // ── 5. Spawn mojón (5% por segundo ≈ 0.083% por frame) ──
+    if (Math.random() < 0.15 / 60) {
+      mojones.push({ x: perro.x, y: perro.y, spawnedAt: now });
+    }
+  });
+
+  // ── 6. Colisión jugador propio con mojón ─────────────────
+  if (me && !me.dead) {
+    for (let i = mojones.length - 1; i >= 0; i--) {
+      if (dist(me, mojones[i]) < PLAYER_RADIUS + 10) {
+        if (now > (perroMojonPisadoUntil[myId] || 0)) {
+          perroMojonPisadoUntil[myId] = now + 1500;
+          showToast('💩 ¡Pisé caca, ctm!', 2500);
+        }
+        mojones.splice(i, 1);
+      }
+    }
+  }
+
+  // ── 7. Eliminar mojones viejos (> 15 s) ─────────────────
+  for (let i = mojones.length - 1; i >= 0; i--) {
+    if (now - mojones[i].spawnedAt > 15000) mojones.splice(i, 1);
+  }
+
+  // ── 8. Descontar frames de ralentización ─────────────────
+  Object.keys(perroMordidaFrames).forEach(pid => {
+    if (perroMordidaFrames[pid] > 0) perroMordidaFrames[pid]--;
+  });
+
+  // ── 9. Expiración Modo Rabia → muerte ────────────────────
+  if (perroRageModeActive && now >= perroRageModeUntil) {
+    perroRageModeActive = false;
+    killPlayer(myId, '🐕 TE PICO UN PERRO RABIOSO Y REVENTASTE');
+  }
+}
+/** Ralentiza, suelta pelota, flash rojo, cuenta mordidas, activa Modo Rabia. */
+function aplicarMordida(playerId) {
+  const p = playersData[playerId];
+  if (!p || p.dead) return;
+
+  // Contar mordida del evento
+  perroMordidaCount[playerId] = (perroMordidaCount[playerId] || 0) + 1;
+
+  // Soltar la pelota si la tiene
+  if (localBall.possessedBy === playerId) {
+    update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
+    if (playerId === myId) {
+      localBall.possessedBy = null;
+      iAmBallAuthority      = false;
+      possessionFrames      = 0;
+      document.getElementById('possessionTimer').style.display = 'none';
+      onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel(); // ← AGREGAR
+    }
+  }
+
+  // Flash rojo en pantalla
+  const flashEl = document.getElementById('perro-mordida-flash');
+  if (flashEl) {
+    flashEl.style.display = 'block';
+    flashEl.style.opacity = '0.72';
+    setTimeout(() => {
+      flashEl.style.opacity = '0';
+      setTimeout(() => { flashEl.style.display = 'none'; }, 350);
+    }, 180);
+  }
+
+  // Toast y vibración
+  if (playerId === myId) {
+    showToast('¡AU CTM! 🐕 ¡Te mordió un perro! (-60% velocidad 2s)', 2000);
+    if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
+  }
+
+  // Ralentización 60% por 120 frames (2 s a 60fps), excepto en Modo Rabia
+  if (!perroRageModeActive) {
+    perroMordidaFrames[playerId] = 120;
+  }
+
+  // Partículas de impacto (reutiliza triggerExplosion reducido)
+  for (let i = 0; i < 18; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 5;
+    particles.push({
+      type: 'fire', x: p.x, y: p.y,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      size: 3 + Math.random() * 5, color: '#ff4400',
+      life: 1.0, decay: 0.03 + Math.random() * 0.03
+    });
+  }
+
+  // 3 mordidas seguidas → Modo Rabia (solo para myId)
+  if (playerId === myId
+      && perroMordidaCount[playerId] >= 3
+      && !perroRageModeActive) {
+    aplicarModoRabia();
+  }
+}
+
+
+/** Velocidad ×2, parpadeo rojo 2 s, puede taclear. Luego muerte. */
+function aplicarModoRabia() {
+  if (perroRageModeActive) return;
+  perroRageModeActive = true;
+  perroRageModeUntil  = Date.now() + 2000;
+  perroMordidaFrames[myId] = 0;   // quitar la ralentización
+  showToast('🔴 ¡MODO RABIA! Velocidad ×2 — 2 segundos... luego te mueres 😱', 2500);
+  if (navigator.vibrate) navigator.vibrate([500, 100, 500, 100, 800]);
+}
+/** Renderiza los 5 perros con imágenes. */
+function dibujarPerros() {
+  const now = Date.now();
+  perros.forEach(perro => {
+    ctx.save();
+    const r   = PERRO_RADIUS;
+    const img = perroImgs[perro.imgIndex];
+
+    // Sprint: halo naranja
+    if (perro.sprinting) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur  = 22;
+    }
+    // Parpadeo si el perro persigue a un jugador en Modo Rabia
+    if (perroRageModeActive && perro.targetId === myId) {
+      ctx.globalAlpha = Math.floor(now / 130) % 2 === 0 ? 1 : 0.3;
+    }
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, perro.x - r, perro.y - r, r * 2, r * 2);
+    } else {
+      // Fallback texto
+      ctx.globalAlpha = 1;
+      ctx.font        = `${r * 1.8}px sans-serif`;
+      ctx.textAlign   = 'center';
+      ctx.textBaseline= 'middle';
+      ctx.fillText('🐕', perro.x, perro.y);
+    }
+    ctx.restore();
+  });
+}
+/** Renderiza los mojones como círculos marrones con sombra + emoji. */
+function dibujarMojones() {
+  mojones.forEach(m => {
+    ctx.save();
+    ctx.shadowColor = '#3a1a00';
+    ctx.shadowBlur  = 10;
+    ctx.fillStyle   = '#6b3a2a';
+    ctx.globalAlpha = 0.88;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha    = 1;
+    ctx.font           = '14px sans-serif';
+    ctx.textAlign      = 'center';
+    ctx.textBaseline   = 'middle';
+    ctx.fillText('💩', m.x, m.y - 1);
+    ctx.restore();
+  });
+}
+/** Limpieza absoluta al terminar el evento (9 s). */
+function limpiarPerros() {
+  perrosEventActive     = false;
+  perros                = [];
+  mojones               = [];
+  perrosComilon         = null;
+  perrosTriggerReason   = '';
+  perroRageModeActive   = false;
+  perroRageModeUntil    = 0;
+  perroMordidaFrames    = {};
+  perroMordidaCount     = {};
+  perroMojonPisadoUntil = {};
+
+  if (perrosBannerTimeout)  { clearTimeout(perrosBannerTimeout);  perrosBannerTimeout  = null; }
+  if (perrosCleanupTimeout) { clearTimeout(perrosCleanupTimeout); perrosCleanupTimeout = null; }
+
+  const banner = document.getElementById('perros-banner');
+  if (banner) banner.classList.remove('show');
+
+  const flash = document.getElementById('perro-mordida-flash');
+  if (flash)  { flash.style.display = 'none'; flash.style.opacity = '0'; }
+
+  // Restaurar velocidades (los frames de ralentización ya llegaron a 0 al limpiar)
+  // Solo ocultar el timer si el jugador NO tiene la pelota en este momento
+if (localBall.possessedBy !== myId) {
+  document.getElementById('possessionTimer').style.display = 'none';
+}
+}
+
+
+
 // ─── MASS EXPLOSION HANDLER ───────────────────────────────────
 function handleMassExplosion(immuneId, immuneName) {
+  // Solo actuar si hay 2 o más jugadores por equipo (2v2 o más)
+  const playerList = Object.values(playersData);
+  const teamACount = playerList.filter(p => p.team === 'A').length;
+  const teamBCount = playerList.filter(p => p.team === 'B').length;
+  if (teamACount < 2 || teamBCount < 2) return;  // ← LÍNEA NUEVA
   // Mostrar alerta llamativa 0.75s
   showMassExplosionAlert(immuneName);
   playMassExplosionSound();
@@ -2996,7 +3669,7 @@ function handleMassExplosion(immuneId, immuneName) {
     if (myId !== immuneId) {
       const me = playersData[myId];
       if (me && !me.dead) {
-        killPlayer(myId);
+        killPlayer(myId, '💥 Explosión masiva — no tenías el balón JAJAJA');
         emitSoundEvent('muerte');
       }
     } else {
@@ -3071,6 +3744,7 @@ function playMassExplosionSound() {
 }
 function drawParticles() {
   ctx.save();
+  ctx.shadowBlur = 0;  // desactivar por defecto — solo activar donde importa
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.life -= p.decay;
@@ -3079,8 +3753,8 @@ function drawParticles() {
     if (p.type === 'fire') {
       ctx.globalAlpha  = p.life;
       ctx.fillStyle    = p.color;
-      ctx.shadowColor  = p.color;
-      ctx.shadowBlur   = 12;
+      // Sin shadowBlur en fire — demasiado costoso con muchas partículas
+      ctx.shadowBlur   = 0;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
       ctx.fill();
@@ -3088,20 +3762,22 @@ function drawParticles() {
       ctx.globalAlpha  = p.life;
       ctx.fillStyle    = '#ffffff';
       ctx.shadowColor  = '#ffaa00';
-      ctx.shadowBlur   = 8;
+      ctx.shadowBlur   = 6;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();
-      p.vy += 0.06; // gravedad leve
+      ctx.shadowBlur   = 0;
+      p.vy += 0.06;
     } else if (p.type === 'wave') {
       ctx.globalAlpha  = p.life * 0.7;
       ctx.strokeStyle  = `hsl(${p.hue},100%,60%)`;
       ctx.lineWidth    = 4 * p.life;
       ctx.shadowColor  = `hsl(${p.hue},100%,60%)`;
-      ctx.shadowBlur   = 15;
+      ctx.shadowBlur   = 12;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.shadowBlur   = 0;
       p.r += (p.maxR - p.r) * 0.1;
     }
 
@@ -3141,7 +3817,7 @@ function drawGunOverlay(W, H) {
   // Draw bullet (local shooter's bullet)
   if (gunBullet) {
     ctx.save();
-    const BULLET_SIZE = 24;
+    const BULLET_SIZE = PLAYER_RADIUS * 3 * 2;
     const angle = Math.atan2(gunBullet.vy, gunBullet.vx);
     ctx.translate(gunBullet.x, gunBullet.y);
     ctx.rotate(angle);
@@ -3159,7 +3835,7 @@ function drawGunOverlay(W, H) {
   // Draw network bullets (balas de otros jugadores)
   Object.values(networkBullets).forEach(nb => {
     ctx.save();
-    const BULLET_SIZE = 24;
+    const BULLET_SIZE = PLAYER_RADIUS * 3 * 2;
     const angle = Math.atan2(nb.vy, nb.vx);
     ctx.translate(nb.x, nb.y);
     ctx.rotate(angle);
@@ -3196,19 +3872,44 @@ function onGunClick(e) {
   if (me && me.dead) return;
   fireGun();
 }
+
+function drawSlowedMessage(W, H) {
+  const framesLeft = perroMordidaFrames[myId] || 0;
+  const alpha = Math.min(1, framesLeft / 20);
+  const pulse = 0.75 + Math.sin(Date.now() * 0.012) * 0.25;
+  ctx.save();
+  ctx.globalAlpha = alpha * pulse;
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#ff0000';
+  ctx.shadowBlur  = 35;
+  ctx.font        = 'bold 64px Bebas Neue, sans-serif';
+  ctx.fillStyle   = '#ff2200';
+  ctx.fillText('😨 ¡ESTÁS ASUSTADO!', W / 2, H / 2 - 44);
+  ctx.shadowBlur  = 18;
+  ctx.font        = 'bold 26px Space Mono, monospace';
+  ctx.fillStyle   = '#ffaa00';
+  ctx.fillText('(ralentizado...)', W / 2, H / 2 + 18);
+  ctx.restore();
+}
+
+
 // ─── RENDER ───────────────────────────────────────────────────
 function render() {
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
   drawCourt(W, H);
   drawHoops(W, H);
-  drawPowerups();          // ← NUEVO
+  drawPowerups();
+  if (perrosEventActive) dibujarMojones();  // ← suelo, antes de jugadores
   drawPlayers(W, H);
   drawBall(W, H);
   drawUI(W, H);
   drawParticles();
+  if (perrosEventActive) dibujarPerros();   // ← encima de todo lo anterior
   drawGunOverlay(W, H);
-  drawTraicionHUD(W, H);  // ← NUEVO
+  if (perrosEventActive && (perroMordidaFrames[myId] || 0) > 0) drawSlowedMessage(W, H);
+  drawTraicionHUD(W, H);
 }
 function drawTraicionHUD(W, H) {
   // Aviso de traición disponible
@@ -3250,84 +3951,8 @@ function drawTraicionHUD(W, H) {
 }
 // Court
 function drawCourt(W, H) {
-  // Wood floor background
-  const woodGrad = ctx.createLinearGradient(0, 0, 0, H);
-  woodGrad.addColorStop(0,   '#c8813a');
-  woodGrad.addColorStop(0.5, '#d4924a');
-  woodGrad.addColorStop(1,   '#b87030');
-  ctx.fillStyle = woodGrad;
-  ctx.fillRect(0, 0, W, H);
-
-  // Wood planks
-  ctx.save();
-  ctx.globalAlpha = 0.12;
-  for (let i = 0; i < H; i += 12) {
-    const shade = i % 24 < 12;
-    ctx.fillStyle = shade ? '#fff' : '#000';
-    ctx.fillRect(60, i, W - 120, 6);
-  }
-  // Vertical grain lines
-  ctx.globalAlpha = 0.06;
-  for (let x = 60; x < W - 60; x += 4) {
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 8, H); ctx.stroke();
-  }
-  ctx.restore();
-
-  // Court boundary
-  ctx.save();
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 3;
-  ctx.shadowColor = 'rgba(255,255,255,0.5)';
-  ctx.shadowBlur  = 6;
-  ctx.strokeRect(70, 80, W - 140, H - 120);
-
-  // Center circle
-  ctx.beginPath();
-  ctx.arc(W/2, H/2, 70, 0, Math.PI * 2);
-  ctx.stroke();
-  // Center dot
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(W/2, H/2, 6, 0, Math.PI * 2);
-  ctx.fill();
-  // Center line
-  ctx.beginPath(); ctx.moveTo(W/2, 80); ctx.lineTo(W/2, H - 40); ctx.stroke();
-
-  // Paint zones
-  const pW = 180, pH = 200;
-  ctx.fillStyle = 'rgba(200,60,60,0.15)';
-  ctx.fillRect(70, H/2 - pH/2, pW, pH);
-  ctx.strokeRect(70, H/2 - pH/2, pW, pH);
-  ctx.fillStyle = 'rgba(60,100,200,0.15)';
-  ctx.fillRect(W - 70 - pW, H/2 - pH/2, pW, pH);
-  ctx.strokeRect(W - 70 - pW, H/2 - pH/2, pW, pH);
-
-  // Free-throw arcs
-  ctx.beginPath();
-  ctx.arc(70 + pW, H/2, pH/2, -Math.PI/2, Math.PI/2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(W - 70 - pW, H/2, pH/2, Math.PI/2, Math.PI * 1.5);
-  ctx.stroke();
-
-  // 3-point arcs
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.arc(90, H/2, 200, -Math.PI/2 + 0.3, Math.PI/2 - 0.3);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(W - 90, H/2, 200, Math.PI/2 + 0.3, Math.PI * 1.5 - 0.3);
-  ctx.stroke();
-  // 3pt corner lines
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(70, H/2 - 200); ctx.lineTo(70 + 120, H/2 - 200); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(70, H/2 + 200); ctx.lineTo(70 + 120, H/2 + 200); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(W - 70, H/2 - 200); ctx.lineTo(W - 70 - 120, H/2 - 200); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(W - 70, H/2 + 200); ctx.lineTo(W - 70 - 120, H/2 + 200); ctx.stroke();
-
-  ctx.restore();
+  buildCourtOffscreen(W, H);
+  ctx.drawImage(courtOffscreen, 0, 0);
 }
 
 // Hoops
@@ -3463,7 +4088,9 @@ function drawPlayers(W, H) {
     const drawY = p.id === myId ? p.y : rpos.y;
     const isMe  = p.id === myId;
     const team  = p.team === 'A' ? '#e84040' : '#4080e8';
-const drawRadius = p.giant ? PLAYER_RADIUS*3 : PLAYER_RADIUS;
+const aimActive = gunState && gunState.active;
+const drawRadius = p.giant ? PLAYER_RADIUS*3
+                 : (aimActive ? PLAYER_RADIUS*3 : PLAYER_RADIUS);
     const ringColor  = (isMe && traicionActive) ? '#aa00ff' : team;
     ctx.save();
 
@@ -3497,7 +4124,17 @@ const drawRadius = p.giant ? PLAYER_RADIUS*3 : PLAYER_RADIUS;
     ctx.arc(drawX, drawY, drawRadius + 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
-
+// Parpadeo rojo en Modo Rabia (solo para myId)
+    if (isMe && perroRageModeActive) {
+      const blinkOn = Math.floor(Date.now() / 140) % 2 === 0;
+      ctx.strokeStyle  = blinkOn ? '#ff0000' : '#ff8800';
+      ctx.shadowColor  = '#ff0000';
+      ctx.shadowBlur   = 45;
+      ctx.lineWidth    = 7;
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, drawRadius + 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     // Player ring
       ctx.strokeStyle = ringColor;
     ctx.lineWidth   = isMe ? 3.5 : 2.5;
@@ -3681,6 +4318,8 @@ async function cleanup() {
   if (unsubBullets)       { unsubBullets(); }
   if (unsubMassExplosion) { unsubMassExplosion(); }
   if (unsubPowerups) { unsubPowerups(); }
+  if (unsubPerrosEvent) { unsubPerrosEvent(); unsubPerrosEvent = null; }
+  limpiarPerros();
 }
 window.addEventListener('beforeunload', cleanup);
 // ─── PLAY AGAIN: eliminar sala para todos ─────────────────────
@@ -3699,4 +4338,3 @@ resizeCanvas();
 </script>
 </body>
 </html>
-
