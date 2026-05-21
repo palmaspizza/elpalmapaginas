@@ -1,0 +1,4563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🏀 PALMA BASKET Online — Baloncesto Multijugador</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --court-wood: #c8843a;
+    --court-dark: #a0612a;
+    --neon-orange: #ff6b00;
+    --neon-yellow: #ffd700;
+    --ui-bg: #0a0a12;
+    --ui-panel: #13131f;
+    --ui-border: #2a2a40;
+    --ui-accent: #ff6b00;
+    --ui-accent2: #ffd700;
+    --text-primary: #f0f0f0;
+    --text-dim: #888;
+    --team-a: #e84040;
+    --team-b: #4080e8;
+    --green-line: #ffffff;
+    --power-bar: #ff6b00;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ui-bg);
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ─── LOBBY ─────────────────────────────────────────────── */
+  #lobby {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 0%, #1a1030 0%, #0a0a12 70%);
+    z-index: 100;
+  }
+  #lobby::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ff6b00' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .lobby-container {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    width: min(1100px, 96vw);
+    max-height: 92vh;
+    animation: fadeUp 0.6s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(30px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  .lobby-left { display: flex; flex-direction: column; gap: 16px; }
+  .lobby-right { display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 72px;
+    line-height: 1;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #ff6b00 0%, #ffd700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 30px rgba(255,107,0,0.4));
+  }
+  .logo-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-top: -8px;
+    margin-left: 4px;
+  }
+
+  .panel {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-orange), transparent);
+  }
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 3px;
+    color: var(--ui-accent);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .input-label { font-size: 11px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+  .input-field, .select-field {
+    background: #0d0d1a;
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .input-field:focus, .select-field:focus {
+    border-color: var(--neon-orange);
+    box-shadow: 0 0 0 3px rgba(255,107,0,0.15);
+  }
+  .select-field option { background: #0d0d1a; }
+
+  .btn {
+    border: none; cursor: pointer; border-radius: 8px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px; font-size: 18px;
+    padding: 12px 20px;
+    transition: all 0.2s;
+    width: 100%;
+    position: relative; overflow: hidden;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #ff6b00, #ff9500);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255,107,0,0.4);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255,107,0,0.5);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--ui-border);
+    font-size: 14px;
+    padding: 8px 14px;
+  }
+  .btn-secondary:hover {
+    border-color: var(--neon-orange);
+    color: var(--neon-orange);
+  }
+
+  /* Skin preview */
+  .skin-area {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 12px;
+  }
+  .skin-preview-wrap {
+    width: 70px; height: 70px; border-radius: 50%;
+    border: 3px solid var(--neon-orange);
+    box-shadow: 0 0 20px rgba(255,107,0,0.4);
+    overflow: hidden; flex-shrink: 0;
+    background: #111;
+  }
+  #skinPreview {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  .skin-info { flex: 1; }
+  .skin-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .skin-hint { font-size: 12px; color: var(--text-dim); }
+
+  /* Rooms list */
+  .rooms-scroll {
+    overflow-y: auto;
+    max-height: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+  }
+  .rooms-scroll::-webkit-scrollbar { width: 4px; }
+  .rooms-scroll::-webkit-scrollbar-track { background: transparent; }
+  .rooms-scroll::-webkit-scrollbar-thumb { background: var(--ui-border); border-radius: 2px; }
+
+  .room-card {
+    background: #0d0d1a;
+    border: 1px solid var(--ui-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .room-card:hover {
+    border-color: var(--neon-orange);
+    background: #12121e;
+    transform: translateX(4px);
+  }
+  .room-name { font-weight: 700; font-size: 16px; }
+  .room-mode { font-size: 12px; color: var(--neon-yellow); letter-spacing: 1px; }
+  .room-players { font-size: 13px; color: var(--text-dim); }
+  .room-join-badge {
+    background: var(--neon-orange);
+    color: #fff;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .room-full .room-join-badge {
+    background: #333;
+    color: var(--text-dim);
+  }
+  .rooms-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  .rooms-loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-dim);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ─── GAME SCREEN ─────────────────────────────────────────── */
+  #gameScreen {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+  }
+
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, transparent 100%);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .hud-team {
+    display: flex; align-items: center; gap: 12px;
+    pointer-events: auto;
+  }
+  .hud-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px currentColor;
+  }
+  .score-a { color: var(--team-a); }
+  .score-b { color: var(--team-b); }
+  .hud-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .hud-center {
+    text-align: center;
+  }
+  .hud-room-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: var(--neon-yellow);
+  }
+  .hud-divider {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px;
+    color: rgba(255,255,255,0.2);
+    margin: 0 16px;
+  }
+
+  #gameCanvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+
+  /* Controls hint */
+  #controlsHint {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .hint-key {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .hint-key span { color: var(--neon-yellow); }
+
+  /* Toast notification */
+  #toast {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(0,0,0,0.85);
+    border: 1px solid var(--neon-orange);
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--neon-orange);
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Score popup */
+  .score-popup {
+    position: absolute;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 4px;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 30px var(--neon-orange);
+    pointer-events: none;
+    z-index: 20;
+    animation: scorePop 1.5s ease forwards;
+  }
+  @keyframes scorePop {
+    0%   { opacity:1; transform: translateX(-50%) scale(0.5); }
+    30%  { opacity:1; transform: translateX(-50%) scale(1.2); }
+    100% { opacity:0; transform: translateX(-50%) translateY(-80px) scale(1); }
+  }
+
+  #waiting-overlay {
+    position: absolute; inset: 0;
+    background: rgba(10,10,18,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 30;
+  }
+  .waiting-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 4px;
+    color: var(--neon-orange);
+  }
+  .waiting-dots span {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--neon-orange);
+    margin: 0 4px;
+    animation: dot 1.2s ease infinite;
+  }
+  .waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
+  .waiting-code {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  /* ─── WINNER SCREEN ─── */
+  #winner-overlay {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(10,10,18,0.92) 0%, rgba(0,0,0,0.97) 100%);
+    display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 24px;
+    z-index: 200;
+    animation: fadeUp 0.5s ease both;
+  }
+  #winner-overlay.show { display: flex; }
+  .winner-trophy {
+    font-size: 100px;
+    animation: trophyBounce 0.6s cubic-bezier(.36,.07,.19,.97) both;
+    filter: drop-shadow(0 0 40px gold);
+  }
+  @keyframes trophyBounce {
+    0%   { transform: scale(0) rotate(-15deg); }
+    60%  { transform: scale(1.2) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  .winner-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px;
+    letter-spacing: 8px;
+    line-height: 1;
+    filter: drop-shadow(0 0 30px currentColor);
+  }
+  .winner-team-a { color: var(--team-a); }
+  .winner-team-b { color: var(--team-b); }
+  .winner-score-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 4px;
+  }
+  .winner-btn {
+    margin-top: 12px;
+    background: linear-gradient(135deg, #ff6b00, #ffd700);
+    border: none; cursor: pointer;
+    border-radius: 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 3px;
+    padding: 14px 40px; color: #fff;
+    box-shadow: 0 6px 30px rgba(255,107,0,0.5);
+    transition: all 0.2s;
+  }
+  .winner-btn:hover { transform: scale(1.05); }
+
+  /* ─── POSSESSION TIMER ─── */
+  #possessionTimer {
+    position: absolute;
+    top: 72px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 3px;
+    color: var(--text-dim);
+    z-index: 10; pointer-events: none;
+    display: none;
+  }
+  #possessionTimer.urgent {
+    color: #ff4444;
+    animation: urgentPulse 0.3s ease infinite alternate;
+  }
+  @keyframes urgentPulse { from{opacity:1} to{opacity:0.3} }
+
+  /* ─── HUD MAX SCORE ─── */
+  .hud-maxscore {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(255,215,0,0.5);
+    margin-top: 2px;
+  }
+
+  /* ─── SPRINT / STEAL STATUS ─── */
+  #statusBars {
+    position: absolute;
+    bottom: 52px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 16px;
+    pointer-events: none; z-index: 10;
+  }
+  .status-bar-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .status-bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: rgba(255,255,255,0.4);
+  }
+  .status-bar-track {
+    width: 80px; height: 5px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px; overflow: hidden;
+  }
+  .status-bar-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.1s linear;
+  }
+  #sprintBarFill  { background: linear-gradient(90deg,#00e5ff,#00ff88); }
+  #stealBarFill   { background: linear-gradient(90deg,#ff4444,#ff9900); }
+/* ─── DEAD OVERLAY ─── */
+  #dead-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+    z-index: 150;
+  }
+  .dead-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 90px; line-height: 1;
+    color: #ff1111;
+    text-shadow: 0 0 40px #ff0000, 0 0 80px #ff3300;
+    animation: urgentPulse 0.45s ease infinite alternate;
+  }
+  .dead-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 26px; letter-spacing: 4px; color: #fff;
+  }
+  .hud-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px currentColor;
+  }
+  .score-a { color: var(--team-a); }
+  .score-b { color: var(--team-b); }
+  .hud-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .hud-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px;
+    line-height: 1;
+    letter-spacing: 4px;
+    text-shadow:
+      0 0 10px currentColor,
+      0 0 30px currentColor,
+      0 0 60px currentColor,
+      0 4px 20px rgba(0,0,0,0.8);
+    filter: drop-shadow(0 0 18px currentColor);
+    transition: transform 0.15s cubic-bezier(.36,.07,.19,.97), color 0.2s;
+  }
+  .hud-score.score-bump {
+    transform: scale(1.35);
+  }
+  .score-a {
+    color: var(--team-a);
+    background: linear-gradient(180deg, #ff6a6a 0%, #e84040 60%, #a00000 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 18px #e84040);
+  }
+  .score-b {
+    color: var(--team-b);
+    background: linear-gradient(180deg, #80b4ff 0%, #4080e8 60%, #0030a0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 18px #4080e8);
+  }
+  .hud-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255,255,255,0.2);
+  }
+  .hud-divider {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 60px;
+    color: rgba(255,255,255,0.15);
+    margin: 0 20px;
+    text-shadow: 0 0 20px rgba(255,255,255,0.1);
+    align-self: center;
+  }
+  /* ─── NETWORK BULLET ─── */
+  .net-bullet-flash {
+    animation: bulletAppear 0.1s ease both;
+  }
+  @keyframes bulletAppear {
+    from { opacity: 0; transform: scale(0.5); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  /* ─── SKIN PICKER MODAL ─── */
+  #skinModal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(8px);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: fadeUp 0.3s ease both;
+  }
+  #skinModal.open { display: flex; }
+  .skin-modal-box {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: min(720px, 94vw);
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .skin-modal-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-orange), transparent);
+    border-radius: 16px 16px 0 0;
+  }
+  .skin-modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: var(--neon-orange);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .skin-modal-close {
+    background: transparent;
+    border: 1px solid var(--ui-border);
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 18px;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    font-family: monospace;
+  }
+  .skin-modal-close:hover { border-color: var(--neon-orange); color: var(--neon-orange); }
+  .skin-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .skin-option {
+    background: #0d0d1a;
+    border: 2px solid var(--ui-border);
+    border-radius: 12px;
+    padding: 14px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .skin-option:hover {
+    border-color: var(--neon-orange);
+    background: #12121e;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(255,107,0,0.25);
+  }
+  .skin-option.selected {
+    border-color: var(--neon-yellow);
+    box-shadow: 0 0 20px rgba(255,215,0,0.3);
+  }
+  .skin-option-img-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #111;
+    border: 2px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  .skin-option-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  .skin-option-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-primary);
+    text-align: center;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+  }
+  /* ─── NAME VALIDATION ─── */
+  .input-field.invalid {
+    border-color: #e84040 !important;
+    box-shadow: 0 0 0 3px rgba(232,64,64,0.2) !important;
+    animation: shake 0.35s ease;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-6px); }
+    40%      { transform: translateX(6px); }
+    60%      { transform: translateX(-4px); }
+    80%      { transform: translateX(4px); }
+  }
+  .name-error {
+    font-size: 12px;
+    color: #e84040;
+    letter-spacing: 1px;
+    margin-top: 4px;
+    display: none;
+  }
+  .name-error.show { display: block; }
+  /* ─── DISPARA OVERLAY ─── */
+  #dispara-overlay {
+    position: absolute; inset: 0;
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 160;
+    pointer-events: none;
+    background: rgba(255, 215, 0, 0.88);
+  }
+  #dispara-overlay.show {
+    display: flex;
+    animation: disparaFade 0.75s cubic-bezier(.22,.61,.36,1) forwards;
+  }
+  .dispara-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 180px;
+    letter-spacing: 16px;
+    color: #111;
+    text-shadow:
+      0 0 30px #ff4400,
+      0 0 70px #ff0000,
+      6px 6px 0 #ff6600,
+      -6px -6px 0 #cc2200;
+    animation: disparaZoom 0.75s cubic-bezier(.22,.61,.36,1) forwards;
+  }
+  @keyframes disparaFade {
+    0%   { opacity: 1; }
+    60%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes disparaZoom {
+    0%   { transform: scale(0.4) rotate(-4deg); opacity: 0; }
+    25%  { transform: scale(1.15) rotate(2deg);  opacity: 1; }
+    60%  { transform: scale(1.0)  rotate(0deg);  opacity: 1; }
+    100% { transform: scale(1.2)  rotate(-1deg); opacity: 0; }
+  }
+  /* ─── MASS EXPLOSION ALERT ─── */
+#massExplosionAlert {
+  position: absolute; inset: 0;
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 9999;
+  pointer-events: none;
+}
+#massExplosionAlert.show {
+  display: flex;
+  animation: alertScreenFlash 0.08s ease infinite alternate;
+}
+@keyframes alertScreenFlash {
+  from { background: rgba(255,30,0,0.22); }
+  to   { background: rgba(255,200,0,0.28); }
+}
+.mass-explosion-box {
+  background: linear-gradient(135deg, #ff0000 0%, #ff6b00 50%, #ffd700 100%);
+  border: 6px solid #fff;
+  border-radius: 24px;
+  padding: 36px 70px;
+  text-align: center;
+  animation: explosionBoxPulse 0.12s ease infinite alternate;
+}
+@keyframes explosionBoxPulse {
+  from { transform: scale(0.96) rotate(-1deg); box-shadow: 0 0 80px #ff0000, 0 0 160px rgba(255,50,0,0.7); }
+  to   { transform: scale(1.04) rotate(1deg);  box-shadow: 0 0 140px #ff6b00, 0 0 280px rgba(255,200,0,0.8); }
+}
+.mass-explosion-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 110px;
+  letter-spacing: 10px;
+  color: #fff;
+  text-shadow: 0 0 40px #ff0000, 0 0 80px #ff6b00, 4px 4px 0 #7a0000;
+  line-height: 1;
+}
+.mass-explosion-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 20px;
+  letter-spacing: 5px;
+  color: #fff;
+  margin-top: 10px;
+  text-shadow: 0 0 14px #ff6b00;
+  text-transform: uppercase;
+}
+.mass-explosion-immune {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 34px;
+  letter-spacing: 4px;
+  color: #ffd700;
+  margin-top: 8px;
+  text-shadow: 0 0 20px #ffd700, 2px 2px 0 #7a5a00;
+}
+/* ══════════════════════════════════════════════
+     REDISEÑO UI IN-GAME — POSSESSION / BARRAS / HUD / CONTROLS
+  ══════════════════════════════════════════════ */
+
+  /* ─── POSSESSION TIMER (reemplaza los 2 bloques anteriores) ─── */
+  #possessionTimer {
+    position: absolute;
+    top: 74px; left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center; gap: 10px;
+    background: rgba(10,10,20,0.72);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 30px;
+    padding: 6px 18px 6px 14px;
+    pointer-events: none; z-index: 10;
+    backdrop-filter: blur(6px);
+  }
+  #possessionTimer .poss-icon {
+    font-size: 15px; line-height: 1;
+  }
+  #possessionTimer .poss-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 3px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+  }
+  #possessionTimer .poss-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 2px;
+    color: #fff;
+    min-width: 32px; text-align: right;
+    line-height: 1;
+  }
+  #possessionTimer .poss-bar-track {
+    width: 64px; height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px; overflow: hidden;
+    align-self: center;
+  }
+  #possessionTimer .poss-bar-fill {
+    height: 100%; width: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #00e5ff, #00ff88);
+    transition: width 0.1s linear, background 0.4s ease;
+  }
+  #possessionTimer.urgent {
+    border-color: rgba(255,60,60,0.5);
+    box-shadow: 0 0 16px rgba(255,40,40,0.25);
+  }
+  #possessionTimer.urgent .poss-bar-fill {
+    background: linear-gradient(90deg, #ff4444, #ff9900);
+  }
+  #possessionTimer.urgent .poss-time {
+    color: #ff5555;
+    animation: possUrgentNum 0.35s ease infinite alternate;
+  }
+  @keyframes possUrgentNum {
+    from { transform: scale(1);   opacity: 1; }
+    to   { transform: scale(1.1); opacity: 0.7; }
+  }
+
+  /* ─── STATUS BARS (Sprint + Robo) ─── */
+  #statusBars {
+    position: absolute;
+    bottom: 48px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 10px;
+    pointer-events: none; z-index: 10;
+  }
+  .status-bar-wrap {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(10,10,20,0.65);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 5px 12px 5px 10px;
+    backdrop-filter: blur(4px);
+  }
+  .status-bar-icon {
+    font-size: 13px; line-height: 1;
+  }
+  .status-bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; letter-spacing: 2px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+  }
+  .status-bar-track {
+    width: 70px; height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px; overflow: hidden;
+  }
+  .status-bar-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.08s linear;
+  }
+  #sprintBarFill { background: linear-gradient(90deg,#00e5ff,#00ff88); }
+  #stealBarFill  { background: linear-gradient(90deg,#ff6b00,#ffd700); }
+
+  /* ─── CONTROLS HINT ─── */
+  #controlsHint {
+    position: absolute;
+    bottom: 14px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 5px;
+    pointer-events: none; z-index: 10;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .hint-key {
+    background: rgba(10,10,20,0.62);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 4px 11px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+    transition: border-color 0.2s;
+  }
+  .hint-key span {
+    color: rgba(255,215,0,0.85);
+    font-weight: 700;
+  }
+
+  /* ─── HUD score labels más legibles ─── */
+  .hud-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.3);
+  }
+  .hud-maxscore {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: rgba(255,215,0,0.3);
+    margin-top: 1px;
+  }
+  /* ─── NAME GATE ─── */
+  #nameGate {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 0%, #1a1030 0%, #0a0a12 70%);
+    z-index: 200;
+    animation: fadeUp 0.5s ease both;
+  }
+  #nameGate::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ff6b00' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .name-gate-box {
+    display: flex; flex-direction: column; align-items: center; gap: 24px;
+    width: min(420px, 92vw);
+    animation: fadeUp 0.6s ease both;
+  }
+  .name-gate-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px; line-height: 1; letter-spacing: 4px;
+    background: linear-gradient(135deg, #ff6b00 0%, #ffd700 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 30px rgba(255,107,0,0.4));
+  }
+  .name-gate-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 6px;
+    color: var(--text-dim); text-transform: uppercase;
+    margin-top: -20px;
+  }
+  .name-gate-panel {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 14px;
+    padding: 28px 28px 24px;
+    width: 100%;
+    position: relative; overflow: hidden;
+  }
+  .name-gate-panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-orange), transparent);
+  }
+  .name-gate-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px; letter-spacing: 4px;
+    color: var(--text-dim); text-align: center;
+    margin-bottom: 18px;
+  }
+  .name-gate-hint {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--text-dim); text-align: center;
+    margin-top: 10px;
+  }
+  /* ─── SKIN MINI PREVIEW STRIP ─── */
+  .skin-btn-wrap {
+    position: relative;
+    display: inline-block;
+    margin-top: 8px;
+  }
+  .skin-strip {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 7px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .skin-strip-thumb {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.08);
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    background: #111;
+  }
+  .skin-strip-thumb:hover {
+    transform: scale(1.25) translateY(-2px);
+    border-color: var(--neon-orange);
+    box-shadow: 0 0 8px rgba(255,107,0,0.6);
+  }
+  .skin-strip-thumb.active {
+    border-color: var(--neon-yellow);
+    box-shadow: 0 0 10px rgba(255,215,0,0.5);
+    transform: scale(1.15);
+  }
+  /* ─── PERROS CTM EVENT ──────────────────────────────────────── */
+#perros-banner {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.4);
+  background: rgba(0, 0, 0, 0.93);
+  border: 3px solid #ff2200;
+  border-radius: 18px;
+  padding: 26px 48px 22px;
+  text-align: center;
+  z-index: 300;
+  pointer-events: none;
+  display: none;
+  opacity: 0;
+  box-shadow:
+    0 0 50px rgba(255, 34, 0, 0.75),
+    0 0 120px rgba(255, 34, 0, 0.3),
+    inset 0 0 40px rgba(255,60,0,0.12);
+  transition: opacity 0.25s ease, transform 0.35s cubic-bezier(.36,.07,.19,.97);
+}
+#perros-banner.show {
+  display: block;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  animation: perrosBannerIn 0.42s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes perrosBannerIn {
+  0%   { transform: translate(-50%,-50%) scale(0.2) rotate(-8deg); opacity: 0; }
+  60%  { transform: translate(-50%,-50%) scale(1.08) rotate(2deg); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(1)   rotate(0deg); opacity: 1; }
+}
+.perros-banner-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 62px;
+  letter-spacing: 5px;
+  color: #ff2200;
+  text-shadow:
+    0 0 20px #ff4400,
+    0 0 55px #ff0000,
+    2px 2px 0 #7a0000;
+  line-height: 1;
+  animation: perrosTitlePulse 0.3s ease infinite alternate;
+}
+@keyframes perrosTitlePulse {
+  from { text-shadow: 0 0 20px #ff4400, 0 0 55px #ff0000; }
+  to   { text-shadow: 0 0 40px #ff6600, 0 0 90px #ff2200, 0 0 10px #fff; }
+}
+.perros-banner-sub {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 34px;
+  letter-spacing: 4px;
+  color: #ffd700;
+  text-shadow: 0 0 18px #ff8800, 1px 1px 0 #7a4400;
+  margin-top: 10px;
+}
+/* Flash de mordida */
+#perro-mordida-flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 0, 0, 0.72);
+  z-index: 250;
+  pointer-events: none;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+/* Referencia CSS para mojones (el dibujo es en canvas) */
+.mojon { display: none; }
+</style>
+</head>
+<body>
+<!-- ═══════════ NAME GATE ═══════════ -->
+<div id="nameGate">
+  <div class="name-gate-box">
+    <div class="name-gate-logo">PALMA BASKET</div>
+    <div class="name-gate-sub">Online Basketball · Multijugador</div>
+    <div class="name-gate-panel">
+      <div class="name-gate-title">¿CÓMO TE LLAMAS?</div>
+      <div class="input-group" style="margin-bottom:16px;">
+        <div class="input-label">Tu apodo</div>
+        <input class="input-field" id="nameGateInput" type="text"
+          placeholder="Escribe tu nombre..." maxlength="16" autocomplete="off"/>
+        <div class="name-error" id="nameGateError">El nombre no puede estar vacío</div>
+      </div>
+      <button class="btn btn-primary" id="nameGateBtn">🏀 Entrar al Lobby</button>
+      <div class="name-gate-hint">Puedes cambiarlo después</div>
+    </div>
+  </div>
+</div>
+<!-- ═══════════ LOBBY ═══════════ -->
+<div id="lobby">
+  <div class="lobby-container">
+
+    <!-- LEFT COLUMN -->
+    <div class="lobby-left">
+      <div>
+        <div class="logo">PALMA BASKET</div>
+        <div class="logo-sub">Online Basketball · Multijugador</div>
+      </div>
+
+      <!-- Player Setup -->
+      <div class="panel">
+        <div class="panel-title">👤 Tu Jugador</div>
+
+        <div class="skin-area">
+          <div class="skin-preview-wrap">
+            <img id="skinPreview" src="mockey.webp" alt="Skin" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ff6b00%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2250%22%3E🏀%3C/text%3E%3C/svg%3E'"/>
+          </div>
+          <div class="skin-info">
+            <div class="skin-name" id="skinName">Skin por defecto</div>
+            <div class="skin-hint">Sube tu propia imagen</div>
+            <input type="file" id="skinFile" accept="image/*" style="display:none"/>
+            <div class="skin-btn-wrap">
+              <div class="skin-strip" id="skinStrip"></div>
+              <button class="btn btn-secondary" style="width:auto;" onclick="window.openSkinModal()">🎭 Cambiar Skin</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">Nombre del Jugador</div>
+          <input class="input-field" id="playerName" type="text" placeholder="Tu apodo..." maxlength="16" value=""/>
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">Modalidad</div>
+          <select class="select-field" id="gameMode">
+            <option value="1v1"selected>1 vs 1</option>
+            <option value="2v2">2 vs 2</option>
+            <option value="3v3" >3 vs 3</option>
+            <option value="4v4">4 vs 4</option>
+          </select>
+          <div class="input-group">
+          <div class="input-label">Puntos para ganar</div>
+          <input class="input-field" id="maxScore" type="number" min="5" max="100" value="50" step="1"/>
+        </div>
+        </div>
+
+        <button class="btn btn-primary" id="createRoomBtn">🏀 Crear Nueva Sala</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="lobby-right">
+      <div class="panel" style="flex:1; display:flex; flex-direction:column;">
+        <div class="panel-title">🌐 Salas Disponibles
+          <span style="font-size:12px;color:var(--text-dim);font-family:Rajdhani;font-weight:400;margin-left:auto;" id="roomCount"></span>
+        </div>
+        <div class="rooms-scroll" id="roomsList">
+          <div class="rooms-loading">Buscando salas<span>...</span></div>
+        </div>
+      </div>
+
+      <!-- Controls reference -->
+      <div class="panel" style="padding:14px 20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">WASD</span> — Mover</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">SPACE</span> — Cargar tiro</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">E</span> — Agarrar / Robar</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">Suelta SPACE</span> — Disparar</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">Click Derecho</span> — Pasar</div>
+          <div style="font-size:13px;color:var(--text-dim);"><span style="color:var(--neon-yellow)">Shift / BloqMayus</span> — Sprint</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ GAME SCREEN ═══════════ -->
+<div id="gameScreen">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-team">
+      <div>
+        <div class="hud-label">EQUIPO ROJO</div>
+        <div class="hud-score score-a" id="scoreA">0</div>
+        <div class="hud-maxscore" id="hudMaxScore">/ 50 pts</div>
+      </div>
+    </div>
+    <div class="hud-center">
+      <div class="hud-room-name" id="hudRoomName"></div>
+      <div class="hud-label" id="hudMode"></div>
+    </div>
+    <div class="hud-team">
+      <div style="text-align:right;">
+        <div class="hud-label">EQUIPO AZUL</div>
+        <div class="hud-score score-b" id="scoreB">0</div>
+        <div class="hud-maxscore" style="text-align:right;" id="hudMaxScoreB">/ 50 pts</div>
+      </div>
+    </div>
+    <!-- ═══════════ PERROS CTM BANNER ═══════════ -->
+<div id="perros-banner">
+  <div class="perros-banner-title">🚨 ¡SALGAN PERROS CTM! 🚨</div>
+  <div class="perros-banner-sub">¡SALGAN SALGAAAN! 🐕🐕🐕</div>
+</div>
+<!-- Flash rojo de mordida -->
+<div id="perro-mordida-flash"></div>
+  </div>
+
+  <!-- Possession timer -->
+<!-- Possession timer -->
+  <div id="possessionTimer" style="display:none;">
+    <span class="poss-icon">🏀</span>
+    <span class="poss-label">POSESIÓN</span>
+    <div class="poss-bar-track"><div class="poss-bar-fill" id="possBarFill"></div></div>
+    <span class="poss-time" id="possTimerVal">4.0</span>
+  </div>
+
+  <!-- Sprint / Steal status bars -->
+  <div id="statusBars">
+    <div class="status-bar-wrap">
+      <span class="status-bar-icon">⚡</span>
+      <div class="status-bar-label">SPRINT</div>
+      <div class="status-bar-track"><div class="status-bar-fill" id="sprintBarFill" style="width:100%"></div></div>
+    </div>
+    <div class="status-bar-wrap">
+      <span class="status-bar-icon">🤚</span>
+      <div class="status-bar-label">ROBO</div>
+      <div class="status-bar-track"><div class="status-bar-fill" id="stealBarFill" style="width:100%"></div></div>
+    </div>
+  </div>
+  <!-- Winner overlay -->
+  <div id="winner-overlay">
+    <div class="winner-trophy">🏆</div>
+    <div class="winner-title" id="winnerTitle">EQUIPO A GANA</div>
+    <div class="winner-score-display" id="winnerScore">0 — 0</div>
+    <button class="winner-btn" id="playAgainBtn">🏀 JUGAR DE NUEVO</button>
+  </div>
+
+  <!-- Waiting overlay -->
+  <div id="waiting-overlay">
+    <div class="waiting-title">Esperando Jugadores</div>
+    <div class="waiting-dots"><span></span><span></span><span></span></div>
+    <div class="waiting-code" id="waitingInfo"></div>
+  </div>
+  <!-- DISPARA overlay -->
+  <div id="dispara-overlay">
+    <div class="dispara-text">🔫 DISPARA</div>
+  </div>
+<!-- Dead overlay -->
+
+  <div id="dead-overlay">
+    <div class="dead-title">TE MORISTE JAJAJA</div>
+    <div class="dead-sub" id="dead-countdown">Reapareciendo en 3...</div>
+    <div id="dead-reason" style="font-family:'Space Mono',monospace;font-size:15px;letter-spacing:2px;color:#ffaa44;text-align:center;max-width:340px;margin-top:4px;"></div>
+  </div>
+  <!-- Controls hint -->
+  <div id="controlsHint">
+    <div class="hint-key"><span>Click Izq.</span> Disparar pistola</div>
+  <div class="hint-key"><span>WASD</span> Mover</div>
+    <div class="hint-key"><span>E</span> Agarrar/Robar</div>
+    <div class="hint-key"><span>SPACE</span> Cargar · Soltar dispara</div>
+    <div class="hint-key"><span>Click Der.</span> Pasar</div>
+    <div class="hint-key"><span>Shift</span> Sprint 3s</div></div>
+</div>
+<!-- Mass Explosion Alert -->
+<div id="massExplosionAlert">
+    <div class="mass-explosion-box">
+      <div class="mass-explosion-title">💥 BOOM 💥</div>
+      <div class="mass-explosion-sub">¡TODOS EXPLOTAN!</div>
+      <div class="mass-explosion-immune" id="massExplosionImmuneName">🛡️ ??? SOBREVIVE</div>
+    </div>
+  </div>
+<!-- Toast -->
+<div id="toast"></div>
+<!-- ═══════════ SKIN PICKER MODAL ═══════════ -->
+<div id="skinModal">
+  <div class="skin-modal-box">
+    <div class="skin-modal-title">
+      🎭 ELIGE TU SKIN
+      <button class="skin-modal-close" onclick="closeSkinModal()">✕</button>
+    </div>
+    <div class="skin-grid" id="skinGrid">
+      <!-- Generado por JS -->
+    </div>
+  </div>
+</div>
+<!-- ═══════════ FIREBASE + GAME LOGIC ═══════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getDatabase, ref, set, push, onValue, update, remove,
+  onDisconnect, serverTimestamp, get
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ─── FIREBASE INIT ────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCSqgJA6uL8SkY-kphhuaR9TuGPulucPic",
+  authDomain: "ajedrez-65b15.firebaseapp.com",
+  databaseURL: "https://ajedrez-65b15-default-rtdb.firebaseio.com",
+  projectId: "ajedrez-65b15",
+  storageBucket: "ajedrez-65b15.firebasestorage.app",
+  messagingSenderId: "501222935015",
+  appId: "1:501222935015:web:bb08aeab5af07a77eb1542"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ─── CONSTANTS ────────────────────────────────────────────────
+const MAX_PER_SIDE = { '1v1': 1, '2v2': 2, '3v3': 3, '4v4': 4 };
+const PLAYER_RADIUS = 24;
+const BALL_RADIUS   = 14;
+const PLAYER_SPEED  = 4.2;
+const STEAL_DIST    = 54;
+const GRAB_DIST     = 46;
+const MAX_POWER     = 100;
+const POWER_RATE    = 1.8;  // per frame
+const SHOOT_MULT    = 0.18;
+const GRAVITY       = 0.28;
+const FRICTION      = 0.985;
+const BALL_BOUNCE   = 0.55;
+const HOOP_HEIGHT_3D = 30; // visual 3D effect
+const LOGIC_W = 1200;
+const LOGIC_H = 600;
+const playersVelocity = {};   // { playerId: {vx, vy} }
+const playersLastUpdate = {};
+// ─── STATE ────────────────────────────────────────────────────
+let myId        = null;
+let roomId      = null;
+let ballLastShotTime    = 0;
+let ballGrabLockUntil   = 0;   // ignora updates externos post-grab por 700ms
+let roomData    = null;
+let playersData = {};
+let playersRenderPos = {}; 
+const playerTargetPos = {};   // posición target de red por jugador (para Lerp)
+let ballData    = null;
+let localBall   = { x: 0, y: 0, vx: 0, vy: 0, vz: 0, z: 0, possessedBy: null, scored: false, targetX: 0, targetY: 0 };
+let myTeam      = 'A';
+let gameRunning = false;
+let animId      = null;
+let iAmBallAuthority = false;
+let lastDeathReason = '';
+let lastRagePushTime = 0;
+let lastOwnerChangeTime = 0;   // timestamp del último cambio de dueño (cooldown anti-robo 200ms)
+// ─── PERROS CTM — ESTADO DEL EVENTO ────────────────────────────
+let perrosEventActive    = false;
+let perros               = [];       // [{id,x,y,vx,vy,imgIndex,sprinting,sprintTimer,targetId,lastBiteTime}]
+let mojones              = [];       // [{x,y,spawnedAt}]
+let perrosSpawnTime      = 0;
+let perrosComilon        = null;     // playerId del "comilón"
+let perrosTriggerReason  = '';       // 'comilon' | 'remontada'
+let perrosBannerVisible  = false;
+let perrosBannerTimeout  = null;
+let perrosCleanupTimeout = null;
+let unsubPerrosEvent     = null;
+let perroMordidaFrames   = {};       // {playerId: framesRestantes}  (ralentización)
+let perroMordidaCount    = {};       // {playerId: nMordidas}        (en el evento)
+let perroRageModeActive  = false;
+let perroRageModeUntil   = 0;
+let perroMojonPisadoUntil = {};      // {playerId: timestamp}        (pérdida control)
+// Skin
+let skinBase64 = null;
+let skinImg    = new Image();
+skinImg.src    = 'tiorenechibi.png';
+
+// Input state
+const keys = { w:false, a:false, s:false, d:false, e:false, space:false };
+let ePressHandled = false;
+let spacePressing = false;
+let powerLevel    = 0;
+let iAmShooting   = false;
+// Sprint state
+let sprintActive     = false;
+let sprintTimer      = 0;          // frames restantes de sprint activo (60fps × 3s = 180)
+let sprintCooldown   = 0;          // frames de cooldown (60fps × 4s = 240)
+let sprintKeyHeld    = false;
+let lastRunAudio     = -1;
+
+// Steal cooldown
+let stealCooldownFrames = 0;       // 60fps × 3s = 180
+let lastWinAudio     = -1;
+
+// Possession timer — aviso visual en el segundo 3, perros en el segundo 5
+const POSSESSION_FRAMES         = 126;  // 2.1s @ 60fps
+const POSSESSION_WARNING_FRAMES = 75;   // 1.25s → UI urgente + primer toast
+const POSSESSION_MAX_FRAMES     = 126;  // 2.1s → activa perros
+const POSSESSION_LAST_WARNING   = 100;  // 1.67s → último aviso  // 4.0s → último aviso
+let possessionFrames = 0;          // frames que lleva el jugador con el balón
+
+// Max score (se leerá del room)
+let maxScore = 21;
+// ─── MASS EXPLOSION STATE ──────────────────────────────────────
+let massExplosionTriggeredA = false;  // se activa cuando Equipo A llega a 15
+let massExplosionTriggeredB = false;  // se activa cuando Equipo B llega a 15
+let lastMassExplosionT      = 0;      // evita doble ejecución del mismo evento
+let unsubMassExplosion      = null;   // para limpiar el listener al salir
+// ─── GUN & DEATH STATE ────────────────────────────────────────
+let gunState           = null;     // mirror de rooms/{roomId}/gun
+let unsubGun           = null;
+let gunCountdownInterval = null;
+let gunBullet          = null;     // { x,y,vx,vy,ownerTeam } — solo en el shooter
+let particles          = [];       // partículas de explosión (locales)
+const lastShotRef      = { val: -1 };
+const lastScoreRef     = { val: -1 };
+
+// Balas de otros jugadores (sincronizadas por Firebase)
+let networkBullets     = {};   // { bulletId: { x,y,vx,vy,ownerTeam } }
+let unsubBullets       = null;
+let activePowerups    = {};
+let myPowerups        = {};
+let unsubPowerups     = null;
+let lastGiantPushTime = 0;
+let traicionActive       = false;
+let traicionAviso        = false;
+let traicionAvisoTO      = null;
+let traicionExpiresAt    = 0;
+let traicionOriginalTeam = null;
+let nextTraicionTime     = 0;
+
+// Imágenes gun / muerto
+// Imágenes gun / muerto
+const gunImg  = new Image(); gunImg.src  = 'pistola.png';
+const deadImg = new Image(); deadImg.src = 'muerto.png';
+const bulletImg = new Image(); bulletImg.src = 'bala.png';
+// Audio pre-cargado para evitar lag al activar los perros
+const audioPerrosPreload = new Audio('salganperrosctm.mp3');
+audioPerrosPreload.volume = 0.85;
+audioPerrosPreload.load();  // forzar descarga inmediata
+// Imágenes de perros (perro1.png … perro5.png)
+const perroImgs = [];
+for (let _pi = 1; _pi <= 5; _pi++) {
+  const _pimg = new Image();
+  _pimg.src = `perro${_pi}.png`;
+  perroImgs.push(_pimg);
+}
+const PERRO_RADIUS = Math.round(PLAYER_RADIUS * 1.1); // 10% más grande que jugador
+const SKINS = [
+  { file: 'tiorenechibi.jpg',   name: 'Tiorene Chibi'    },
+  { file: 'jbthevoice.jpg',     name: 'JB The Voice'     },
+  { file: 'tencantalapasta.jpg',name: 'Ten Canta La Pasta'},
+  { file: 'flaytiano.jpg',      name: 'Flaytiano'        },
+  { file: 'jrplayboy.jpg',      name: 'JR Playboy'       },
+  { file: 'ninjamalveke.jpg',   name: 'Ninja Malveke'    },
+  { file: 'carlitos.jpg',       name: 'Carlitos'         },
+  { file: 'tiorene.jpg',        name: 'Tiorene'          },
+  { file: 'corxea.jpg',         name: 'Corxea'           },
+];
+
+const _randomSkin = SKINS[Math.floor(Math.random() * SKINS.length)];
+let selectedSkinFile = _randomSkin.file;
+let selectedSkinName = _randomSkin.name;
+document.addEventListener('DOMContentLoaded', () => {
+  const preview = document.getElementById('skinPreview');
+  const nameEl  = document.getElementById('skinName');
+  if (preview) preview.src = selectedSkinFile;
+  if (nameEl)  nameEl.textContent = selectedSkinName;
+  buildSkinStrip();
+});
+// Mouse (aim)
+let mouseX = 600, mouseY = 300;
+let lastAimPush   = 0;   // throttle 50 ms
+let lastBulletPush = 0;  // throttle 30 ms
+
+// Spawn position (guardada al unirse)
+let mySpawnX = 200, mySpawnY = 300;
+
+// Dead overlay control
+let deadOverlayShown = false;
+let myDeadUntil      = 0;
+let prevDeadStates   = {};
+// Canvas
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+
+// ─── OFFSCREEN COURT (pre-render para evitar lag) ─────────────
+let courtOffscreen    = null;
+let courtOffscreenW   = 0;
+let courtOffscreenH   = 0;
+function buildCourtOffscreen(W, H) {
+  if (courtOffscreenW === W && courtOffscreenH === H && courtOffscreen) return;
+  courtOffscreenW = W; courtOffscreenH = H;
+  courtOffscreen  = document.createElement('canvas');
+  courtOffscreen.width  = W;
+  courtOffscreen.height = H;
+  const cx = courtOffscreen.getContext('2d');
+  _drawCourtToCtx(cx, W, H);
+}
+function _drawCourtToCtx(cx, W, H) {
+  const woodGrad = cx.createLinearGradient(0, 0, 0, H);
+  woodGrad.addColorStop(0,   '#c8813a');
+  woodGrad.addColorStop(0.5, '#d4924a');
+  woodGrad.addColorStop(1,   '#b87030');
+  cx.fillStyle = woodGrad;
+  cx.fillRect(0, 0, W, H);
+  // Wood planks
+  cx.save();
+  cx.globalAlpha = 0.12;
+  for (let i = 0; i < H; i += 12) {
+    const shade = i % 24 < 12;
+    cx.fillStyle = shade ? '#fff' : '#000';
+    cx.fillRect(60, i, W - 120, 6);
+  }
+  // Vertical grain lines
+  cx.globalAlpha = 0.06;
+  for (let x = 60; x < W - 60; x += 4) {
+    cx.strokeStyle = '#000';
+    cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x + 8, H); cx.stroke();
+  }
+  cx.restore();
+  // Court boundary
+  cx.save();
+  cx.strokeStyle = '#fff';
+  cx.lineWidth = 3;
+  cx.shadowColor = 'rgba(255,255,255,0.5)';
+  cx.shadowBlur  = 6;
+  cx.strokeRect(70, 80, W - 140, H - 120);
+  cx.beginPath(); cx.arc(W/2, H/2, 70, 0, Math.PI * 2); cx.stroke();
+  cx.fillStyle = '#fff';
+  cx.beginPath(); cx.arc(W/2, H/2, 6, 0, Math.PI * 2); cx.fill();
+  cx.beginPath(); cx.moveTo(W/2, 80); cx.lineTo(W/2, H - 40); cx.stroke();
+  const pW = 180, pH = 200;
+  cx.shadowBlur = 0;
+  cx.fillStyle = 'rgba(200,60,60,0.15)';
+  cx.fillRect(70, H/2 - pH/2, pW, pH);
+  cx.strokeRect(70, H/2 - pH/2, pW, pH);
+  cx.fillStyle = 'rgba(60,100,200,0.15)';
+  cx.fillRect(W - 70 - pW, H/2 - pH/2, pW, pH);
+  cx.strokeRect(W - 70 - pW, H/2 - pH/2, pW, pH);
+  cx.beginPath(); cx.arc(70 + pW, H/2, pH/2, -Math.PI/2, Math.PI/2); cx.stroke();
+  cx.beginPath(); cx.arc(W - 70 - pW, H/2, pH/2, Math.PI/2, Math.PI * 1.5); cx.stroke();
+  cx.lineWidth = 2.5;
+  cx.beginPath(); cx.arc(90, H/2, 200, -Math.PI/2 + 0.3, Math.PI/2 - 0.3); cx.stroke();
+  cx.beginPath(); cx.arc(W - 90, H/2, 200, Math.PI/2 + 0.3, Math.PI * 1.5 - 0.3); cx.stroke();
+  // 3pt corner lines
+  cx.lineWidth = 2;
+  cx.beginPath(); cx.moveTo(70, H/2 - 200); cx.lineTo(70 + 120, H/2 - 200); cx.stroke();
+  cx.beginPath(); cx.moveTo(70, H/2 + 200); cx.lineTo(70 + 120, H/2 + 200); cx.stroke();
+  cx.beginPath(); cx.moveTo(W - 70, H/2 - 200); cx.lineTo(W - 70 - 120, H/2 - 200); cx.stroke();
+  cx.beginPath(); cx.moveTo(W - 70, H/2 + 200); cx.lineTo(W - 70 - 120, H/2 + 200); cx.stroke();
+  cx.restore();
+}
+
+// Player image cache
+const playerImgCache = {};
+
+// Unsubscribe functions
+let unsubPlayers = null;
+let unsubBall    = null;
+let unsubRoom    = null;
+
+// ─── UTILITY ──────────────────────────────────────────────────
+function uid()  { return Math.random().toString(36).slice(2, 10); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+// ─── PASS BALL ────────────────────────────────────────────────
+
+async function passBall() {
+  if (localBall.possessedBy !== myId) return;
+  if (perrosEventActive) {
+    showToast('🐕 ¡NO PUEDES SOLTAR LA PELOTA! Los perros te la cuidan 😈', 2000);
+    return;
+  }
+  const me = playersData[myId];
+  if (!me || me.dead) return;
+
+  let nearestId   = null;
+  let nearestDist = Infinity;
+  Object.values(playersData).forEach(p => {
+    if (p.id === myId) return;
+    if (p.team !== myTeam) return;
+    const d = dist(me, p);
+    if (d < nearestDist) { nearestDist = d; nearestId = p.id; }
+  });
+
+  if (!nearestId) { showToast('❌ No hay compañeros'); return; }
+
+  const target = playersData[nearestId];
+  const dx = target.x - me.x;
+  const dy = target.y - me.y;
+  const d  = Math.hypot(dx, dy) || 1;
+  const speed = 10;
+  const pvx = (dx/d)*speed;
+  const pvy = (dy/d)*speed;
+
+  // ── PREDICCIÓN LOCAL INSTANTÁNEA del pase ──
+  iAmBallAuthority      = true;
+  ballLastShotTime      = Date.now();
+  lastOwnerChangeTime   = Date.now();
+  localBall.possessedBy = null;
+  localBall.vx          = pvx;
+  localBall.vy          = pvy;
+  localBall.vz          = 1.5;
+  localBall.z           = 0;
+  localBall.targetX = undefined;
+  localBall.targetY = undefined;
+  possessionFrames      = 0;
+  document.getElementById('possessionTimer').style.display = 'none';
+  onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+
+  // Enviar a Firebase en segundo plano
+  update(ref(db, `rooms/${roomId}/ball`), {
+    possessedBy: null,
+    x: me.x, y: me.y,
+    vx: pvx, vy: pvy,
+    vz: 1.5, z: 0,
+    passTarget: nearestId,
+    updatedAt: Date.now()
+  }).catch(() => {});
+
+  showToast(`📤 Pase a ${target.name}`);
+}
+
+window.openSkinModal = function() {
+  const modal = document.getElementById('skinModal');
+  const grid  = document.getElementById('skinGrid');
+  grid.innerHTML = '';
+  SKINS.forEach(sk => {
+    const card = document.createElement('div');
+    card.className = 'skin-option' + (sk.file === selectedSkinFile ? ' selected' : '');
+    card.innerHTML = `
+      <div class="skin-option-img-wrap">
+        <img src="${sk.file}" alt="${sk.name}"
+          onerror="this.style.display='none';this.parentElement.style.background='#1a1a2e'"/>
+      </div>
+      <div class="skin-option-name">${sk.name}</div>
+    `;
+    card.onclick = () => selectSkin(sk.file, sk.name, card);
+    grid.appendChild(card);
+  });
+  modal.classList.add('open');
+}
+
+window.closeSkinModal = function() {
+  document.getElementById('skinModal').classList.remove('open');
+}
+
+function buildSkinStrip() {
+  const strip = document.getElementById('skinStrip');
+  if (!strip) return;
+  strip.innerHTML = '';
+  SKINS.forEach(sk => {
+    const img = document.createElement('img');
+    img.src = sk.file;
+    img.alt = sk.name;
+    img.title = sk.name;
+    img.className = 'skin-strip-thumb' + (sk.file === selectedSkinFile ? ' active' : '');
+    img.onerror = function() { this.style.display = 'none'; };
+    img.addEventListener('click', () => {
+      selectSkin(sk.file, sk.name, null);
+    });
+    strip.appendChild(img);
+  });
+}
+
+function selectSkin(file, name, card) {
+  selectedSkinFile = file;
+  selectedSkinName = name;
+
+  skinBase64 = null;
+  skinImg.src = file;
+  document.getElementById('skinPreview').src = file;
+  document.getElementById('skinName').textContent = name;
+
+  // Actualizar activo en el modal
+  if (card) {
+    document.querySelectorAll('.skin-option').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  }
+
+  // Actualizar activo en el strip
+  document.querySelectorAll('.skin-strip-thumb').forEach(img => {
+    img.classList.toggle('active', img.src.endsWith(file) || img.getAttribute('src') === file);
+  });
+
+  window.closeSkinModal();
+  buildSkinStrip();
+}
+
+
+function onRightClick(e) {
+  e.preventDefault();
+  if (!gameRunning) return;
+  passBall();
+}
+function showToast(msg, dur = 2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+function showDispara() {
+  const el = document.getElementById('dispara-overlay');
+  el.classList.remove('show');
+  void el.offsetWidth; // forzar reflow para reiniciar animación
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 750);
+}
+function scorePopup(x, y, txt) {
+  const el = document.createElement('div');
+  el.className = 'score-popup';
+  el.textContent = txt;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  document.getElementById('gameScreen').appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+// ─── AUDIO SYSTEM (sin repetir 2 veces seguidas) ───────────────
+function playRandomAudio(prefix, count, lastRef) {
+  // prefix: 'ganar', 'correr'   count: 3   lastRef: { val: -1 }
+  let idx;
+  do { idx = Math.floor(Math.random() * count) + 1; } while (idx === lastRef.val && count > 1);
+  lastRef.val = idx;
+  const audio = new Audio(`${prefix}${idx}.mp3`);
+  audio.volume = 0.7;
+  audio.play().catch(() => {});  // catch si el navegador bloquea
+}
+const lastRunRef  = { val: -1 };
+const lastWinRef  = { val: -1 };
+const lastDeathRef = { val: -1 };
+let lastPistolaRef = { val: -1 }; // 👈 Para evitar repetir sonido al recibir la pistola
+let lastDisparoRef = { val: -1 }; // 👈 Para evitar repetir sonido al disparar
+function playSynth(freq, dur, type='sine', vol=0.5, freqEnd=null) {
+  try {
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ac.currentTime);
+    if (freqEnd) osc.frequency.linearRampToValueAtTime(freqEnd, ac.currentTime+dur);
+    gain.gain.setValueAtTime(vol, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+dur);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime+dur);
+  } catch(e){}
+}
+function playSynthSeq(notes) {
+  let accumulated = 0;
+  notes.forEach(([params, delay = 0]) => {
+    accumulated += delay;
+    const t = accumulated;
+    setTimeout(() => playSynth(...params), t);
+  });
+}
+function playPowerupSpawnAudio() {
+  playSynthSeq([[[440,.12,'triangle',.4],0],[[554,.12,'triangle',.4],80],[[659,.12,'triangle',.4],80],[[880,.18,'triangle',.55],80]]);
+}
+function playPowerupPickupAudio() {
+  playSynthSeq([[[880,.08,'square',.5],0],[[1100,.08,'square',.5],60],[[1320,.14,'triangle',.55],60]]);
+}
+function playPowerupExpireAudio() {
+  playSynth(600,.4,'triangle',.4,200);
+  playSynthSeq([[[500,.1,'triangle',.3],0],[[350,.1,'triangle',.3],80],[[220,.2,'triangle',.25],80]]);
+}
+function playGiantActivateAudio() {
+  playSynth(80,.5,'sawtooth',.7,40);
+  playSynth(160,.4,'square',.4,80);
+  playSynthSeq([[[220,.15,'square',.5],0],[[180,.15,'sawtooth',.5],80],[[140,.25,'sawtooth',.6],80]]);
+}
+let _lastPushSnd=0;
+function playGiantPushAudio() {
+  const n=Date.now(); if(n-_lastPushSnd<400)return; _lastPushSnd=n;
+  playSynth(60,.15,'sawtooth',.8,20); playSynth(200,.1,'square',.5);
+}
+function playShieldActivateAudio() {
+  playSynth(400,.3,'square',.25,800);
+  playSynthSeq([[[1200,.08,'sawtooth',.4],0],[[1400,.08,'sawtooth',.4],60],[[1600,.08,'sawtooth',.4],60],[[1800,.2,'sawtooth',.3,800],60]]);
+}
+function playShieldDeflectAudio() {
+  playSynth(2000,.05,'sawtooth',.7,500); playSynth(300,.2,'square',.4,100);
+  playSynthSeq([[[1500,.05,'sawtooth',.5],0],[[800,.05,'sawtooth',.5],40],[[400,.1,'square',.4],40]]);
+}
+function playTraicionAvisoAudio() {
+  playSynthSeq([[[440,.12,'square',.55],0],[[440,.12,'square',.55],200],[[554,.2,'square',.65],200]]);
+}
+function playTraicionActivateAudio() {
+  playSynth(110,.6,'sawtooth',.6,55);
+  playSynthSeq([[[220,.15,'square',.4],0],[[185,.15,'square',.4],120],[[165,.3,'sawtooth',.5],120]]);
+}
+function playTraicionEndAudio() {
+  playSynthSeq([[[330,.12,'triangle',.4],0],[[392,.12,'triangle',.4],80],[[523,.22,'triangle',.5],80]]);
+}
+function playRunAudio()  { playRandomAudio('correr', 3, lastRunRef); }
+function playWinAudio()  { playRandomAudio('ganar',  8, lastWinRef); }
+function playGunShotAudio() {
+  // Genera un número entero al azar entre 1 y 4
+  const numeroAzar = Math.floor(Math.random() * 4) + 1;
+  
+  // Si el número es 1, usamos 'disparo.mp3', de lo contrario añadimos el número (disparo2, disparo3...)
+  const nombreArchivo = numeroAzar === 1 ? 'disparo.mp3' : `disparo${numeroAzar}.mp3`;
+  
+  const audiodisparo = new Audio(nombreArchivo);
+  audiodisparo.play();
+}
+
+function playGunGrantAudio() {
+  // Genera un número al azar entre 1 y 3
+  const numeroAzar = Math.floor(Math.random() * 4) + 1;
+  
+  // Arma el nombre del archivo dinámicamente (pistola1.mp3, pistola2.mp3, etc.)
+  const a = new Audio(`pistola${numeroAzar}.mp3`);
+  a.volume = 0.8;
+  a.play().catch(() => {});
+}
+function playScoreAudio() { playRandomAudio('encesta', 3, lastScoreRef); }
+// ─── SKIN SYSTEM ──────────────────────────────────────────────
+document.getElementById('skinFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    skinBase64 = ev.target.result;
+    document.getElementById('skinPreview').src = skinBase64;
+    document.getElementById('skinName').textContent = file.name.slice(0, 20);
+    skinImg.src = skinBase64;
+  };
+  reader.readAsDataURL(file);
+});
+// ─── SOUND EVENTS (sincronizados por Firebase) ────────────────
+function emitSoundEvent(name) {
+  set(ref(db, `rooms/${roomId}/soundEvent`), { name, t: Date.now() }).catch(() => {});
+}
+
+
+function getPlayerImg(p) {
+  const src = p.skin || selectedSkinFile;
+  // Si ya está en caché y cargó bien, devolverla
+  if (playerImgCache[src] && playerImgCache[src].naturalWidth > 0) {
+    return playerImgCache[src];
+  }
+  // Si no existe en caché o falló, crear nueva
+  if (!playerImgCache[src] || playerImgCache[src]._failed) {
+    const img = new Image();
+    img.onload  = () => { img._failed = false; playerImgCache[src] = img; };
+    img.onerror = () => { img._failed = true;  playerImgCache[src] = skinImg; };
+    img.src = src;
+    playerImgCache[src] = img;
+  }
+  // Mientras carga, devolver skinImg como fallback
+  return playerImgCache[src].naturalWidth > 0 ? playerImgCache[src] : skinImg;
+}
+// ─── NAME GATE ────────────────────────────────────────────────
+(function() {
+  const gate      = document.getElementById('nameGate');
+  const lobby     = document.getElementById('lobby');
+  const input     = document.getElementById('nameGateInput');
+  const btn       = document.getElementById('nameGateBtn');
+  const errorEl   = document.getElementById('nameGateError');
+  const lobbyInput = document.getElementById('playerName');
+
+  // Ocultar lobby hasta que pasen el gate
+  lobby.style.display = 'none';
+
+  function confirm() {
+    const name = input.value.trim();
+    if (!name) {
+      errorEl.classList.add('show');
+      input.classList.add('invalid');
+      setTimeout(() => input.classList.remove('invalid'), 400);
+      input.focus();
+      return;
+    }
+    errorEl.classList.remove('show');
+    // Pasar el nombre al campo del lobby
+    lobbyInput.value = name;
+    // Ocultar gate, mostrar lobby
+    gate.style.opacity = '0';
+    gate.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => {
+      gate.style.display = 'none';
+      lobby.style.display = '';
+    }, 300);
+  }
+
+  btn.addEventListener('click', confirm);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') confirm(); });
+  input.focus();
+})();
+// ─── LOBBY: List rooms ─────────────────────────────────────────
+const roomsRef = ref(db, 'rooms');
+onValue(roomsRef, snap => {
+  const rooms = snap.val() || {};
+  const list  = document.getElementById('roomsList');
+  const keys  = Object.keys(rooms);
+  document.getElementById('roomCount').textContent = keys.length + ' sala(s)';
+
+  if (!keys.length) {
+    list.innerHTML = '<div class="rooms-empty">🏀<br>No hay salas activas.<br>¡Crea la primera!</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  keys.forEach(rid => {
+    const r = rooms[rid];
+    const total    = MAX_PER_SIDE[r.mode] * 2;
+    const players  = Object.keys(r.players || {}).length;
+    const isFull   = players >= total;
+    const card = document.createElement('div');
+    card.className = 'room-card' + (isFull ? ' room-full' : '');
+    card.innerHTML = `
+      <div>
+        <div class="room-name">🏟️ ${r.name}</div>
+        <div class="room-mode">${r.mode}</div>
+      </div>
+      <div class="room-players">${players}/${total} jugadores</div>
+      <div class="room-join-badge">${isFull ? 'LLENA' : 'UNIRSE'}</div>
+    `;
+    if (!isFull) card.onclick = () => joinRoom(rid, r);
+    list.appendChild(card);
+  });
+});
+
+// ─── CREATE ROOM ──────────────────────────────────────────────
+document.getElementById('createRoomBtn').addEventListener('click', async () => {
+  const name     = document.getElementById('playerName').value.trim() || 'Jugador' + uid().slice(0,4);
+  const mode     = document.getElementById('gameMode').value;
+  const maxScoreVal = parseInt(document.getElementById('maxScore').value) || 21;
+  document.getElementById('playerName').value = name;
+
+  myId = uid();
+  const newRoomRef = push(ref(db, 'rooms'));
+  roomId = newRoomRef.key;
+
+
+    const roomObj = {
+    name: name + "'s Room",
+    mode,
+    host: myId,
+    maxScore: maxScoreVal,          // ← AGREGAR esta línea
+    createdAt: serverTimestamp(),
+    score: { A: 0, B: 0 },
+    players: {},
+    ball: {
+      x: canvas.width / 2 || 600,
+      y: canvas.height / 2 || 300,
+      vx: 0, vy: 0, vz: 0, z: 0,
+      possessedBy: null
+    }
+  };
+
+  const playerObj = {
+    id: myId,
+    name,
+    skin: skinBase64 || selectedSkinFile,
+    team: 'A',
+    x: 200, y: 300,
+    hasBall: false
+  };
+
+  roomObj.players[myId] = playerObj;
+  await set(newRoomRef, roomObj);
+
+ mySpawnX = 200;    // ✅ valor fijo, igual que el playerObj de arriba
+  mySpawnY = 300;    // ✅
+  myTeam = 'A';
+  enterGame(name, mode);
+});
+
+// ─── JOIN ROOM ─────────────────────────────────────────────────
+async function joinRoom(rid, r) {
+  const name = document.getElementById('playerName').value.trim() || 'Jugador' + uid().slice(0,4);
+  document.getElementById('playerName').value = name;
+
+  myId   = uid();
+  roomId = rid;
+
+  const existingPlayers = Object.values(r.players || {});
+  const teamA = existingPlayers.filter(p => p.team === 'A').length;
+  const teamB = existingPlayers.filter(p => p.team === 'B').length;
+  myTeam = teamA <= teamB ? 'A' : 'B';
+
+  const perSide = MAX_PER_SIDE[r.mode];
+  const spawnX  = myTeam === 'A' ? 200 : canvas.width - 200 || 1000;
+
+  const playerObj = {
+    id: myId,
+    name,
+    skin: skinBase64 || selectedSkinFile,
+    team: myTeam,
+    x: spawnX, y: 280 + existingPlayers.length * 40,
+    hasBall: false
+  };
+
+  await update(ref(db, `rooms/${roomId}/players/${myId}`), playerObj);
+  mySpawnX = spawnX;
+  mySpawnY = 280 + existingPlayers.length * 40;
+  enterGame(r.name, r.mode);
+}
+// ─── ENTER GAME ────────────────────────────────────────────────
+function enterGame(rName, mode) {
+  if (typeof unsubLobby === 'function') unsubLobby();
+  document.getElementById('lobby').style.display = 'none';
+  const gs = document.getElementById('gameScreen');
+  gs.style.display = 'flex';
+  document.getElementById('hudRoomName').textContent = rName;
+  document.getElementById('hudMode').textContent = mode;
+  document.getElementById('waitingInfo').textContent = 'Sala: ' + roomId;
+
+  resizeCanvas();
+
+  // onDisconnect: remove player & release ball
+  const myPlayerRef = ref(db, `rooms/${roomId}/players/${myId}`);
+  onDisconnect(myPlayerRef).remove();
+  // Si soy el último jugador, borrar la sala entera al desconectarme
+  onDisconnect(ref(db, `rooms/${roomId}`)).remove();
+  // Release ball if I have it
+  const ballRef = ref(db, `rooms/${roomId}/ball`);
+  // We'll update onDisconnect dynamically when I grab ball
+
+  setupListeners();
+  startGameLoop();
+
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup',   onKeyUp);
+  window.addEventListener('beforeunload', cleanup);
+  canvas.addEventListener('contextmenu', onRightClick);  // ← AGREGAR
+canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('click',     onGunClick);
+  onDisconnect(ref(db, `rooms/${roomId}/gun`)).remove();
+}
+
+// ─── RESIZE CANVAS ────────────────────────────────────────────
+function resizeCanvas() {
+  canvas.width  = LOGIC_W;
+  canvas.height = LOGIC_H;
+  const scale = Math.min(window.innerWidth / LOGIC_W, window.innerHeight / LOGIC_H);
+  canvas.style.width    = (LOGIC_W * scale) + 'px';
+  canvas.style.height   = (LOGIC_H * scale) + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.left     = ((window.innerWidth  - LOGIC_W * scale) / 2) + 'px';
+  canvas.style.top      = ((window.innerHeight - LOGIC_H * scale) / 2) + 'px';
+  canvas._scale = scale;
+}
+window.addEventListener('resize', () => { resizeCanvas(); courtOffscreen = null; });
+
+// ─── FIREBASE LISTENERS ───────────────────────────────────────
+function setupListeners() {
+  // Players
+  unsubPlayers = onValue(ref(db, `rooms/${roomId}/players`), snap => {
+    playersData = snap.val() || {};
+
+    // Inicializar posición de render y velocidad si es jugador nuevo
+    Object.values(playersData).forEach(p => {
+      if (!playersRenderPos[p.id]) {
+        playersRenderPos[p.id] = { x: p.x, y: p.y };
+        playersVelocity[p.id]  = { vx: 0, vy: 0 };
+        if (p.id !== myId) {
+  playerTargetPos[p.id] = { x: p.x, y: p.y };
+}
+        playersLastUpdate[p.id] = Date.now();
+        return;
+      }
+      // ── DEAD RECKONING mejorado: calcular velocidad real desde posición delta y dt
+      const oldPos   = playersRenderPos[p.id];
+      const prevTime = playersLastUpdate[p.id] || Date.now();
+      const dtMs     = Math.max(16, Date.now() - prevTime);
+      const dtFrames = dtMs / 16.67;
+
+      // Si el jugador remoto envía sus vectores, usarlos directamente
+      if (p.vx !== undefined && p.vy !== undefined) {
+        playersVelocity[p.id] = { vx: p.vx || 0, vy: p.vy || 0 };
+      } else {
+        // Inferir velocidad del delta de posición, escalado a 1 frame
+        const rawVx = (p.x - oldPos.x) / dtFrames;
+        const rawVy = (p.y - oldPos.y) / dtFrames;
+        // Suavizado exponencial para evitar saltos bruscos
+        const prev  = playersVelocity[p.id] || { vx: 0, vy: 0 };
+        playersVelocity[p.id] = {
+          vx: prev.vx * 0.4 + rawVx * 0.6,
+          vy: prev.vy * 0.4 + rawVy * 0.6
+        };
+      }
+      playersLastUpdate[p.id] = Date.now();
+    });
+
+    // Detectar jugadores que acaban de morir (explosión para todos)
+    Object.values(playersData).forEach(p => {
+      if (p.dead && !prevDeadStates[p.id]) {
+        triggerExplosion(p.x, p.y);
+        if (p.id === myId && !deadOverlayShown) {
+          deadOverlayShown = true;
+          myDeadUntil = p.respawnAt || (Date.now() + 3000);
+          showDeadOverlay(p.respawnAt || (Date.now() + 3000), lastDeathReason);
+        }
+      }
+      if (!p.dead && prevDeadStates[p.id]) {
+        if (p.id === myId) deadOverlayShown = false;
+      }
+      prevDeadStates[p.id] = !!p.dead;
+    });
+
+    // Waiting overlay
+    const total = roomData ? MAX_PER_SIDE[roomData.mode] * 2 : 2;
+    const count = Object.keys(playersData).length;
+    if (count >= total && !gameRunning) {
+      startActualGame();
+    }
+    if (count === 0) {
+      remove(ref(db, `rooms/${roomId}`)).catch(() => {});
+      return;
+    }
+    if (count < total) {
+      document.getElementById('waiting-overlay').style.display = 'flex';
+      gameRunning = false;
+    }
+
+    // Rebuild image cache for new players
+    Object.values(playersData).forEach(p => {
+      if (p.skin && (!playerImgCache[p.skin] || playerImgCache[p.skin].naturalWidth === 0)) {
+        const img = new Image();
+        img.onload  = () => { playerImgCache[p.skin] = img; };
+        img.onerror = () => { playerImgCache[p.skin] = skinImg; };
+        img.src = p.skin;
+        playerImgCache[p.skin] = img;
+      }
+    });
+  });
+
+  // Ball (source of truth)
+  unsubBall = onValue(ref(db, `rooms/${roomId}/ball`), snap => {
+    const d = snap.val();
+    if (!d) return;
+
+    // ══════════════════════════════════════════════════════════════
+    // AUTORIDAD ABSOLUTA DEL POSEEDOR (Anti-tiriteo)
+    // Si YO soy el dueño actual, soy la ÚNICA fuente de verdad para
+    // la posición de la pelota. Ignorar COMPLETAMENTE cualquier dato
+    // de posición/velocidad que venga de Firebase para la pelota.
+    // Solo se permite entrar si alguien MÁS se convirtió en dueño.
+    // ══════════════════════════════════════════════════════════════
+    if (localBall.possessedBy === myId) {
+      // Única excepción: otro jugador robó/agarró la pelota → cederla
+      if (d.possessedBy && d.possessedBy !== myId) {
+        localBall.possessedBy = d.possessedBy;
+        iAmBallAuthority      = false;
+        possessionFrames      = 0;
+        lastOwnerChangeTime   = Date.now();
+        document.getElementById('possessionTimer').style.display = 'none';
+      }
+      // En cualquier otro caso, bloqueo total: no leer x/y/vx/vy de Firebase
+      return;
+    }
+
+    const prevPossessed = localBall.possessedBy;
+    localBall.possessedBy = d.possessedBy;
+
+    // Si alguien más agarró la pelota, perder autoridad y resetear contador
+    if (d.possessedBy && d.possessedBy !== myId) {
+      iAmBallAuthority = false;
+      lastOwnerChangeTime = Date.now();
+      if (prevPossessed === myId) {
+        possessionFrames = 0;
+        document.getElementById('possessionTimer').style.display = 'none';
+      }
+    }
+
+    if (d.possessedBy !== myId) {
+      // Si acabo de agarrar, ignorar CUALQUIER update con pelota libre por 700ms
+      if (!d.possessedBy && Date.now() < ballGrabLockUntil) return;
+
+      if (!d.possessedBy) {
+        // Pelota libre: ignorar actualizaciones por 200ms tras un disparo/pase mío
+        if (iAmBallAuthority && Date.now() - ballLastShotTime < 200) return;
+
+        // ── DEAD RECKONING: guardar posición target para Lerp suave en tick() ──
+        // No asignar en seco — se interpola en el loop a 60fps
+        const latencyCompMs = Math.min(Date.now() - (d.updatedAt || Date.now()), 150);
+        const framesAhead   = latencyCompMs / 16.67;
+        // Actualizar vectores de velocidad inmediatamente (necesarios para simular)
+        localBall.vx = d.vx || 0;
+        localBall.vy = d.vy || 0;
+        localBall.vz = d.vz || 0;
+        localBall.z  = Math.max(0, (d.z || 0) + (d.vz || 0) * framesAhead - GRAVITY * framesAhead * framesAhead * 0.5);
+        // Guardar posición TARGET para el interpolador — no asignar en seco
+if (!(iAmBallAuthority && Date.now() - ballLastShotTime < 400)) {
+  localBall.targetX = (d.x || 0) + localBall.vx * framesAhead * 0.5;
+  localBall.targetY = (d.y || 0) + localBall.vy * framesAhead * 0.5;
+}
+        // Primera vez que aparece la pelota libre: teletransportar sin lerp
+        if (prevPossessed && prevPossessed !== myId) {
+          localBall.x = localBall.targetX;
+          localBall.y = localBall.targetY;
+        }
+      } else {
+        // Poseída por otro — seguir su posición de render interpolada
+        const ownerRender = playersRenderPos[d.possessedBy];
+        const ownerData   = playersData[d.possessedBy];
+        if (ownerRender) {
+          localBall.x = ownerRender.x;
+          localBall.y = ownerRender.y + 10;
+        } else if (ownerData) {
+          localBall.x = ownerData.x;
+          localBall.y = ownerData.y + 10;
+        } else {
+          localBall.x = d.x;
+          localBall.y = d.y;
+        }
+        localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+      }
+    }
+
+    // Auto-agarrar pases dirigidos a mí
+    if (d.passTarget === myId && !d.possessedBy) {
+      const me = playersData[myId];
+      if (me) {
+        setTimeout(async () => {
+          const snap2 = await get(ref(db, `rooms/${roomId}/ball`));
+          const b = snap2.val();
+          if (!b || b.possessedBy) return;
+          await update(ref(db, `rooms/${roomId}/ball`), {
+            possessedBy: myId, passTarget: null,
+            x: playersData[myId]?.x || b.x,
+            y: (playersData[myId]?.y || b.y) + 10
+          });
+          localBall.possessedBy = myId;
+          localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+          possessionFrames = 0;
+          iAmBallAuthority = true;
+          document.getElementById('possessionTimer').style.display = 'flex';
+          showToast('📥 ¡Pase recibido!');
+        }, 400);
+      }
+    }
+  });
+
+  // Room data (score, mode, reload)
+  unsubRoom = onValue(ref(db, `rooms/${roomId}`), snap => {
+    roomData = snap.val();
+    if (roomData && roomData.reloadAll) {
+      location.reload();
+      return;
+    }
+    if (!roomData && gameRunning) {
+      location.reload();
+      return;
+    }
+    if (!roomData) return;
+    document.getElementById('scoreA').textContent = roomData.score?.A ?? 0;
+    document.getElementById('scoreB').textContent = roomData.score?.B ?? 0;
+    maxScore = roomData.maxScore || 21;
+    const label = `/ ${maxScore} pts`;
+    document.getElementById('hudMaxScore').textContent  = label;
+    document.getElementById('hudMaxScoreB').textContent = label;
+  });
+
+  // Gun listener
+  unsubGun = onValue(ref(db, `rooms/${roomId}/gun`), snap => {
+    const prev = gunState;
+    gunState = snap.val() || null;
+    if (gunState && gunState.active && gunState.ownerId === myId) {
+      if (!prev || !prev.active || prev.ownerId !== myId) {
+        startGunCountdown();
+        showDispara();
+      }
+    } else {
+      if (prev && prev.ownerId === myId) clearInterval(gunCountdownInterval);
+    }
+  });
+
+  // Balas de red
+  unsubBullets = onValue(ref(db, `rooms/${roomId}/bullets`), snap => {
+    const data = snap.val() || {};
+    Object.entries(data).forEach(([bid, b]) => {
+      if (b.ownerId === myId) return;
+      if (!networkBullets[bid]) {
+        playGunShotAudio();
+        networkBullets[bid] = {
+          x: b.x, y: b.y,
+          vx: b.vx, vy: b.vy,
+          ownerTeam: b.ownerTeam,
+          targetId: b.targetId || null,
+          ownerId: b.ownerId
+        };
+      }
+    });
+    Object.keys(networkBullets).forEach(bid => {
+      if (!data[bid]) delete networkBullets[bid];
+    });
+  });
+
+  onValue(ref(db, `rooms/${roomId}/soundEvent`), snap => {
+    const ev = snap.val();
+    if (!ev) return;
+    if (ev.name === 'ganar')   playWinAudio();
+    if (ev.name === 'encesta') playScoreAudio();
+    if (ev.name === 'muerte')  { playRandomAudio('muerte', 8, lastDeathRef); }
+if (ev.name === 'pistola') { playRandomAudio('pistola', 4, lastPistolaRef); } // Cambia el 3 por tu cantidad real de audios
+if (ev.name === 'disparo') { playRandomAudio('disparo', 6, lastDisparoRef); }
+  });
+
+  // Mass Explosion Event
+  unsubMassExplosion = onValue(ref(db, `rooms/${roomId}/massExplosionEvent`), snap => {
+    const ev = snap.val();
+    if (!ev) return;
+    if (ev.t === lastMassExplosionT) return;
+    lastMassExplosionT = ev.t;
+    handleMassExplosion(ev.immuneId, ev.immuneName);
+  });
+
+  // Power-ups
+  unsubPowerups = onValue(ref(db, `rooms/${roomId}/powerups`), snap => {
+    activePowerups = snap.val() || {};
+  });
+  // ── Listener de Perros CTM ───────────────────────────────────
+  unsubPerrosEvent = onValue(ref(db, `rooms/${roomId}/perrosEvent`), snap => {
+    const ev = snap.val();
+    if (!ev) return;
+
+    if (ev.active && !perrosEventActive) {
+      // ── ACTIVAR EVENTO ──────────────────────────────────────
+      perrosEventActive = true;
+      perrosSpawnTime   = ev.startTime || Date.now();
+
+      // Audio — no bloquea otros sonidos (ver Sección 11)
+     audioPerrosPreload.currentTime = 0;
+      audioPerrosPreload.play().catch(() => {});
+
+      // Banner visible 3 segundos
+      const banner = document.getElementById('perros-banner');
+      if (banner) {
+        banner.classList.add('show');
+        perrosBannerVisible = true;
+        perrosBannerTimeout = setTimeout(() => {
+          banner.classList.remove('show');
+          perrosBannerVisible = false;
+        }, 3000);
+      }
+
+      // Generar los 5 perros
+      spawnearPerros(ev.triggeredBy || 'remontada', ev.comilon || null);
+
+      // Limpiar a los 9 segundos
+      perrosCleanupTimeout = setTimeout(() => {
+        limpiarPerros();
+        // Solo el host escribe active: false en Firebase
+        if (roomData && roomData.host === myId) {
+          update(ref(db, `rooms/${roomId}/perrosEvent`), { active: false }).catch(() => {});
+        }
+      }, 9000);
+
+    } else if (ev.active === false && perrosEventActive) {
+      // ── DESACTIVAR EVENTO (señal de otro cliente) ───────────
+      limpiarPerros();
+    }
+  });
+}
+
+function startActualGame() {
+  gameRunning = true;
+  document.getElementById('waiting-overlay').style.display = 'none';
+  if (roomData?.ball) {
+    localBall.x = roomData.ball.x || canvas.width / 2;
+    localBall.y = roomData.ball.y || canvas.height / 2;
+    localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+    localBall.possessedBy = roomData.ball.possessedBy || null;
+  }
+
+}
+
+// ─── INPUT ────────────────────────────────────────────────────
+function onKeyDown(e) {
+  if (!gameRunning) return;
+  const me = playersData[myId];       // ← añadir esta línea
+  if (me && me.dead) return;          // ← el chequeo de muerte
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup')    { keys.w = true; e.preventDefault(); }
+  if (k === 'a' || k === 'arrowleft')  { keys.a = true; e.preventDefault(); }
+  if (k === 's' || k === 'arrowdown')  { keys.s = true; e.preventDefault(); }
+  if (k === 'd' || k === 'arrowright') { keys.d = true; e.preventDefault(); }
+  if (k === ' ') {
+    e.preventDefault();
+    if (!spacePressing && localBall.possessedBy === myId) {
+      spacePressing = true;
+      iAmShooting   = true;
+      powerLevel    = 0;
+    }
+  }
+  if (k === 'e' && !ePressHandled) {
+    ePressHandled = true;
+    handleGrabSteal();
+  }
+  // Sprint: Shift o CapsLock
+  if ((e.key === 'Shift' || e.key === 'CapsLock') && !sprintKeyHeld) {
+    sprintKeyHeld = true;
+    if (sprintCooldown <= 0 && !sprintActive) {
+      sprintActive = true;
+      sprintTimer  = 180;   // 3 segundos × 60fps
+      playRunAudio();
+    }
+  }
+  if (k === 't' && traicionAviso && !traicionActive) {
+    clearTimeout(traicionAvisoTO);
+    traicionAviso        = false;
+    traicionActive       = true;
+    traicionOriginalTeam = myTeam;
+    myTeam               = myTeam === 'A' ? 'B' : 'A';
+    traicionExpiresAt    = Date.now()+10000;
+    showToast('⚠️ ¡TRAICIÓN ACTIVA! — 10 segundos',3000);
+    playTraicionActivateAudio();
+    if (navigator.vibrate) navigator.vibrate([300,100,300,100,500]);
+  }
+}
+function onKeyUp(e) {
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup')    keys.w = false;
+  if (k === 'a' || k === 'arrowleft')  keys.a = false;
+  if (k === 's' || k === 'arrowdown')  keys.s = false;
+  if (k === 'd' || k === 'arrowright') keys.d = false;
+  if (k === 'e')  ePressHandled = false;
+  if (k === ' ') {
+    if (spacePressing && iAmShooting) shootBall();
+    spacePressing = false;
+    iAmShooting   = false;
+  }
+  if (e.key === 'Shift' || e.key === 'CapsLock') {
+    sprintKeyHeld = false;
+  }
+}
+
+// ─── GRAB / STEAL ─────────────────────────────────────────────
+async function handleGrabSteal() {
+  iAmBallAuthority = true;
+  const me = playersData[myId];
+  if (!me) return;
+
+  // ── COOLDOWN DE ROBO: bloquear 200ms tras cualquier cambio de dueño ──
+  // Evita que la pelota salte infinitamente entre dos jugadores pegados
+  if (Date.now() - lastOwnerChangeTime < 200) return;
+
+  // If ball is free & near me → grab
+  if (!localBall.possessedBy) {
+    const ballPos = { x: localBall.x, y: localBall.y };
+    if (dist(me, ballPos) < GRAB_DIST) {
+      await grabBall();
+      showToast('🏀 ¡Balón agarrado!');
+    }
+    return;
+  }
+
+  // If I already have it → drop (or do nothing)
+  if (localBall.possessedBy === myId) return;
+
+  // Try to steal from opponent
+  const owner = playersData[localBall.possessedBy];
+  if (!owner) return;
+  if (dist(me, owner) < STEAL_DIST) {
+    // 50% steal chance (but owner must be opponent)
+    const success = Math.random() > 0.45;
+    if (success) {
+      await grabBall();
+      showToast('🔥 ¡ROBO!');
+    } else {
+      showToast('❌ Robo fallido');
+    }
+  }
+}
+
+async function grabBall() {
+  const me = playersData[myId];
+  if (!me) return;
+
+  // ── Bloquear estado LOCAL INMEDIATAMENTE, antes de cualquier await ──
+  ballGrabLockUntil     = Date.now() + 700;  // 700ms de protección
+  lastOwnerChangeTime   = Date.now();        // cooldown anti-robo 200ms
+  localBall.possessedBy = myId;
+  localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+  iAmBallAuthority      = true;
+  possessionFrames      = 0;
+  document.getElementById('possessionTimer').style.display = 'flex';
+
+  // Ahora sí escribir a Firebase (el estado local ya está asegurado)
+  await update(ref(db, `rooms/${roomId}/ball`), {
+    possessedBy: myId,
+    x: me.x,
+    y: me.y + 10
+  });
+  onDisconnect(ref(db, `rooms/${roomId}/ball`)).update({ possessedBy: null });
+}
+
+// ─── SHOOT ────────────────────────────────────────────────────
+function getHoopTarget() {
+  const W = canvas.width;
+  const H = canvas.height;
+  const me = playersData[myId];
+  if (!me) return { tx: W/2, ty: H/2 };
+  // Shoot toward the enemy hoop
+  // Team A attacks right hoop, Team B attacks left hoop
+  if (myTeam === 'A') {
+    return { tx: W - 80, ty: H / 2 };
+  } else {
+    return { tx: 80, ty: H / 2 };
+  }
+}
+
+async function shootBall() {
+  iAmBallAuthority = true;
+  if (localBall.possessedBy !== myId) return;
+  const me = playersData[myId];
+  if (!me) return;
+
+  const power = powerLevel;
+  const { tx, ty } = getHoopTarget();
+
+  const dx = tx - me.x;
+  const dy = ty - me.y;
+  const d  = Math.hypot(dx, dy) || 1;
+  const speed = 4 + power * SHOOT_MULT;
+
+  const vx = (dx / d) * speed;
+  const vy = (dy / d) * speed;
+  const vz = 3 + power * 0.05; // arc height
+
+  // ── PREDICCIÓN LOCAL INSTANTÁNEA: la pelota sale en pantalla a 60fps
+  // SIN esperar confirmación de Firebase. El servidor se sincroniza después ──
+  localBall.lastShooter = myId;
+  localBall.possessedBy = null;
+  localBall.vx          = vx;
+  localBall.vy          = vy;
+  localBall.vz          = vz;
+  localBall.z           = 0;
+  localBall.targetX     = me.x;
+  localBall.targetY     = me.y;
+  powerLevel            = 0;
+  spacePressing         = false;
+  possessionFrames      = 0;
+  lastOwnerChangeTime   = Date.now();
+  document.getElementById('possessionTimer').style.display = 'none';
+  onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+
+  // Enviar a Firebase en segundo plano (asíncrono, no bloquea el canvas)
+  ballLastShotTime = Date.now();
+  update(ref(db, `rooms/${roomId}/ball`), {
+    possessedBy: null,
+    x: me.x, y: me.y,
+    vx, vy, vz, z: 0,
+    updatedAt: Date.now()
+  }).catch(() => {});
+}
+// ─── GAME LOOP ────────────────────────────────────────────────
+function startGameLoop() {
+  if (animId) cancelAnimationFrame(animId);
+  function loop() {
+    tick();
+    render();
+    animId = requestAnimationFrame(loop);
+  }
+  animId = requestAnimationFrame(loop);
+}
+
+let lastPushedX = -9999, lastPushedY = -9999;
+let lastBallPushTime = 0;
+let lastPushTime = 0;
+function spawnPowerup() {
+  if (!gameRunning || !roomId) return;
+  if (Object.keys(activePowerups).length >= 3) return;
+  const types = ['giant','shield'];
+  const type  = types[Math.floor(Math.random()*types.length)];
+  const x = 160 + Math.random()*(LOGIC_W-320);
+  const y = 120 + Math.random()*(LOGIC_H-200);
+  const id = uid();
+  set(ref(db,`rooms/${roomId}/powerups/${id}`),{id,type,x,y,spawnedAt:Date.now()}).catch(()=>{});
+  setTimeout(()=>remove(ref(db,`rooms/${roomId}/powerups/${id}`)).catch(()=>{}), 5000);
+  playPowerupSpawnAudio();
+}
+function checkPowerupPickup() {
+  const me = playersData[myId];
+  if (!me || me.dead) return;
+  Object.entries(activePowerups).forEach(([id, pu]) => {
+    if (!pu) return;
+    if (Math.hypot(me.x-pu.x, me.y-pu.y) >= 20+PLAYER_RADIUS) return;
+    remove(ref(db,`rooms/${roomId}/powerups/${id}`)).catch(()=>{});
+    delete activePowerups[id];
+    myPowerups[pu.type] = { expiresAt: Date.now()+6000 };
+    playPowerupPickupAudio();
+    triggerPowerupActivation(me.x, me.y, pu.type==='giant'?'#ffd700':'#00ccff');
+    if (pu.type === 'giant') {
+      update(ref(db,`rooms/${roomId}/players/${myId}`),{giant:true}).catch(()=>{});
+      showToast('🔵 ¡MODO GIGANTE — 6 SEGUNDOS!', 2500);
+      playGiantActivateAudio();
+      setTimeout(()=>{
+        delete myPowerups['giant'];
+        update(ref(db,`rooms/${roomId}/players/${myId}`),{giant:false}).catch(()=>{});
+        showToast('⬇️ Modo gigante terminó',1500);
+        playPowerupExpireAudio();
+      }, 6000);
+    } else if (pu.type === 'shield') {
+      update(ref(db,`rooms/${roomId}/players/${myId}`),{shield:true}).catch(()=>{});
+      showToast('🛡️ ¡ESCUDO ELÉCTRICO — 6 SEGUNDOS!', 2500);
+      playShieldActivateAudio();
+      setTimeout(()=>{
+        delete myPowerups['shield'];
+        update(ref(db,`rooms/${roomId}/players/${myId}`),{shield:false}).catch(()=>{});
+        showToast('💔 Escudo roto',1500);
+        playPowerupExpireAudio();
+      }, 6000);
+    }
+  });
+}
+function triggerPowerupActivation(x, y, color) {
+  for (let i=0;i<40;i++){
+    const a=Math.random()*Math.PI*2, s=2+Math.random()*7;
+    particles.push({type:'fire',x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      size:3+Math.random()*6,color,life:1.0,decay:0.02+Math.random()*0.03});
+  }
+  for(let i=0;i<2;i++){
+    particles.push({type:'wave',x,y,r:5,maxR:60+i*30,
+      life:1.0,decay:0.04+i*0.01,hue:color==='#ffd700'?50:195});
+  }
+}
+function tick() {
+  if (!gameRunning) return;
+
+  // ── Cooldown timers ─────────────────────
+  if (stealCooldownFrames > 0) stealCooldownFrames--;
+  const stealPct = 1 - (stealCooldownFrames / 180);
+  document.getElementById('stealBarFill').style.width = (stealPct * 100) + '%';
+
+  // ── Sprint lógica ───────────────────────
+  let currentSpeed = PLAYER_SPEED;
+  if (sprintActive) {
+    sprintTimer--;
+    if (sprintTimer <= 0) {
+      sprintActive   = false;
+      sprintCooldown = 240;
+    }
+    currentSpeed = PLAYER_SPEED * 2;
+  } else if (sprintCooldown > 0) {
+    sprintCooldown--;
+  }
+
+  const sprintBarPct = sprintActive
+    ? sprintTimer / 180
+    : (sprintCooldown > 0 ? 1 - sprintCooldown / 240 : 1);
+  document.getElementById('sprintBarFill').style.width = (sprintBarPct * 100) + '%';
+  // ── Velocidad modificada por perros ─────────────────────────
+  if (perrosEventActive) {
+    if (perroRageModeActive) {
+      // ── MODO RABIA FATAL: +200% de velocidad base (3× PLAYER_SPEED) ──
+      currentSpeed = PLAYER_SPEED * 3;
+    } else if (perroMordidaFrames[myId] > 0) {
+      currentSpeed *= 0.70;        // Mordida: -30% velocidad
+    }
+  }
+  // Bloquear sprint si el rival tiene la pistola activa
+  if (gunState && gunState.active && gunState.ownerId !== myId) {
+    currentSpeed = PLAYER_SPEED;
+  }
+    // ── Possession timer (5 seg: aviso 3s, perros 5s) ───────────
+  if (localBall.possessedBy === myId) {
+    possessionFrames++;
+    const totalFrames = POSSESSION_MAX_FRAMES;  // 300 frames = 5 seg
+    const secsHeld    = (possessionFrames / 60).toFixed(1);
+    const secsLeft    = Math.max(0, (totalFrames - possessionFrames) / 60).toFixed(1);
+    const timerEl     = document.getElementById('possessionTimer');
+    document.getElementById('possTimerVal').textContent = secsLeft;
+    const possBarFill = document.getElementById('possBarFill');
+    if (possBarFill) {
+      possBarFill.style.width =
+        (Math.max(0, (totalFrames - possessionFrames) / totalFrames) * 100) + '%';
+    }
+    timerEl.classList.toggle('urgent', possessionFrames >= POSSESSION_WARNING_FRAMES);
+
+    // Advertencia exacta al segundo 3 (180 frames)
+    if (possessionFrames === POSSESSION_WARNING_FRAMES && !perrosEventActive) {
+      showToast('⚠️ ¡SUELTA LA WEÁ O VIENEN LOS PERROS EN 2 SEGUNDOS!', 1800);
+    }
+    // Último aviso al segundo 4 (240 frames)
+    if (possessionFrames === POSSESSION_LAST_WARNING && !perrosEventActive) {
+      showToast('🐕🚨 ¡¡ÚLTIMO AVISO WN!! ¡¡SUELTAAAAA EN 1 SEGUNDO!!', 900);
+    }
+
+    // Activar perros exactamente al segundo 5 (300 frames)
+    if (possessionFrames >= totalFrames) {
+      possessionFrames = 0;
+      timerEl.style.display = 'none';
+      timerEl.classList.remove('urgent');
+      if (!perrosEventActive) {
+        iniciarEventoPerros('comilon');   // ← escribe en Firebase
+      }
+      update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
+      localBall.possessedBy = null;
+      iAmBallAuthority      = false;
+      onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+    }
+  }
+
+  // ── Move my player ──────────────────────
+  const me = playersData[myId];
+  if (!me) return;
+  const amIDead = me.dead && Date.now() < myDeadUntil;
+  const W = LOGIC_W, H = LOGIC_H;
+  const courtLeft = 60, courtRight = W - 60;
+  const courtTop  = 80, courtBottom = H - 40;
+
+  // ── Bala local (solo en el shooter) ──────
+  if (gunBullet) {
+    if (gunBullet.targetId) {
+      const target = playersData[gunBullet.targetId];
+      if (target && !target.dead) {
+        const tdx = target.x - gunBullet.x;
+        const tdy = target.y - gunBullet.y;
+        const td  = Math.hypot(tdx, tdy) || 1;
+        const dot = tdx * gunBullet.vx + tdy * gunBullet.vy;
+        if (dot > 0) {
+          gunBullet.vx = (tdx / td) * 18;
+          gunBullet.vy = (tdy / td) * 18;
+        } else {
+          gunBullet.targetId = null;
+        }
+      }
+    }
+
+    gunBullet.x += gunBullet.vx;
+    gunBullet.y += gunBullet.vy;
+
+    let bulletHit = false;
+    Object.values(playersData).forEach(p => {
+      if (bulletHit) return;
+      if (p.team === gunBullet.ownerTeam || p.dead) return;
+      if (Math.hypot(p.x - gunBullet.x, p.y - gunBullet.y) < PLAYER_RADIUS * 3) {
+        if (p.shield) {
+          gunBullet.ownerTeam = p.team;
+          gunBullet.targetId  = myId;
+          const rx = playersData[myId].x - gunBullet.x;
+          const ry = playersData[myId].y - gunBullet.y;
+          const rd = Math.hypot(rx, ry) || 1;
+          gunBullet.vx = (rx / rd) * 18;
+          gunBullet.vy = (ry / rd) * 18;
+          playShieldDeflectAudio();
+          showToast('🛡️ ¡ESCUDO desvió la bala!', 2000);
+          triggerPowerupActivation(p.x, p.y, '#00ccff');
+        } else {
+          bulletHit = true;
+          killPlayer(p.id);
+        }
+      }
+    });
+
+    if (bulletHit || gunBullet.x < 0 || gunBullet.x > W || gunBullet.y < 0 || gunBullet.y > H) {
+      if (gunBullet.bulletId) {
+        remove(ref(db, `rooms/${roomId}/bullets/${gunBullet.bulletId}`)).catch(() => {});
+      }
+      gunBullet = null;
+    }
+  }
+
+  // ── Balas de red (de otros jugadores) ───────────────────────
+  Object.entries(networkBullets).forEach(([bid, nb]) => {
+    if (nb.targetId) {
+      const target = playersData[nb.targetId];
+      if (target && !target.dead) {
+        const tdx = target.x - nb.x;
+        const tdy = target.y - nb.y;
+        const td  = Math.hypot(tdx, tdy) || 1;
+        const dotProduct = tdx * nb.vx + tdy * nb.vy;
+        if (dotProduct > 0) {
+          nb.vx = (tdx / td) * 18;
+          nb.vy = (tdy / td) * 18;
+        } else {
+          nb.targetId = null;
+        }
+      }
+    }
+
+    nb.x += nb.vx;
+    nb.y += nb.vy;
+
+    let nbHit = false;
+    Object.values(playersData).forEach(p => {
+      if (nbHit || p.team === nb.ownerTeam || p.dead || p.id !== myId) return;
+      if (Math.hypot(p.x-nb.x, p.y-nb.y) < PLAYER_RADIUS*3) {
+        if (myPowerups['shield'] && myPowerups['shield'].expiresAt > Date.now()) {
+          nbHit = true;
+          remove(ref(db,`rooms/${roomId}/bullets/${bid}`)).catch(()=>{});
+          delete networkBullets[bid];
+          playShieldDeflectAudio();
+          showToast('🛡️ ¡ESCUDO desvió la bala!',2000);
+          triggerPowerupActivation(p.x,p.y,'#00ccff');
+          const shooter = playersData[nb.ownerId];
+          if (shooter && !shooter.dead) {
+            const rdx=shooter.x-p.x, rdy=shooter.y-p.y, rd=Math.hypot(rdx,rdy)||1;
+            const retBulletId = uid();
+            const retData = {x:p.x,y:p.y,vx:(rdx/rd)*18,vy:(rdy/rd)*18,
+              ownerTeam:myTeam,targetId:nb.ownerId,ownerId:myId,createdAt:Date.now()};
+            set(ref(db,`rooms/${roomId}/bullets/${retBulletId}`),retData).catch(()=>{});
+            setTimeout(()=>remove(ref(db,`rooms/${roomId}/bullets/${retBulletId}`)).catch(()=>{}),2000);
+            gunBullet={...retData,bulletId:retBulletId};
+          }
+        } else {
+        nbHit = true;
+          killPlayer(p.id, '🔫 TE PUSIERON SENDO TUNASO XD');
+          remove(ref(db,`rooms/${roomId}/bullets/${bid}`)).catch(()=>{});
+        }
+      }
+    });
+
+    if (nbHit || nb.x < 0 || nb.x > W || nb.y < 0 || nb.y > H) {
+      delete networkBullets[bid];
+    }
+  });
+
+  // ── Movimiento del jugador ───────────────
+// Pérdida de control por mojón (1.5 s)
+  const lostControl = perrosEventActive
+    && (perroMojonPisadoUntil[myId] || 0) > Date.now();
+
+  if (!amIDead && !lostControl) {
+    let dx = 0, dy = 0;
+    if (keys.a) dx -= currentSpeed;
+    if (keys.d) dx += currentSpeed;
+    if (keys.w) dy -= currentSpeed;
+    if (keys.s) dy += currentSpeed;
+
+    const newX = clamp(me.x + dx, courtLeft + PLAYER_RADIUS, courtRight - PLAYER_RADIUS);
+    const newY = clamp(me.y + dy, courtTop  + PLAYER_RADIUS, courtBottom - PLAYER_RADIUS);
+
+    if (newX !== me.x || newY !== me.y) {
+  playersData[myId].x = newX;
+  playersData[myId].y = newY;
+  // ── CLIENT-SIDE PREDICTION: actualizar local inmediatamente a 60fps,
+  //    enviar a Firebase en segundo plano cada 66-80ms ──
+  const now = Date.now();
+  if (now - lastPushTime > 66 && (Math.abs(newX - lastPushedX) > 1.5 || Math.abs(newY - lastPushedY) > 1.5)) {
+    // Envío asíncrono sin bloquear el loop local
+    update(ref(db, `rooms/${roomId}/players/${myId}`), {
+      x: newX, y: newY,
+      sprinting: sprintActive,
+      vx: keys.d ? currentSpeed : (keys.a ? -currentSpeed : 0),
+      vy: keys.s ? currentSpeed : (keys.w ? -currentSpeed : 0),
+      updatedAt: now
+    }).catch(()=>{});
+    lastPushedX  = newX;
+    lastPushedY  = newY;
+    lastPushTime = now;
+  }
+}
+  }
+
+  // ── Empuje gigante ───────────────────────────────────────────
+  if (myPowerups['giant'] && myPowerups['giant'].expiresAt > Date.now()) {
+    const me2 = playersData[myId];
+    const nowP = Date.now();
+    if (me2 && !me2.dead && nowP - lastGiantPushTime > 350) {
+      Object.values(playersData).forEach(p => {
+        if (p.id === myId || p.dead) return;
+        if (Math.hypot(me2.x-p.x, me2.y-p.y) < PLAYER_RADIUS*3+PLAYER_RADIUS) {
+          lastGiantPushTime = nowP;
+          let pDx = (keys.d?1:0)-(keys.a?1:0);
+          let pDy = (keys.s?1:0)-(keys.w?1:0);
+          if (!pDx && !pDy) { pDx=p.x-me2.x; pDy=p.y-me2.y; }
+          const pD = Math.hypot(pDx,pDy)||1;
+          const nx = clamp(p.x+(pDx/pD)*18, 60+PLAYER_RADIUS, LOGIC_W-60-PLAYER_RADIUS);
+          const ny = clamp(p.y+(pDy/pD)*18, 80+PLAYER_RADIUS, LOGIC_H-40-PLAYER_RADIUS);
+          update(ref(db,`rooms/${roomId}/players/${p.id}`),{x:nx,y:ny,pushed:nowP}).catch(()=>{});
+          if (playersData[p.id]) { playersData[p.id].x=nx; playersData[p.id].y=ny; }
+          if (localBall.possessedBy===p.id) {
+            update(ref(db,`rooms/${roomId}/ball`),{possessedBy:null}).catch(()=>{});
+            localBall.possessedBy=null;
+          }
+          triggerPowerupActivation(p.x,p.y,'#ffd700');
+          playGiantPushAudio();
+        }
+      });
+    }
+  }
+// ── Empuje Modo Rabia (cooldown 300ms para no saturar Firebase) ──
+  if (perroRageModeActive) {
+    const nowR = Date.now();
+    const meR  = playersData[myId];
+    if (meR && !meR.dead && nowR - lastRagePushTime > 300) {
+      Object.values(playersData).forEach(p => {
+        if (p.id === myId || p.dead) return;
+        if (Math.hypot(meR.x - p.x, meR.y - p.y) < PLAYER_RADIUS * 2.4) {
+          lastRagePushTime = nowR;
+          const rdx = p.x - meR.x, rdy = p.y - meR.y;
+          const rd  = Math.hypot(rdx, rdy) || 1;
+          const nx  = clamp(p.x + (rdx/rd)*14, 60+PLAYER_RADIUS, LOGIC_W-60-PLAYER_RADIUS);
+          const ny  = clamp(p.y + (rdy/rd)*14, 80+PLAYER_RADIUS, LOGIC_H-40-PLAYER_RADIUS);
+          update(ref(db, `rooms/${roomId}/players/${p.id}`), { x:nx, y:ny }).catch(()=>{});
+          if (playersData[p.id]) { playersData[p.id].x = nx; playersData[p.id].y = ny; }
+        }
+      });
+    }
+  }
+  // ── Power bar ───────────────────────────
+  if (spacePressing && localBall.possessedBy === myId) {
+    powerLevel = Math.min(MAX_POWER, powerLevel + POWER_RATE);
+  }
+
+  // ── Ball physics ────────────────────────
+  if (!localBall.possessedBy) {
+    // ── INTERPOLADOR DE UMBRAL (Lerp anti-tiriteo) ──────────────────
+    // Si hay una posición target de Firebase, suavizar gradualmente hacia ella
+    // en lugar de saltar en seco. 20% por frame absorbe la vibración de red.
+    if (!iAmBallAuthority && localBall.targetX !== undefined && localBall.targetY !== undefined) {
+      const diffX = localBall.targetX - localBall.x;
+      const diffY = localBall.targetY - localBall.y;
+      const dist2 = Math.hypot(diffX, diffY);
+      // Solo aplicar lerp si la diferencia es perceptible (> 1px) pero no enorme (< 120px)
+      // Si la diferencia es enorme, teletransportar (el cliente perdió sync)
+      if (dist2 > 1 && dist2 < 120) {
+        localBall.x += diffX * 0.20;
+        localBall.y += diffY * 0.20;
+      } else if (dist2 >= 120) {
+        // Diferencia demasiado grande: snap y resetear target
+        localBall.x = localBall.targetX;
+        localBall.y = localBall.targetY;
+      }
+      // Una vez convergido, limpiar target para no interferir con física local
+      if (dist2 < 0.5) {
+        localBall.targetX = undefined;
+        localBall.targetY = undefined;
+      }
+    }
+
+    localBall.x  += localBall.vx;
+    localBall.y  += localBall.vy;
+    localBall.vz -= GRAVITY;
+    localBall.z  += localBall.vz;
+    if (localBall.z <= 0) {
+      localBall.z  = 0;
+      localBall.vz = -localBall.vz * BALL_BOUNCE;
+      if (Math.abs(localBall.vz) < 0.5) localBall.vz = 0;
+      localBall.vx *= 0.85;
+      localBall.vy *= 0.85;
+    }
+    localBall.vx *= FRICTION;
+    localBall.vy *= FRICTION;
+
+    if (localBall.x < courtLeft  + BALL_RADIUS) { localBall.x = courtLeft  + BALL_RADIUS; localBall.vx *= -BALL_BOUNCE; }
+    if (localBall.x > courtRight - BALL_RADIUS) { localBall.x = courtRight - BALL_RADIUS; localBall.vx *= -BALL_BOUNCE; }
+    if (localBall.y < courtTop   + BALL_RADIUS) { localBall.y = courtTop   + BALL_RADIUS; localBall.vy *= -BALL_BOUNCE; }
+    if (localBall.y > courtBottom- BALL_RADIUS) { localBall.y = courtBottom- BALL_RADIUS; localBall.vy *= -BALL_BOUNCE; }
+
+    checkHoop();
+
+    const speed = Math.hypot(localBall.vx, localBall.vy);
+    const nowBall = Date.now();
+    // ── DEAD RECKONING: enviar posición + vectores de velocidad cada 66-80ms
+    // Los demás clientes simulan la trayectoria localmente entre paquetes ──
+    if (speed > 0.2 && nowBall - lastBallPushTime > 66 && nowBall > ballGrabLockUntil) {
+      lastBallPushTime = nowBall;
+      update(ref(db, `rooms/${roomId}/ball`), {
+        x: localBall.x, y: localBall.y,
+        vx: localBall.vx, vy: localBall.vy,
+        vz: localBall.vz, z: localBall.z,
+        possessedBy: null,
+        updatedAt: nowBall
+      }).catch(()=>{});
+    }
+  } else if (localBall.possessedBy === myId) {
+    localBall.x = playersData[myId].x;
+    localBall.y = playersData[myId].y + 10;
+  } else {
+    const ownerRender = playersRenderPos[localBall.possessedBy];
+    const ownerData   = playersData[localBall.possessedBy];
+    if (ownerRender) {
+      localBall.x = ownerRender.x;
+      localBall.y = ownerRender.y + 10;
+    } else if (ownerData) {
+      localBall.x = ownerData.x;
+      localBall.y = ownerData.y + 10;
+    }
+  }
+
+  // ── INTERPOLACIÓN + DEAD RECKONING para jugadores remotos ──────
+  Object.values(playersData).forEach(p => {
+    if (p.id === myId) {
+      // Jugador local: posición de render = posición física real (sin lag)
+      playersRenderPos[myId] = { x: p.x, y: p.y };
+      return;
+    }
+    if (!playersRenderPos[p.id]) {
+      playersRenderPos[p.id] = { x: p.x, y: p.y };
+      return;
+    }
+    const vel    = playersVelocity[p.id] || { vx: 0, vy: 0 };
+    const lagMs  = Date.now() - (playersLastUpdate[p.id] || Date.now());
+    // Factor de interpolación: más lento si hay más lag (evita overshooting)
+    const factor = lagMs < 80  ? 0.22
+                 : lagMs < 140 ? 0.15
+                 : lagMs < 220 ? 0.10
+                 : 0.07;
+
+    // Dead reckoning: avanzar con velocidad predicha mientras espera el próximo paquete (66-80ms)
+    const drWeight = Math.min(lagMs / 80, 1.0);  // peso creciente hasta el próximo paquete
+    const drX = vel.vx * drWeight * 0.9;
+    const drY = vel.vy * drWeight * 0.9;
+
+    playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * factor + drX;
+    playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * factor + drY;
+
+    // Clamp para evitar que el dead reckoning se aleje demasiado de la posición real
+    const maxDrift = 80;
+    const driftX   = playersRenderPos[p.id].x - p.x;
+    const driftY   = playersRenderPos[p.id].y - p.y;
+    const driftD   = Math.hypot(driftX, driftY);
+    if (driftD > maxDrift) {
+      const driftScale = maxDrift / driftD;
+      playersRenderPos[p.id].x = p.x + driftX * driftScale;
+      playersRenderPos[p.id].y = p.y + driftY * driftScale;
+    }
+  });
+
+  // ── Traición ─────────────────────────────────────────────────
+  const nowTr = Date.now();
+  if (gameRunning && nextTraicionTime === 0)
+    nextTraicionTime = nowTr + 45000 + Math.random()*15000;
+
+  if (!traicionActive && !traicionAviso && nextTraicionTime > 0 && nowTr >= nextTraicionTime) {
+    traicionAviso    = true;
+    nextTraicionTime = 0;
+    playTraicionAvisoAudio();
+    if (navigator.vibrate) navigator.vibrate([200,100,200]);
+    traicionAvisoTO = setTimeout(()=>{
+      traicionAviso    = false;
+      nextTraicionTime = Date.now()+45000+Math.random()*15000;
+    }, 5000);
+  }
+
+  if (traicionActive && nowTr >= traicionExpiresAt) {
+    traicionActive       = false;
+    myTeam               = traicionOriginalTeam;
+    traicionOriginalTeam = null;
+    traicionExpiresAt    = 0;
+    showToast('✅ Traición terminada — volviste a tu equipo', 2500);
+    playTraicionEndAudio();
+    nextTraicionTime = Date.now()+45000+Math.random()*15000;
+  }
+  checkPowerupPickup();
+  // ── Evento Perros CTM ─────────────────────────────────────────
+  if (perrosEventActive) actualizarPerros();
+}
+
+
+// ─── HOOP DETECTION ───────────────────────────────────────────
+let scoreCooldown = 0;
+function drawPowerups() {
+  const now = Date.now();
+  Object.values(activePowerups).forEach(pu => {
+    if (!pu) return;
+    const { x, y, type, spawnedAt } = pu;
+    const pulse   = 0.7 + Math.sin(now*0.006)*0.3;
+    const timePct = Math.max(0, 1 - (now-spawnedAt)/5000);
+    const color   = type==='giant' ? '#ffd700' : '#00ccff';
+    const letter  = type==='giant' ? 'G' : '🛡️';
+
+    ctx.save();
+
+    // Sombra exterior
+    ctx.shadowColor = color; ctx.shadowBlur = 24;
+
+    // Fondo
+    ctx.globalAlpha = pulse*0.7;
+    ctx.fillStyle   = type==='giant' ? 'rgba(255,215,0,0.25)' : 'rgba(0,200,255,0.25)';
+    ctx.beginPath(); ctx.arc(x,y,20,0,Math.PI*2); ctx.fill();
+
+    // Borde
+    ctx.globalAlpha  = pulse;
+    ctx.strokeStyle  = color;
+    ctx.lineWidth    = 3;
+    ctx.beginPath(); ctx.arc(x,y,20,0,Math.PI*2); ctx.stroke();
+
+    // Letra central
+    ctx.globalAlpha  = 1;
+    ctx.shadowBlur   = 10;
+    ctx.fillStyle    = '#fff';
+    if (type === 'shield') {
+  ctx.font = '20px sans-serif';
+} else {
+  ctx.font = 'bold 15px Bebas Neue, sans-serif';
+}
+ctx.textAlign    = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText(letter, x, y);
+
+    // Arco de tiempo restante
+    ctx.strokeStyle  = color;
+    ctx.lineWidth    = 4;
+    ctx.globalAlpha  = 0.55;
+    ctx.beginPath();
+    ctx.arc(x, y, 25, -Math.PI/2, -Math.PI/2 + timePct*Math.PI*2);
+    ctx.stroke();
+
+    // Icono emoji pequeño encima
+    ctx.font = '11px sans-serif';
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(type==='giant'?'🔵':'🛡️', x, y-32);
+
+    ctx.restore();
+  });
+}
+function checkHoop() {
+  if (scoreCooldown > 0) { scoreCooldown--; return; }
+  // Solo el cliente que simuló el último tiro cuenta el gol
+  if (localBall.lastShooter !== myId) return;
+  const W = LOGIC_W, H = LOGIC_H;
+  const hoopLeft  = { x: 80,     y: H / 2 };
+  const hoopRight = { x: W - 80, y: H / 2 };
+  const hoopR = 28;
+
+  const inLeft  = dist(localBall, hoopLeft)  < hoopR && localBall.z < 20;
+  const inRight = dist(localBall, hoopRight) < hoopR && localBall.z < 20;
+
+  if (inLeft || inRight) {
+    let scoringTeam = inRight ? 'A' : 'B';
+    if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
+    const pts = 2;
+    scoreCooldown = 120;
+
+    const newA = (roomData?.score?.A || 0) + (scoringTeam === 'A' ? pts : 0);
+    const newB = (roomData?.score?.B || 0) + (scoringTeam === 'B' ? pts : 0);
+
+    update(ref(db, `rooms/${roomId}/score`), { A: newA, B: newB });
+
+    // ── Trigger pistola en múltiplos de 6 ──────────────────
+    if (scoringTeam === 'A' && newA > 0 && newA % 6 === 0) {
+      assignGunToTeam('B');
+    } else if (scoringTeam === 'B' && newB > 0 && newB % 6 === 0) {
+      assignGunToTeam('A');
+    }
+
+    // ── Mass Explosion: cuando un equipo llega a 15 ─────────
+    const MASS_EXPLOSION_THRESHOLD = 15;
+    const shouldExplodeA = scoringTeam === 'A' && newA >= MASS_EXPLOSION_THRESHOLD && !massExplosionTriggeredA;
+    const shouldExplodeB = scoringTeam === 'B' && newB >= MASS_EXPLOSION_THRESHOLD && !massExplosionTriggeredB;
+    if (shouldExplodeA || shouldExplodeB) {
+      if (shouldExplodeA) massExplosionTriggeredA = true;
+      if (shouldExplodeB) massExplosionTriggeredB = true;
+      const immuneId   = localBall.lastShooter || myId;
+      const immunePlayer = playersData[immuneId];
+      const immuneName = immunePlayer ? immunePlayer.name : '???';
+      set(ref(db, `rooms/${roomId}/massExplosionEvent`), {
+        immuneId,
+        immuneName,
+        t: Date.now()
+      }).catch(() => {});
+    }
+
+    // ── Remontada desesperada: a 1 canasta de ganar ─────────
+    if (!perrosEventActive) {
+      const closeA = (newA >= maxScore - 2) && (newA < maxScore);
+      const closeB = (newB >= maxScore - 2) && (newB < maxScore);
+      if (closeA || closeB) {
+        iniciarEventoPerros('remontada');
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 🏀 NUEVO: ENTREGAR PELOTA AL EQUIPO CONTRARIO (saque de fondo)
+    // ─────────────────────────────────────────────────────────
+    const receivingTeam = scoringTeam === 'A' ? 'B' : 'A';
+    let receiverId = null;
+    let receiverPos = null;
+
+    // Buscar un jugador vivo del equipo receptor
+    for (let p of Object.values(playersData)) {
+      if (p.team === receivingTeam && !p.dead) {
+        receiverId = p.id;
+        receiverPos = { x: p.x, y: p.y };
+        break;
+      }
+    }
+
+    if (receiverId && receiverPos) {
+      // Asignar balón al jugador encontrado
+      localBall.possessedBy = receiverId;
+      localBall.x = receiverPos.x;
+      localBall.y = receiverPos.y + 10;
+      localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+      iAmBallAuthority = (receiverId === myId);
+
+      if (receiverId === myId) {
+        possessionFrames = 0;
+        document.getElementById('possessionTimer').style.display = 'flex';
+      } else {
+        possessionFrames = 0;
+        document.getElementById('possessionTimer').style.display = 'none';
+      }
+
+      // Escribir a Firebase (sin esperar, para no bloquear)
+      update(ref(db, `rooms/${roomId}/ball`), {
+        possessedBy: receiverId,
+        x: receiverPos.x,
+        y: receiverPos.y + 10,
+        vx: 0, vy: 0, vz: 0, z: 0,
+        lastShooter: null,
+        updatedAt: Date.now()
+      }).catch(() => {});
+    } else {
+      // No hay jugadores vivos del equipo receptor: dejar el balón cerca de su aro
+      let spawnX, spawnY;
+      if (receivingTeam === 'A') {
+        spawnX = 140;        // cerca del aro izquierdo (x=80)
+        spawnY = H / 2;
+      } else {
+        spawnX = W - 140;    // cerca del aro derecho (x=W-80)
+        spawnY = H / 2;
+      }
+      localBall.x = spawnX;
+      localBall.y = spawnY;
+      localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+      localBall.possessedBy = null;
+      iAmBallAuthority = false;
+      possessionFrames = 0;
+      document.getElementById('possessionTimer').style.display = 'none';
+
+      update(ref(db, `rooms/${roomId}/ball`), {
+        possessedBy: null,
+        x: spawnX, y: spawnY,
+        vx: 0, vy: 0, vz: 0, z: 0,
+        lastShooter: null,
+        updatedAt: Date.now()
+      }).catch(() => {});
+    }
+
+    // Limpiar el shooter local para no volver a contar el mismo gol
+    localBall.lastShooter = null;
+
+    // ─────────────────────────────────────────────────────────
+    // Efectos visuales y audio (sin cambios)
+    const hx = scoringTeam === 'A' ? W - 80 : 80;
+    scorePopup(hx, H/2 - 60, `+${pts} ${scoringTeam === 'A' ? '🔴' : '🔵'}`);
+    showToast(scoringTeam === 'A' ? '🔴 EQUIPO ROJO ANOTA!' : '🔵 EQUIPO AZUL ANOTA!', 2500);
+    playScoreAudio();
+
+    const scoreElId = scoringTeam === 'A' ? 'scoreA' : 'scoreB';
+    const scoreElBump = document.getElementById(scoreElId);
+    scoreElBump.classList.remove('score-bump');
+    void scoreElBump.offsetWidth;
+    scoreElBump.classList.add('score-bump');
+    setTimeout(() => scoreElBump.classList.remove('score-bump'), 300);
+
+    // Verificar victoria
+    if (newA >= maxScore || newB >= maxScore) {
+      gameRunning = false;
+      const winTeam  = newA >= maxScore ? 'A' : 'B';
+      const winColor = winTeam === 'A' ? 'winner-team-a' : 'winner-team-b';
+      const overlay  = document.getElementById('winner-overlay');
+      const titleEl  = document.getElementById('winnerTitle');
+      const scoreEl  = document.getElementById('winnerScore');
+      titleEl.textContent = `EQUIPO ${winTeam} GANA`;
+      titleEl.className   = `winner-title ${winColor}`;
+      scoreEl.textContent = `${newA} — ${newB}`;
+      overlay.classList.add('show');
+      playWinAudio();
+    }
+  }
+}
+// ─── GUN MECHANICS ────────────────────────────────────────────
+
+async function assignGunToTeam(team) {
+  const teamPlayers = Object.values(playersData).filter(p => p.team === team && !p.dead);
+  if (!teamPlayers.length) return;
+  const lucky = teamPlayers[Math.floor(Math.random() * teamPlayers.length)];
+  const gunRef = ref(db, `rooms/${roomId}/gun`);
+  await set(gunRef, {
+    ownerId:  lucky.id,
+    aimX:     lucky.x,
+    aimY:     lucky.y,
+    timeLeft: 4,
+    active:   true
+  });
+  onDisconnect(gunRef).remove();
+  playGunGrantAudio();
+  if (lucky.id === myId) {
+    showToast('🔫 ¡TIENES LA PISTOLA! Haz click para disparar', 3500);
+  } else {
+    showToast(`🔫 ${lucky.name} tiene la pistola!`, 2500);
+  }
+
+  // Spawnear 2 escudos inmediatamente cerca del centro para que alguien los agarre
+  // Primero borrar cualquier escudo previo para garantizar máximo 2
+  const existingPuSnap = await get(ref(db, `rooms/${roomId}/powerups`)).catch(() => null);
+  if (existingPuSnap && existingPuSnap.exists()) {
+    const existing = existingPuSnap.val();
+    Object.entries(existing).forEach(([eid, pu]) => {
+      if (pu.type === 'shield') {
+        remove(ref(db, `rooms/${roomId}/powerups/${eid}`)).catch(() => {});
+      }
+    });
+  }
+
+  // Spawnear exactamente 2 escudos a 40% de la cancha de distancia del portador
+  const W = LOGIC_W, H = LOGIC_H;
+  const courtW = W - 120;  // ancho útil de la cancha (60px márgenes)
+  const shieldDist = courtW * 0.40;  // 40% del ancho de la cancha
+  const ownerAngle1 = Math.random() * Math.PI * 2;
+  const ownerAngle2 = ownerAngle1 + Math.PI + (Math.random() - 0.5) * 0.8;
+  const shieldPositions = [
+    {
+      x: clamp(lucky.x + Math.cos(ownerAngle1) * shieldDist, 80, W - 80),
+      y: clamp(lucky.y + Math.sin(ownerAngle1) * shieldDist, 100, H - 60)
+    },
+    {
+      x: clamp(lucky.x + Math.cos(ownerAngle2) * shieldDist, 80, W - 80),
+      y: clamp(lucky.y + Math.sin(ownerAngle2) * shieldDist, 100, H - 60)
+    },
+  ];
+  shieldPositions.forEach(pos => {
+    const id = uid();
+    set(ref(db, `rooms/${roomId}/powerups/${id}`), {
+      id, type: 'shield',
+      x: pos.x, y: pos.y,
+      emoji: '🛡️',           // ← para el render
+      spawnedAt: Date.now()
+    }).catch(() => {});
+    setTimeout(() => remove(ref(db, `rooms/${roomId}/powerups/${id}`)).catch(() => {}), 4000);
+  });
+}
+
+function startGunCountdown() {
+  clearInterval(gunCountdownInterval);
+  let secsLeft = 3;
+  gunCountdownInterval = setInterval(async () => {
+    secsLeft--;
+    if (!roomId) { clearInterval(gunCountdownInterval); return; }
+    if (secsLeft <= 0) {
+      clearInterval(gunCountdownInterval);
+      const me = playersData[myId];
+      if (me) triggerExplosion(me.x, me.y);
+      remove(ref(db, `rooms/${roomId}/gun`)).catch(() => {});
+      showToast('💥 ¡La pistola te explotó! Te moriste.', 2500);
+      killPlayer(myId, '💣 TE DEMORASTE MUCHO AWEONAO — la pistola te explotó');   // ← LÍNEA NUEVA: el portador muere
+      emitSoundEvent('muerte');
+    } else {
+      update(ref(db, `rooms/${roomId}/gun`), { timeLeft: secsLeft }).catch(() => {});
+    }
+  }, 1000);
+}
+
+async function fireGun() {
+  if (!gunState || !gunState.active || gunState.ownerId !== myId) return;
+  const me = playersData[myId];
+  if (!me || me.dead) return;
+
+  clearInterval(gunCountdownInterval);
+
+  // Borrar pistola de Firebase
+  await remove(ref(db, `rooms/${roomId}/gun`)).catch(() => {});
+
+  // Crear bala local
+  const dx = mouseX - me.x;
+  const dy = mouseY - me.y;
+  const d  = Math.hypot(dx, dy) || 1;
+  const BULLET_SPEED = 18;
+
+ // Solo asignar targetId si el cursor estaba encima del rival al disparar
+let targetId = null;
+Object.values(playersData).forEach(p => {
+  if (p.team === myTeam || p.dead) return;
+  if (Math.hypot(p.x - mouseX, p.y - mouseY) < PLAYER_RADIUS * 3) {
+    targetId = p.id;
+  }
+});
+
+  const bulletId = uid();
+  const bulletData = {
+    x: me.x,
+    y: me.y,
+    vx: (dx / d) * BULLET_SPEED,
+    vy: (dy / d) * BULLET_SPEED,
+    ownerTeam: myTeam,
+    targetId: targetId || null,
+    ownerId: myId,
+    createdAt: Date.now()
+  };
+
+  // Publicar bala en Firebase para que todos la vean
+  const bulletRef = ref(db, `rooms/${roomId}/bullets/${bulletId}`);
+  await set(bulletRef, bulletData).catch(() => {});
+  // Auto-eliminar de Firebase después de 2 segundos
+  setTimeout(() => remove(bulletRef).catch(() => {}), 2000);
+
+  // Bala local (para el shooter)
+  gunBullet = {
+    x: me.x,
+    y: me.y,
+    vx: bulletData.vx,
+    vy: bulletData.vy,
+    ownerTeam: myTeam,
+    targetId,
+    bulletId
+  };
+
+  playGunShotAudio();
+    spawnPowerup();
+}
+function showDeathReason(reason) {
+  const overlay = document.getElementById('dead-overlay');
+  let reasonEl = document.getElementById('dead-reason');
+  if (!reasonEl) {
+    reasonEl = document.createElement('div');
+    reasonEl.id = 'dead-reason';
+    reasonEl.style.cssText = 'font-family:"Space Mono",monospace;font-size:15px;letter-spacing:2px;color:#ffaa44;text-align:center;max-width:340px;margin-top:4px;';
+    overlay.appendChild(reasonEl);
+  }
+  reasonEl.textContent = reason;
+}
+async function killPlayer(pid, reason = '') {
+  const p = playersData[pid];
+  if (!p || p.dead) return;
+  triggerExplosion(p.x, p.y);
+  playRandomAudio('muerte', 4, lastDeathRef);
+  // Soltar el balón si lo tenía
+  if (localBall.possessedBy === pid) {
+    await update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
+    if (pid === myId) localBall.possessedBy = null;
+  }
+  if (pid === myId) lastDeathReason = reason;
+  // Si era el portador de la pistola, limpiar gun
+  if (gunState && gunState.ownerId === pid) {
+    clearInterval(gunCountdownInterval);
+    await remove(ref(db, `rooms/${roomId}/gun`)).catch(() => {});
+  }
+  // AGREGAR antes de: await update(ref(db, `rooms/${roomId}/players/${pid}`), { dead: true, respawnAt });
+  if (pid === myId && reason) {
+    // La razón se mostrará cuando el overlay aparezca
+    setTimeout(() => showDeathReason(reason), 100);
+  }
+  const respawnAt = Date.now() + 3000;
+  await update(ref(db, `rooms/${roomId}/players/${pid}`), {
+    dead: true, respawnAt
+  }).catch(() => {});
+}
+
+function showDeadOverlay(respawnAt, reason) {
+  const reasonEl = document.getElementById('dead-reason');
+  if (reasonEl) reasonEl.textContent = reason || '';
+  const overlay     = document.getElementById('dead-overlay');
+  const countdownEl = document.getElementById('dead-countdown');
+  overlay.style.display = 'flex';
+  function tick() {
+    const left = Math.ceil((respawnAt - Date.now()) / 1000);
+    if (left <= 0) {
+      overlay.style.display = 'none';
+      // Reaparece en spawn
+      const me = playersData[myId];
+      if (me) {
+        playersData[myId].x = mySpawnX;
+        playersData[myId].y = mySpawnY;
+        playersData[myId].dead = false;
+        update(ref(db, `rooms/${roomId}/players/${myId}`), {
+          dead: false, respawnAt: 0, x: mySpawnX, y: mySpawnY
+        }).catch(() => {});
+      }
+      myDeadUntil = 0;
+      return;
+    }
+    countdownEl.textContent = `Reapareciendo en ${left}...`;
+    setTimeout(tick, 250);
+  }
+  tick();
+}
+
+function triggerExplosion(x, y) {
+  // Partículas de fuego
+  for (let i = 0; i < 25; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 9;
+    const hue   = Math.random() * 60;
+    particles.push({
+      type: 'fire', x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 4 + Math.random() * 8,
+      color: `hsl(${hue},100%,${40 + Math.random() * 40}%)`,
+      life: 1.0,
+      decay: 0.015 + Math.random() * 0.025
+    });
+  }
+  // Brasas
+  for (let i = 0; i < 15; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 3 + Math.random() * 13;
+    particles.push({
+      type: 'ember', x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.5,
+      size: 2,
+      life: 1.0,
+      decay: 0.008 + Math.random() * 0.015
+    });
+  }
+  // Ondas de choque (3 anillos)
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      type: 'wave', x, y,
+      r: 5,
+      maxR: 70 + i * 55,
+      life: 1.0,
+      decay: 0.028 + i * 0.008,
+      hue: i === 0 ? 40 : 15
+    });
+  }
+}
+
+
+// ─── PERROS CTM — FUNCIONES ─────────────────────────────────────
+
+/** Escribe en Firebase para disparar el evento en todos los clientes. */
+function iniciarEventoPerros(triggerReason) {
+  if (perrosEventActive || !roomId || !gameRunning) return; 
+  // Usar myId como "comilón" solo si el trigger es por posesión propia
+  const comilon = (triggerReason === 'comilon') ? myId : null;
+  set(ref(db, `rooms/${roomId}/perrosEvent`), {
+    active:      true,
+    triggeredBy: triggerReason,   // 'comilon' | 'remontada'
+    comilon:     comilon,
+    startTime:   Date.now(),
+    duration:    9000
+  }).catch(() => {});
+}
+function spawnearPerros(triggerReason, comilon) {
+  perros = [];
+  mojones = [];
+  perrosTriggerReason = triggerReason;
+  perrosComilon       = comilon;
+  const W = LOGIC_W, H = LOGIC_H;
+
+  // 🐕 Siempre exactamente 5 perros simultáneos (perro1.png → perro5.png)
+  const numPerros = 5;
+
+  for (let i = 0; i < numPerros; i++) {
+    const edge = Math.floor(Math.random() * 4);
+    let sx, sy;
+    if      (edge === 0) { sx = 60 + Math.random() * (W - 120); sy = -PERRO_RADIUS * 3; }
+    else if (edge === 1) { sx = W + PERRO_RADIUS * 3;           sy = 80 + Math.random() * (H - 120); }
+    else if (edge === 2) { sx = 60 + Math.random() * (W - 120); sy = H + PERRO_RADIUS * 3; }
+    else                 { sx = -PERRO_RADIUS * 3;               sy = 80 + Math.random() * (H - 120); }
+
+    perros.push({
+      id:           i,
+      x:            sx,
+      y:            sy,
+      vx:           0,
+      vy:           0,
+      imgIndex:     i % 5,     // perro1.png … perro5.png (5 imágenes distintas)
+      sprinting:    true,      // entran siempre en sprint
+      sprintTimer:  240,       // 4 segundos de sprint inicial
+      entryMode:    true,      // sprint de entrada (velocidad decae con distancia)
+      targetId:     null,
+      lastBiteTime: 0
+    });
+  }
+
+  Object.keys(playersData).forEach(pid => {
+    perroMordidaFrames[pid]    = 0;
+    perroMordidaCount[pid]     = 0;
+    perroMojonPisadoUntil[pid] = 0;
+  });
+}
+
+/** IA de persecución, sprint, colisiones, spawn de mojones. Llamar cada tick. */
+function actualizarPerros() {
+  if (!perrosEventActive || perros.length === 0) return;
+  const W = LOGIC_W, H = LOGIC_H;
+  const now        = Date.now();
+  const BASE_SPD   = 2.8;
+  const SPRINT_SPD   = BASE_SPD * 1.7;          // sprint normal
+  const ENTRY_SPD    = SPRINT_SPD * 1.24;       // +24% en modo entrada
+  // ── Sprint dinámico reactivo: velocidad de sprint del jugador + 0.5 unidades ──
+  // Si el jugador objetivo está sprinteando, los perros mutan instantáneamente a esta velocidad
+  const REACTIVE_SPD = (PLAYER_SPEED * 2) + 0.5;  // exactamente sprint del jugador + 0.5
+  const me         = playersData[myId];
+
+  perros.forEach(perro => {
+
+    // ── 1. Determinar targetId ───────────────────────────────
+    const sA       = roomData?.score?.A || 0;
+    const sB       = roomData?.score?.B || 0;
+    const winTeam  = sA > sB ? 'A' : (sB > sA ? 'B' : null);
+
+    if (perrosTriggerReason === 'comilon'
+        && perrosComilon
+        && playersData[perrosComilon]
+        && !playersData[perrosComilon].dead) {
+      perro.targetId = perrosComilon;
+    } else {
+      const carrier = localBall.possessedBy ? playersData[localBall.possessedBy] : null;
+      if (carrier && !carrier.dead && (winTeam === null || carrier.team === winTeam)) {
+        perro.targetId = localBall.possessedBy;
+      } else {
+        let closestId = null, closestD = Infinity;
+        Object.values(playersData).forEach(p => {
+          if (p.dead) return;
+          if (winTeam && p.team !== winTeam) return;
+          const d = dist(perro, p);
+          if (d < closestD) { closestD = d; closestId = p.id; }
+        });
+        perro.targetId = closestId;
+      }
+    }
+
+    // ── 2. Calcular distancia al target ─────────────────────
+    const target    = perro.targetId ? playersData[perro.targetId] : null;
+    const distToTarget = target ? Math.hypot(target.x - perro.x, target.y - perro.y) : 9999;
+
+    // ── 3. Sprint reactivo al objetivo (modo normal) ─────────
+    const targetSprinting = perro.targetId === myId ? sprintActive : (target?.sprinting || false);
+  if (targetSprinting && !perro.sprinting && !perro.entryMode) {
+      perro.sprinting      = true;
+      perro.reactiveSprint = (perro.targetId === myId); // reacciona al sprint del jugador
+      const baseFrames     = (perro.targetId === myId) ? (sprintTimer || 60) : 90;
+      perro.sprintTimer    = baseFrames + 45; // +0.75s extra
+    }
+    if (perro.sprinting) {
+      perro.sprintTimer--;
+      if (perro.sprintTimer <= 0) {
+        perro.sprinting      = false;
+        perro.entryMode      = false;
+        perro.reactiveSprint = false;
+      }
+    }
+
+    // ── 4. Velocidad: entrada con decay, luego normal ────────
+    let speed;
+    if (perro.entryMode && perro.sprinting) {
+      // Velocidad de entrada decae a medida que se acerca al jugador
+      // A distancia >= 300: ENTRY_SPD completo; a distancia <= 80: BASE_SPD
+      const closeFactor = clamp((distToTarget - 80) / 220, 0, 1);
+      speed = BASE_SPD + (ENTRY_SPD - BASE_SPD) * closeFactor;
+      // Desactivar entryMode cuando llega cerca
+      if (distToTarget < 80) {
+        perro.entryMode = false;
+      }
+    } else {
+      speed = (perro.sprinting && perro.reactiveSprint) ? REACTIVE_SPD
+            : perro.sprinting ? SPRINT_SPD
+            : BASE_SPD;
+    }
+    // ── 3. Mover hacia target ────────────────────────────────
+    if (target) {
+      const dx = target.x - perro.x;
+      const dy = target.y - perro.y;
+      const d  = Math.hypot(dx, dy) || 1;
+      perro.vx = (dx / d) * speed;
+      perro.vy = (dy / d) * speed;
+    }
+    perro.x = clamp(perro.x + perro.vx, -PERRO_RADIUS * 4, W + PERRO_RADIUS * 4);
+    perro.y = clamp(perro.y + perro.vy, -PERRO_RADIUS * 4, H + PERRO_RADIUS * 4);
+
+    // ── 4. Colisión mordida (solo contra myId localmente) ────
+    if (me && !me.dead && dist(perro, me) < PERRO_RADIUS + PLAYER_RADIUS) {
+      if (now - perro.lastBiteTime > 2200) {
+        perro.lastBiteTime = now;
+        aplicarMordida(myId);
+      }
+    }
+
+    // ── 5. Spawn mojón (5% por segundo ≈ 0.083% por frame) ──
+    if (Math.random() < 0.15 / 60) {
+      mojones.push({ x: perro.x, y: perro.y, spawnedAt: now });
+    }
+  });
+
+  // ── 6. Colisión jugador propio con mojón ─────────────────
+  if (me && !me.dead) {
+    for (let i = mojones.length - 1; i >= 0; i--) {
+      if (dist(me, mojones[i]) < PLAYER_RADIUS + 10) {
+        if (now > (perroMojonPisadoUntil[myId] || 0)) {
+          perroMojonPisadoUntil[myId] = now + 1500;
+          showToast('💩 ¡Pisé caca, ctm!', 2500);
+        }
+        mojones.splice(i, 1);
+      }
+    }
+  }
+
+  // ── 7. Eliminar mojones viejos (> 15 s) ─────────────────
+  for (let i = mojones.length - 1; i >= 0; i--) {
+    if (now - mojones[i].spawnedAt > 15000) mojones.splice(i, 1);
+  }
+
+  // ── 8. Descontar frames de ralentización ─────────────────
+  Object.keys(perroMordidaFrames).forEach(pid => {
+    if (perroMordidaFrames[pid] > 0) perroMordidaFrames[pid]--;
+  });
+
+  // ── 9. Expiración Modo Rabia → muerte obligatoria con causa exacta ──
+  if (perroRageModeActive && now >= perroRageModeUntil) {
+    perroRageModeActive = false;
+    killPlayer(myId, '🐕🦠 Murió por rabia esquizofrenica y ataque de kiltros');
+  }
+}
+/** Ralentiza, suelta pelota, flash rojo, cuenta mordidas, activa Modo Rabia. */
+function aplicarMordida(playerId) {
+  const p = playersData[playerId];
+  if (!p || p.dead) return;
+
+  // Contar mordida del evento
+  perroMordidaCount[playerId] = (perroMordidaCount[playerId] || 0) + 1;
+
+  // Soltar la pelota si la tiene
+  if (localBall.possessedBy === playerId) {
+    update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null }).catch(() => {});
+    if (playerId === myId) {
+      localBall.possessedBy = null;
+      iAmBallAuthority      = false;
+      possessionFrames      = 0;
+      document.getElementById('possessionTimer').style.display = 'none';
+      onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel(); // ← AGREGAR
+    }
+  }
+
+  // Flash rojo en pantalla
+  const flashEl = document.getElementById('perro-mordida-flash');
+  if (flashEl) {
+    flashEl.style.display = 'block';
+    flashEl.style.opacity = '0.72';
+    setTimeout(() => {
+      flashEl.style.opacity = '0';
+      setTimeout(() => { flashEl.style.display = 'none'; }, 350);
+    }, 180);
+  }
+
+  // Toast y vibración
+  if (playerId === myId) {
+    showToast('¡AU CTM! 🐕 ¡Te mordió un perro! (-60% velocidad 2s)', 2000);
+    if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
+  }
+
+  // Ralentización 60% por 120 frames (2 s a 60fps), excepto en Modo Rabia
+  if (!perroRageModeActive) {
+    perroMordidaFrames[playerId] = 120;
+  }
+
+  // Partículas de impacto (reutiliza triggerExplosion reducido)
+  for (let i = 0; i < 18; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 5;
+    particles.push({
+      type: 'fire', x: p.x, y: p.y,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      size: 3 + Math.random() * 5, color: '#ff4400',
+      life: 1.0, decay: 0.03 + Math.random() * 0.03
+    });
+  }
+
+  // 3 mordidas seguidas → Modo Rabia (solo para myId)
+  if (playerId === myId
+      && perroMordidaCount[playerId] >= 3
+      && !perroRageModeActive) {
+    aplicarModoRabia();
+  }
+}
+
+
+/** Modo Rabia Fatal: exactamente 2 segundos con 200% aumento de velocidad, luego muerte obligatoria. */
+function aplicarModoRabia() {
+  if (perroRageModeActive) return;
+  perroRageModeActive = true;
+  perroRageModeUntil  = Date.now() + 2000;   // exactamente 2 segundos
+  perroMordidaFrames[myId] = 0;   // quitar la ralentización
+  showToast('🔴 ¡MODO RABIA FATAL! +200% velocidad — 2 segundos... luego EXPLOTA 😱🐕', 2500);
+  if (navigator.vibrate) navigator.vibrate([500, 100, 500, 100, 800]);
+  // Flash pantalla rojo intenso para avisar
+  const fl = document.getElementById('perro-mordida-flash');
+  if (fl) {
+    fl.style.display = 'block';
+    fl.style.opacity = '0.9';
+    setTimeout(() => { fl.style.opacity = '0'; setTimeout(() => { fl.style.display = 'none'; }, 400); }, 300);
+  }
+}
+/** Renderiza los 5 perros con imágenes. */
+function dibujarPerros() {
+  const now = Date.now();
+  perros.forEach(perro => {
+    ctx.save();
+    const r   = PERRO_RADIUS;
+    const img = perroImgs[perro.imgIndex];
+
+    // Sprint: halo naranja
+    if (perro.sprinting) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur  = 22;
+    }
+    // Parpadeo si el perro persigue a un jugador en Modo Rabia
+    if (perroRageModeActive && perro.targetId === myId) {
+      ctx.globalAlpha = Math.floor(now / 130) % 2 === 0 ? 1 : 0.3;
+    }
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, perro.x - r, perro.y - r, r * 2, r * 2);
+    } else {
+      // Fallback texto
+      ctx.globalAlpha = 1;
+      ctx.font        = `${r * 1.8}px sans-serif`;
+      ctx.textAlign   = 'center';
+      ctx.textBaseline= 'middle';
+      ctx.fillText('🐕', perro.x, perro.y);
+    }
+    ctx.restore();
+  });
+}
+/** Renderiza los mojones como círculos marrones con sombra + emoji. */
+function dibujarMojones() {
+  mojones.forEach(m => {
+    ctx.save();
+    ctx.shadowColor = '#3a1a00';
+    ctx.shadowBlur  = 10;
+    ctx.fillStyle   = '#6b3a2a';
+    ctx.globalAlpha = 0.88;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha    = 1;
+    ctx.font           = '14px sans-serif';
+    ctx.textAlign      = 'center';
+    ctx.textBaseline   = 'middle';
+    ctx.fillText('💩', m.x, m.y - 1);
+    ctx.restore();
+  });
+}
+/** Limpieza absoluta al terminar el evento (9 s). */
+function limpiarPerros() {
+  perrosEventActive     = false;
+  perros                = [];
+  mojones               = [];
+  perrosComilon         = null;
+  perrosTriggerReason   = '';
+  perroRageModeActive   = false;
+  perroRageModeUntil    = 0;
+  perroMordidaFrames    = {};
+  perroMordidaCount     = {};
+  perroMojonPisadoUntil = {};
+
+  if (perrosBannerTimeout)  { clearTimeout(perrosBannerTimeout);  perrosBannerTimeout  = null; }
+  if (perrosCleanupTimeout) { clearTimeout(perrosCleanupTimeout); perrosCleanupTimeout = null; }
+
+  const banner = document.getElementById('perros-banner');
+  if (banner) banner.classList.remove('show');
+
+  const flash = document.getElementById('perro-mordida-flash');
+  if (flash)  { flash.style.display = 'none'; flash.style.opacity = '0'; }
+
+  // Restaurar velocidades (los frames de ralentización ya llegaron a 0 al limpiar)
+  // Solo ocultar el timer si el jugador NO tiene la pelota en este momento
+if (localBall.possessedBy !== myId) {
+  document.getElementById('possessionTimer').style.display = 'none';
+}
+}
+
+
+
+// ─── MASS EXPLOSION HANDLER ───────────────────────────────────
+function handleMassExplosion(immuneId, immuneName) {
+  // Solo actuar si hay 2 o más jugadores por equipo (2v2 o más)
+  const playerList = Object.values(playersData);
+  const teamACount = playerList.filter(p => p.team === 'A').length;
+  const teamBCount = playerList.filter(p => p.team === 'B').length;
+  if (teamACount < 2 || teamBCount < 2) return;  // ← LÍNEA NUEVA
+  // Mostrar alerta llamativa 0.75s
+  showMassExplosionAlert(immuneName);
+  playMassExplosionSound();
+
+  // Matar a todos excepto al inmune (después de 0.75s para que vean la alerta)
+  setTimeout(() => {
+    // Cada cliente se mata a sí mismo si no es el inmune
+    if (myId !== immuneId) {
+      const me = playersData[myId];
+      if (me && !me.dead) {
+        killPlayer(myId, '💥 Explosión masiva — no tenías el balón JAJAJA');
+        emitSoundEvent('muerte');
+      }
+    } else {
+      // El inmune: efecto de brillo especial
+      showToast(`🛡️ ¡${immuneName} ES INMUNE!`, 2000);
+    }
+    // Explosiones visuales para todos los no-inmunes (solo visual, cada cliente)
+    Object.values(playersData).forEach(p => {
+      if (p.id === immuneId || p.dead) return;
+      triggerExplosion(p.x, p.y);
+    });
+  }, 750);
+}
+
+function showMassExplosionAlert(immuneName) {
+  const el = document.getElementById('massExplosionAlert');
+  const nameEl = document.getElementById('massExplosionImmuneName');
+  if (nameEl) nameEl.textContent = `🛡️ ${immuneName || '???'} SOBREVIVE`;
+  el.classList.add('show');
+  // Pantalla tiembla brevemente
+  document.getElementById('gameScreen').style.animation = 'none';
+  document.getElementById('gameCanvas').style.filter = 'brightness(2)';
+  setTimeout(() => {
+    el.classList.remove('show');
+    document.getElementById('gameCanvas').style.filter = '';
+  }, 750);
+}
+
+function playMassExplosionSound() {
+    const a = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-explosion-hit-1694.mp3');
+  a.volume = 0.9;
+  a.play().catch(() => {});
+  // Sonido sintético de explosión masiva (Web Audio API — sin descarga)
+  try {
+    const ctx2 = new (window.AudioContext || window.webkitAudioContext)();
+    // Boom grave
+    const buf = ctx2.createBuffer(1, ctx2.sampleRate * 1.5, ctx2.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const t = i / ctx2.sampleRate;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 3.5) * 0.9;
+    }
+    const src = ctx2.createBufferSource();
+    src.buffer = buf;
+    // Filtro grave para sonido de explosión
+    const filter = ctx2.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 200;
+    filter.Q.value = 0.5;
+    // Ganancia
+    const gain = ctx2.createGain();
+    gain.gain.setValueAtTime(1.2, ctx2.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + 1.5);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx2.destination);
+    src.start();
+    // Capa 2: crackle agudo
+    const buf2 = ctx2.createBuffer(1, ctx2.sampleRate * 0.4, ctx2.sampleRate);
+    const d2 = buf2.getChannelData(0);
+    for (let i = 0; i < d2.length; i++) {
+      d2[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx2.sampleRate * 0.08)) * 0.5;
+    }
+    const src2 = ctx2.createBufferSource();
+    src2.buffer = buf2;
+    const g2 = ctx2.createGain();
+    g2.gain.value = 0.8;
+    src2.connect(g2);
+    g2.connect(ctx2.destination);
+    src2.start();
+  } catch(e) {}
+}
+function drawParticles() {
+  ctx.save();
+  ctx.shadowBlur = 0;  // desactivar por defecto — solo activar donde importa
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+    if (p.type === 'fire') {
+      ctx.globalAlpha  = p.life;
+      ctx.fillStyle    = p.color;
+      // Sin shadowBlur en fire — demasiado costoso con muchas partículas
+      ctx.shadowBlur   = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.type === 'ember') {
+      ctx.globalAlpha  = p.life;
+      ctx.fillStyle    = '#ffffff';
+      ctx.shadowColor  = '#ffaa00';
+      ctx.shadowBlur   = 6;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur   = 0;
+      p.vy += 0.06;
+    } else if (p.type === 'wave') {
+      ctx.globalAlpha  = p.life * 0.7;
+      ctx.strokeStyle  = `hsl(${p.hue},100%,60%)`;
+      ctx.lineWidth    = 4 * p.life;
+      ctx.shadowColor  = `hsl(${p.hue},100%,60%)`;
+      ctx.shadowBlur   = 12;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur   = 0;
+      p.r += (p.maxR - p.r) * 0.1;
+    }
+
+    p.x  += (p.vx || 0);
+    p.y  += (p.vy || 0);
+    if (p.vx !== undefined) { p.vx *= 0.93; p.vy *= 0.93; }
+  }
+  ctx.restore();
+}
+
+function drawGunOverlay(W, H) {
+  if (gunState && gunState.active) {
+    const cx  = gunState.aimX || W / 2;
+    const cy  = gunState.aimY || H / 2;
+    const r   = PLAYER_RADIUS * 3;   // 2x más grande
+    const gap = 14;                     // hueco central más amplio
+    ctx.save();
+    ctx.strokeStyle = '#00cc44';
+    ctx.fillStyle   = '#00cc44';
+    ctx.shadowColor = '#00ff66';
+    ctx.shadowBlur  = 18;
+    ctx.lineWidth   = 3;
+    // Brazos de la cruz
+    ctx.beginPath(); ctx.moveTo(cx - r, cy);   ctx.lineTo(cx - gap, cy);   ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + gap, cy);  ctx.lineTo(cx + r, cy);    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - r);    ctx.lineTo(cx, cy - gap);  ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy + gap);  ctx.lineTo(cx, cy + r);    ctx.stroke();
+    // Punto central
+    ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+    // Círculo exterior
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw bullet (local shooter's bullet)
+  // Draw bullet (local shooter's bullet)
+  if (gunBullet) {
+    ctx.save();
+    const BULLET_SIZE = PLAYER_RADIUS * 3 * 2;
+    const angle = Math.atan2(gunBullet.vy, gunBullet.vx);
+    ctx.translate(gunBullet.x, gunBullet.y);
+    ctx.rotate(angle);
+    if (bulletImg.complete && bulletImg.naturalWidth > 0) {
+      ctx.drawImage(bulletImg, -BULLET_SIZE / 2, -BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE);
+    } else {
+      ctx.fillStyle = '#ffdd00';
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(-8, -4, 16, 8);
+    }
+    ctx.restore();
+  }
+
+  // Draw network bullets (balas de otros jugadores)
+  Object.values(networkBullets).forEach(nb => {
+    ctx.save();
+    const BULLET_SIZE = PLAYER_RADIUS * 3 * 2;
+    const angle = Math.atan2(nb.vy, nb.vx);
+    ctx.translate(nb.x, nb.y);
+    ctx.rotate(angle);
+    if (bulletImg.complete && bulletImg.naturalWidth > 0) {
+      ctx.drawImage(bulletImg, -BULLET_SIZE / 2, -BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE);
+    } else {
+      ctx.fillStyle = '#ffdd00';
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(-8, -4, 16, 8);
+    }
+    ctx.restore();
+  });
+}
+// Handlers de ratón
+// ✅ REEMPLAZAR POR (divide por el factor de escala del canvas)
+function onMouseMove(e) {
+  const rect  = canvas.getBoundingClientRect();
+  const scale = canvas._scale || 1;
+  mouseX = (e.clientX - rect.left) / scale;
+  mouseY = (e.clientY - rect.top)  / scale;
+  // Sync aim a Firebase (throttled 50ms), solo si soy el portador
+  if (!gunState || gunState.ownerId !== myId || !gunState.active) return;
+  const now = Date.now();
+  if (now - lastAimPush < 30) return;
+  lastAimPush = now;
+  update(ref(db, `rooms/${roomId}/gun`), { aimX: mouseX, aimY: mouseY }).catch(() => {});
+}
+
+function onGunClick(e) {
+  if (!gameRunning) return;
+  if (!gunState || gunState.ownerId !== myId || !gunState.active) return;
+  const me = playersData[myId];
+  if (me && me.dead) return;
+  fireGun();
+}
+
+function drawSlowedMessage(W, H) {
+  const framesLeft = perroMordidaFrames[myId] || 0;
+  const alpha = Math.min(1, framesLeft / 20);
+  const pulse = 0.75 + Math.sin(Date.now() * 0.012) * 0.25;
+  ctx.save();
+  ctx.globalAlpha = alpha * pulse;
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#ff0000';
+  ctx.shadowBlur  = 35;
+  ctx.font        = 'bold 64px Bebas Neue, sans-serif';
+  ctx.fillStyle   = '#ff2200';
+  ctx.fillText('😨 ¡ESTÁS ASUSTADO!', W / 2, H / 2 - 44);
+  ctx.shadowBlur  = 18;
+  ctx.font        = 'bold 26px Space Mono, monospace';
+  ctx.fillStyle   = '#ffaa00';
+  ctx.fillText('(ralentizado...)', W / 2, H / 2 + 18);
+  ctx.restore();
+}
+
+
+// ─── RENDER ───────────────────────────────────────────────────
+function render() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  drawCourt(W, H);
+  drawHoops(W, H);
+  drawPowerups();
+  if (perrosEventActive) dibujarMojones();  // ← suelo, antes de jugadores
+  drawPlayers(W, H);
+  drawBall(W, H);
+  drawUI(W, H);
+  drawParticles();
+  if (perrosEventActive) dibujarPerros();   // ← encima de todo lo anterior
+  drawGunOverlay(W, H);
+  if (perrosEventActive && (perroMordidaFrames[myId] || 0) > 0) drawSlowedMessage(W, H);
+  drawTraicionHUD(W, H);
+}
+function drawTraicionHUD(W, H) {
+  // Aviso de traición disponible
+  if (traicionAviso) {
+    const pulse = 0.6+Math.sin(Date.now()*0.01)*0.4;
+    ctx.save();
+    ctx.globalAlpha  = pulse;
+    ctx.fillStyle    = 'rgba(160,0,255,0.18)';
+    ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha  = 1;
+    ctx.font         = 'bold 28px Bebas Neue, sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor  = '#cc00ff'; ctx.shadowBlur = 30;
+    ctx.fillStyle    = '#ff44ff';
+    ctx.fillText('⚠️ TRAICIÓN DISPONIBLE — Presiona T para activar', W/2, H/2+80);
+    ctx.restore();
+  }
+
+  // Contador de traición activa (solo visible para mí)
+  if (traicionActive) {
+    const secsLeft = Math.max(0, Math.ceil((traicionExpiresAt-Date.now())/1000));
+    const pulse    = 0.8+Math.sin(Date.now()*0.008)*0.2;
+    ctx.save();
+    // Borde morado en pantalla
+    ctx.strokeStyle  = '#aa00ff'; ctx.lineWidth = 6;
+    ctx.shadowColor  = '#ff00ff'; ctx.shadowBlur = 20;
+    ctx.globalAlpha  = pulse*0.7;
+    ctx.strokeRect(6,6,W-12,H-12);
+    // Texto contador
+    ctx.globalAlpha  = 1;
+    ctx.font         = 'bold 22px Bebas Neue, sans-serif';
+    ctx.textAlign    = 'center'; ctx.textBaseline='top';
+    ctx.fillStyle    = '#ff44ff';
+    ctx.shadowBlur   = 15;
+    ctx.fillText(`⚠️ TRAICIÓN: ${secsLeft}s`, W/2, 72);
+    ctx.restore();
+  }
+}
+// Court
+function drawCourt(W, H) {
+  buildCourtOffscreen(W, H);
+  ctx.drawImage(courtOffscreen, 0, 0);
+}
+
+// Hoops
+function drawHoops(W, H) {
+  const hoopY = H / 2;
+  drawSingleHoop(80, hoopY, W, H, 'left');
+  drawSingleHoop(W - 80, hoopY, W, H, 'right');
+}
+
+function drawSingleHoop(cx, cy, W, H, side) {
+  ctx.save();
+
+  // Backboard
+  const bbW = 8, bbH = 100;
+  const bbX = side === 'left' ? cx - 30 : cx + 22;
+  ctx.fillStyle = 'rgba(200,220,255,0.15)';
+  ctx.strokeStyle = 'rgba(200,220,255,0.8)';
+  ctx.lineWidth = 3;
+  ctx.fillRect(bbX, cy - bbH/2, bbW, bbH);
+  ctx.strokeRect(bbX, cy - bbH/2, bbW, bbH);
+  // Target square
+  ctx.strokeStyle = 'rgba(200,220,255,0.6)';
+  ctx.lineWidth = 2;
+  const sqOff = side === 'left' ? bbX + bbW : bbX - 30;
+  ctx.strokeRect(sqOff, cy - 20, 30, 30);
+
+  // Pole
+  ctx.fillStyle = '#888';
+  ctx.fillRect(side === 'left' ? cx - 68 : cx + 52, cy - 4, 16, 80);
+
+  // Rim
+  const rimR = 28;
+  ctx.strokeStyle = '#e84a0f';
+  ctx.lineWidth   = 5;
+  ctx.shadowColor = '#ff6b00';
+  ctx.shadowBlur  = 12;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rimR, rimR * 0.4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Net lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth   = 1.2;
+  for (let i = 0; i < 10; i++) {
+    const angle = (i / 10) * Math.PI * 2;
+    const x1 = cx + Math.cos(angle) * rimR;
+    const y1 = cy + Math.sin(angle) * rimR * 0.4;
+    const x2 = cx + Math.cos(angle) * (rimR * 0.3);
+    const y2 = cy + rimR * 0.4 + 30;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  // Net bottom
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + rimR * 0.4 + 30, rimR * 0.3, 6, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// Ball
+function drawBall(W, H) {
+  const bx = localBall.x;
+  const by = localBall.y - localBall.z;
+
+  // Shadow on floor
+  const shadowScale = 1 - clamp(localBall.z / 200, 0, 0.7);
+  ctx.save();
+  ctx.globalAlpha = 0.35 * shadowScale;
+  ctx.fillStyle   = '#000';
+  ctx.beginPath();
+  ctx.ellipse(bx, localBall.y, BALL_RADIUS * shadowScale, BALL_RADIUS * 0.4 * shadowScale, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Ball body
+  ctx.save();
+  const ballGrad = ctx.createRadialGradient(bx - 4, by - 4, 2, bx, by, BALL_RADIUS);
+  ballGrad.addColorStop(0,   '#ffad5c');
+  ballGrad.addColorStop(0.5, '#e8640a');
+  ballGrad.addColorStop(1,   '#a33c00');
+  ctx.fillStyle = ballGrad;
+  ctx.shadowColor = 'rgba(255,107,0,0.6)';
+  ctx.shadowBlur  = 12;
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lines
+  ctx.strokeStyle = '#7a2c00';
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.stroke();
+  // Seams
+  const t = Date.now() * 0.001;
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, -0.5 + t * 0.3, 0.5 + t * 0.3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bx, by, BALL_RADIUS, Math.PI - 0.5 + t * 0.3, Math.PI + 0.5 + t * 0.3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(bx, by - BALL_RADIUS);
+  ctx.bezierCurveTo(bx + BALL_RADIUS * 0.6, by - BALL_RADIUS * 0.3, bx + BALL_RADIUS * 0.6, by + BALL_RADIUS * 0.3, bx, by + BALL_RADIUS);
+  ctx.stroke();
+  ctx.restore();
+
+  // Possession indicator
+  if (localBall.possessedBy) {
+    const owner = playersData[localBall.possessedBy];
+    if (owner) {
+      ctx.save();
+      ctx.strokeStyle = owner.team === 'A' ? 'rgba(232,64,64,0.7)' : 'rgba(64,128,232,0.7)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      ctx.arc(bx, by, BALL_RADIUS + 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+// Players
+// Players
+function drawPlayers(W, H) {
+  Object.values(playersData).forEach(p => {
+    if (!p || !p.id) return;
+    const rpos  = playersRenderPos[p.id] || p;
+    const drawX = p.id === myId ? p.x : rpos.x;
+    const drawY = p.id === myId ? p.y : rpos.y;
+    const isMe  = p.id === myId;
+    const team  = p.team === 'A' ? '#e84040' : '#4080e8';
+const aimActive = gunState && gunState.active;
+const drawRadius = p.giant ? PLAYER_RADIUS*3
+                 : (aimActive ? PLAYER_RADIUS*3 : PLAYER_RADIUS);
+    const ringColor  = (isMe && traicionActive) ? '#aa00ff' : team;
+    ctx.save();
+
+    const isSprinting = isMe ? sprintActive : p.sprinting;
+
+    if (isSprinting) {
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur  = 35;
+    } else {
+      ctx.shadowColor = team;
+      ctx.shadowBlur  = isMe ? 20 : 10;
+    }
+// Aura gigante (pulsante amarilla)
+    if (p.giant) {
+      const tG  = Date.now()*0.003;
+      const aR  = drawRadius + 10 + Math.sin(tG)*8;
+      ctx.save();
+      ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 40;
+      ctx.globalAlpha = 0.35+Math.sin(tG*2)*0.2;
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(drawX,drawY,aR,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha = 0.15+Math.sin(tG*1.5+1)*0.1;
+      ctx.lineWidth   = 10;
+      ctx.beginPath(); ctx.arc(drawX,drawY,aR+8,0,Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+    // Circle background
+    ctx.fillStyle   = team;
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, drawRadius + 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+// Parpadeo rojo en Modo Rabia (solo para myId)
+    if (isMe && perroRageModeActive) {
+      const blinkOn = Math.floor(Date.now() / 140) % 2 === 0;
+      ctx.strokeStyle  = blinkOn ? '#ff0000' : '#ff8800';
+      ctx.shadowColor  = '#ff0000';
+      ctx.shadowBlur   = 45;
+      ctx.lineWidth    = 7;
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, drawRadius + 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // Player ring
+      ctx.strokeStyle = ringColor;
+    ctx.lineWidth   = isMe ? 3.5 : 2.5;
+    if (isMe && traicionActive) { ctx.shadowColor='#aa00ff'; ctx.shadowBlur=25; }
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, drawRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Clip & draw image
+    const drawSkinImg = (p.dead && deadImg.complete) ? deadImg
+                      : (p.skin ? (playerImgCache[p.skin]||getPlayerImg(p)) : skinImg);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, drawRadius - 2, 0, Math.PI * 2);
+    ctx.clip();
+    try {
+      ctx.drawImage(drawSkinImg,
+        drawX - drawRadius + 2, drawY - drawRadius + 2,
+        (drawRadius - 2) * 2,   (drawRadius - 2) * 2);
+    } catch(e2) {
+      ctx.fillStyle = team;
+      ctx.fillRect(drawX - drawRadius + 2, drawY - drawRadius + 2,
+                   (drawRadius - 2) * 2,   (drawRadius - 2) * 2);
+    }
+    ctx.restore();
+
+    // Name
+    ctx.shadowBlur    = 0;
+    ctx.font          = 'bold 12px Rajdhani, sans-serif';
+    ctx.textAlign     = 'center';
+    ctx.textBaseline  = 'bottom';
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillText(p.name||'?', drawX+1, drawY - drawRadius - 6);
+    ctx.fillStyle = isMe ? '#fff' : (p.team==='A' ? '#ff9999' : '#99aaff');
+    ctx.fillText(p.name||'?', drawX,   drawY - drawRadius - 7);
+
+    // "ME" indicator
+    if (isMe) {
+      ctx.fillStyle = '#ffd700';
+      ctx.font      = 'bold 10px Space Mono, monospace';
+      ctx.fillText('◀ TÚ', drawX + drawRadius + 16, drawY + 4);
+    }
+
+    // Power bar
+    if (isMe && iAmShooting && localBall.possessedBy === myId) {
+      const barW = 60, barH = 8;
+      const barX = drawX - barW / 2;
+      const barY = drawY - drawRadius - 26;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(barX - 3, barY - 3, barW + 6, barH + 6);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY, barW, barH);
+      const pct = powerLevel / MAX_POWER;
+      const col = pct < 0.5
+        ? `hsl(${90 - pct * 90}, 90%, 50%)`
+        : `hsl(${45 - (pct - 0.5) * 45}, 90%, 50%)`;
+      ctx.fillStyle   = col;
+      ctx.shadowColor = col;
+      ctx.shadowBlur  = 8;
+      ctx.fillRect(barX, barY, barW * pct, barH);
+      ctx.shadowBlur  = 0;
+    }
+
+    // Pistola
+    if (gunState && gunState.active && gunState.ownerId === p.id) {
+      const GUN_SIZE = PLAYER_RADIUS * 2 * 3;
+      const aimX  = gunState.aimX ?? drawX + GUN_SIZE;
+      const aimY  = gunState.aimY ?? drawY;
+      const angle = Math.atan2(aimY - drawY, aimX - drawX);
+
+      ctx.save();
+      ctx.translate(drawX, drawY);
+      ctx.rotate(angle);
+      if (gunImg.complete && gunImg.naturalWidth > 0) {
+        ctx.drawImage(gunImg, 8, -GUN_SIZE / 4, GUN_SIZE * 0.75, GUN_SIZE / 2);
+      } else {
+        ctx.fillStyle = '#888';
+        ctx.fillRect(8, -10, 50, 18);
+      }
+      ctx.restore();
+
+      const tLeft = Math.max(0, Math.ceil(gunState.timeLeft ?? 0));
+      ctx.save();
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.font         = 'bold 20px Space Mono, monospace';
+      ctx.fillStyle    = tLeft <= 1 ? '#ff2200' : '#ffdd00';
+      ctx.shadowColor  = '#ff4400';
+      ctx.shadowBlur   = 14;
+      ctx.fillText(`🔫 ${tLeft}`, drawX, drawY - drawRadius - 20);
+      ctx.restore();
+    }
+
+    // Anillo de sprint
+    if (isSprinting) {
+      const t2 = Date.now() * 0.005;
+      ctx.strokeStyle = 'rgba(0,229,255,0.6)';
+      ctx.lineWidth   = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, drawRadius + 8 + Math.sin(t2) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Anillo de escudo eléctrico
+    if (p.shield) {
+      const tS = Date.now() * 0.008;
+      ctx.save();
+      ctx.strokeStyle    = '#00ccff';
+      ctx.shadowColor    = '#00eeff';
+      ctx.shadowBlur     = 22;
+      ctx.lineWidth      = 3;
+      ctx.globalAlpha    = 0.85;
+      ctx.setLineDash([8, 4]);
+      ctx.lineDashOffset = -(tS * 50) % 12;
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, drawRadius + 12, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle   = '#00ccff';
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, drawRadius + 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.restore();   // ← este ya existía
+  });
+}
+// UI overlays
+function drawUI(W, H) {
+  // Trajectory line for shooter
+  if (iAmShooting && localBall.possessedBy === myId) {
+    const me = playersData[myId];
+    if (!me) return;
+    const { tx, ty } = getHoopTarget();
+    ctx.save();
+    ctx.setLineDash([6, 8]);
+    ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(me.x, me.y);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    // Hoop highlight
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(255,215,0,0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(tx, ty, 32, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ─── CLEANUP ──────────────────────────────────────────────────
+async function cleanup() {
+  clearInterval(gunCountdownInterval);
+  if (roomId && myId) {
+    try {
+      if (localBall.possessedBy === myId) {
+        await update(ref(db, `rooms/${roomId}/ball`), { possessedBy: null });
+      }
+      if (gunState && gunState.ownerId === myId) {
+        await remove(ref(db, `rooms/${roomId}/gun`));
+      }
+      await remove(ref(db, `rooms/${roomId}/players/${myId}`));
+      const snap = await get(ref(db, `rooms/${roomId}/players`));
+      if (!snap.exists()) {
+        await remove(ref(db, `rooms/${roomId}`));
+      }
+    } catch(e) {}
+  }
+  if (unsubPlayers)       { unsubPlayers(); }
+  if (unsubBall)          { unsubBall(); }
+  if (unsubRoom)          { unsubRoom(); }
+  if (unsubGun)           { unsubGun(); }
+  if (unsubBullets)       { unsubBullets(); }
+  if (unsubMassExplosion) { unsubMassExplosion(); }
+  if (unsubPowerups) { unsubPowerups(); }
+  if (unsubPerrosEvent) { unsubPerrosEvent(); unsubPerrosEvent = null; }
+  limpiarPerros();
+}
+window.addEventListener('beforeunload', cleanup);
+// ─── PLAY AGAIN: eliminar sala para todos ─────────────────────
+document.getElementById('playAgainBtn').addEventListener('click', async () => {
+  if (!roomId) { location.reload(); return; }
+  await cleanup(); 
+  try {
+    // Primero escribir señal de reload en Firebase para avisar a todos
+    await update(ref(db, `rooms/${roomId}`), { reloadAll: true });
+  } catch(e) {
+    console.warn('playAgain error:', e);
+    location.reload();
+  }
+});
+// Start canvas
+resizeCanvas();
+</script>
+</body>
+</html>
