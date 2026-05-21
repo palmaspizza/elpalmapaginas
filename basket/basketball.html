@@ -1359,18 +1359,21 @@ const playersLastUpdate = {};
 // ─── STATE ────────────────────────────────────────────────────
 let myId        = null;
 let roomId      = null;
-let ballLastShotTime = 0;
+let ballLastShotTime    = 0;
+let ballGrabLockUntil   = 0;   // ignora updates externos post-grab por 700ms
 let roomData    = null;
 let playersData = {};
 let playersRenderPos = {}; 
+const playerTargetPos = {};   // posición target de red por jugador (para Lerp)
 let ballData    = null;
-let localBall   = { x: 0, y: 0, vx: 0, vy: 0, vz: 0, z: 0, possessedBy: null, scored: false };
+let localBall   = { x: 0, y: 0, vx: 0, vy: 0, vz: 0, z: 0, possessedBy: null, scored: false, targetX: 0, targetY: 0 };
 let myTeam      = 'A';
 let gameRunning = false;
 let animId      = null;
 let iAmBallAuthority = false;
 let lastDeathReason = '';
 let lastRagePushTime = 0;
+let lastOwnerChangeTime = 0;   // timestamp del último cambio de dueño (cooldown anti-robo 200ms)
 // ─── PERROS CTM — ESTADO DEL EVENTO ────────────────────────────
 let perrosEventActive    = false;
 let perros               = [];       // [{id,x,y,vx,vy,imgIndex,sprinting,sprintTimer,targetId,lastBiteTime}]
@@ -1409,11 +1412,11 @@ let lastRunAudio     = -1;
 let stealCooldownFrames = 0;       // 60fps × 3s = 180
 let lastWinAudio     = -1;
 
-// Possession timer (3 segundos para perros, aviso a 2.3s)
-const POSSESSION_FRAMES         = 102;  // 1.7s
-const POSSESSION_WARNING_FRAMES = 60;   // 1.0s → UI urgente
-const POSSESSION_MAX_FRAMES     = 102;  // 1.7s → activa perros
-const POSSESSION_LAST_WARNING   = 84;   // 1.4s → último aviso // 2.3s → "último aviso WN"
+// Possession timer — aviso visual en el segundo 3, perros en el segundo 5
+const POSSESSION_FRAMES         = 126;  // 2.1s @ 60fps
+const POSSESSION_WARNING_FRAMES = 75;   // 1.25s → UI urgente + primer toast
+const POSSESSION_MAX_FRAMES     = 126;  // 2.1s → activa perros
+const POSSESSION_LAST_WARNING   = 100;  // 1.67s → último aviso  // 4.0s → último aviso
 let possessionFrames = 0;          // frames que lleva el jugador con el balón
 
 // Max score (se leerá del room)
@@ -1447,9 +1450,14 @@ let traicionOriginalTeam = null;
 let nextTraicionTime     = 0;
 
 // Imágenes gun / muerto
+// Imágenes gun / muerto
 const gunImg  = new Image(); gunImg.src  = 'pistola.png';
 const deadImg = new Image(); deadImg.src = 'muerto.png';
 const bulletImg = new Image(); bulletImg.src = 'bala.png';
+// Audio pre-cargado para evitar lag al activar los perros
+const audioPerrosPreload = new Audio('salganperrosctm.mp3');
+audioPerrosPreload.volume = 0.85;
+audioPerrosPreload.load();  // forzar descarga inmediata
 // Imágenes de perros (perro1.png … perro5.png)
 const perroImgs = [];
 for (let _pi = 1; _pi <= 5; _pi++) {
@@ -1604,26 +1612,34 @@ async function passBall() {
   const dy = target.y - me.y;
   const d  = Math.hypot(dx, dy) || 1;
   const speed = 10;
+  const pvx = (dx/d)*speed;
+  const pvy = (dy/d)*speed;
 
-  iAmBallAuthority = true;
-  ballLastShotTime = Date.now();
+  // ── PREDICCIÓN LOCAL INSTANTÁNEA del pase ──
+  iAmBallAuthority      = true;
+  ballLastShotTime      = Date.now();
+  lastOwnerChangeTime   = Date.now();
+  localBall.possessedBy = null;
+  localBall.vx          = pvx;
+  localBall.vy          = pvy;
+  localBall.vz          = 1.5;
+  localBall.z           = 0;
+  localBall.targetX = undefined;
+  localBall.targetY = undefined;
+  possessionFrames      = 0;
+  document.getElementById('possessionTimer').style.display = 'none';
+  onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
 
-  await update(ref(db, `rooms/${roomId}/ball`), {
+  // Enviar a Firebase en segundo plano
+  update(ref(db, `rooms/${roomId}/ball`), {
     possessedBy: null,
     x: me.x, y: me.y,
-    vx: (dx/d)*speed, vy: (dy/d)*speed,
+    vx: pvx, vy: pvy,
     vz: 1.5, z: 0,
+    passTarget: nearestId,
     updatedAt: Date.now()
-  });
+  }).catch(() => {});
 
-  localBall.possessedBy = null;
-  localBall.vx = (dx/d)*speed; localBall.vy = (dy/d)*speed;
-  localBall.vz = 1.5; localBall.z = 0;
-  possessionFrames = 0;
-  document.getElementById('possessionTimer').style.display = 'none';
-
-  await update(ref(db, `rooms/${roomId}/ball`), { passTarget: nearestId });
-  onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
   showToast(`📤 Pase a ${target.name}`);
 }
 
@@ -1734,6 +1750,8 @@ function playRandomAudio(prefix, count, lastRef) {
 const lastRunRef  = { val: -1 };
 const lastWinRef  = { val: -1 };
 const lastDeathRef = { val: -1 };
+let lastPistolaRef = { val: -1 }; // 👈 Para evitar repetir sonido al recibir la pistola
+let lastDisparoRef = { val: -1 }; // 👈 Para evitar repetir sonido al disparar
 function playSynth(freq, dur, type='sine', vol=0.5, freqEnd=null) {
   try {
     const ac = new (window.AudioContext||window.webkitAudioContext)();
@@ -1794,14 +1812,24 @@ function playTraicionEndAudio() {
   playSynthSeq([[[330,.12,'triangle',.4],0],[[392,.12,'triangle',.4],80],[[523,.22,'triangle',.5],80]]);
 }
 function playRunAudio()  { playRandomAudio('correr', 3, lastRunRef); }
-function playWinAudio()  { playRandomAudio('ganar',  3, lastWinRef); }
+function playWinAudio()  { playRandomAudio('ganar',  8, lastWinRef); }
 function playGunShotAudio() {
-  const audiodisparo = new Audio('disparo.mp3');
+  // Genera un número entero al azar entre 1 y 4
+  const numeroAzar = Math.floor(Math.random() * 4) + 1;
+  
+  // Si el número es 1, usamos 'disparo.mp3', de lo contrario añadimos el número (disparo2, disparo3...)
+  const nombreArchivo = numeroAzar === 1 ? 'disparo.mp3' : `disparo${numeroAzar}.mp3`;
+  
+  const audiodisparo = new Audio(nombreArchivo);
   audiodisparo.play();
 }
 
 function playGunGrantAudio() {
-  const a = new Audio('icrima.mp3');
+  // Genera un número al azar entre 1 y 3
+  const numeroAzar = Math.floor(Math.random() * 4) + 1;
+  
+  // Arma el nombre del archivo dinámicamente (pistola1.mp3, pistola2.mp3, etc.)
+  const a = new Audio(`pistola${numeroAzar}.mp3`);
   a.volume = 0.8;
   a.play().catch(() => {});
 }
@@ -2047,15 +2075,32 @@ function setupListeners() {
       if (!playersRenderPos[p.id]) {
         playersRenderPos[p.id] = { x: p.x, y: p.y };
         playersVelocity[p.id]  = { vx: 0, vy: 0 };
+        if (p.id !== myId) {
+  playerTargetPos[p.id] = { x: p.x, y: p.y };
+}
         playersLastUpdate[p.id] = Date.now();
         return;
       }
-      // Calcular velocidad basada en el delta de posición para extrapolación
-      const oldPos = playersRenderPos[p.id];
-      playersVelocity[p.id] = {
-        vx: (p.x - oldPos.x) * 0.6,
-        vy: (p.y - oldPos.y) * 0.6
-      };
+      // ── DEAD RECKONING mejorado: calcular velocidad real desde posición delta y dt
+      const oldPos   = playersRenderPos[p.id];
+      const prevTime = playersLastUpdate[p.id] || Date.now();
+      const dtMs     = Math.max(16, Date.now() - prevTime);
+      const dtFrames = dtMs / 16.67;
+
+      // Si el jugador remoto envía sus vectores, usarlos directamente
+      if (p.vx !== undefined && p.vy !== undefined) {
+        playersVelocity[p.id] = { vx: p.vx || 0, vy: p.vy || 0 };
+      } else {
+        // Inferir velocidad del delta de posición, escalado a 1 frame
+        const rawVx = (p.x - oldPos.x) / dtFrames;
+        const rawVy = (p.y - oldPos.y) / dtFrames;
+        // Suavizado exponencial para evitar saltos bruscos
+        const prev  = playersVelocity[p.id] || { vx: 0, vy: 0 };
+        playersVelocity[p.id] = {
+          vx: prev.vx * 0.4 + rawVx * 0.6,
+          vy: prev.vy * 0.4 + rawVy * 0.6
+        };
+      }
       playersLastUpdate[p.id] = Date.now();
     });
 
@@ -2107,26 +2152,66 @@ function setupListeners() {
     const d = snap.val();
     if (!d) return;
 
+    // ══════════════════════════════════════════════════════════════
+    // AUTORIDAD ABSOLUTA DEL POSEEDOR (Anti-tiriteo)
+    // Si YO soy el dueño actual, soy la ÚNICA fuente de verdad para
+    // la posición de la pelota. Ignorar COMPLETAMENTE cualquier dato
+    // de posición/velocidad que venga de Firebase para la pelota.
+    // Solo se permite entrar si alguien MÁS se convirtió en dueño.
+    // ══════════════════════════════════════════════════════════════
+    if (localBall.possessedBy === myId) {
+      // Única excepción: otro jugador robó/agarró la pelota → cederla
+      if (d.possessedBy && d.possessedBy !== myId) {
+        localBall.possessedBy = d.possessedBy;
+        iAmBallAuthority      = false;
+        possessionFrames      = 0;
+        lastOwnerChangeTime   = Date.now();
+        document.getElementById('possessionTimer').style.display = 'none';
+      }
+      // En cualquier otro caso, bloqueo total: no leer x/y/vx/vy de Firebase
+      return;
+    }
+
     const prevPossessed = localBall.possessedBy;
     localBall.possessedBy = d.possessedBy;
 
-    // Si alguien más agarró la pelota, perder autoridad
+    // Si alguien más agarró la pelota, perder autoridad y resetear contador
     if (d.possessedBy && d.possessedBy !== myId) {
       iAmBallAuthority = false;
+      lastOwnerChangeTime = Date.now();
+      if (prevPossessed === myId) {
+        possessionFrames = 0;
+        document.getElementById('possessionTimer').style.display = 'none';
+      }
     }
 
     if (d.possessedBy !== myId) {
+      // Si acabo de agarrar, ignorar CUALQUIER update con pelota libre por 700ms
+      if (!d.possessedBy && Date.now() < ballGrabLockUntil) return;
+
       if (!d.possessedBy) {
         // Pelota libre: ignorar actualizaciones por 200ms tras un disparo/pase mío
         if (iAmBallAuthority && Date.now() - ballLastShotTime < 200) return;
 
-        // Aceptar posición de Firebase
-        localBall.x  = d.x;
-        localBall.y  = d.y;
+        // ── DEAD RECKONING: guardar posición target para Lerp suave en tick() ──
+        // No asignar en seco — se interpola en el loop a 60fps
+        const latencyCompMs = Math.min(Date.now() - (d.updatedAt || Date.now()), 150);
+        const framesAhead   = latencyCompMs / 16.67;
+        // Actualizar vectores de velocidad inmediatamente (necesarios para simular)
         localBall.vx = d.vx || 0;
         localBall.vy = d.vy || 0;
         localBall.vz = d.vz || 0;
-        localBall.z  = d.z  || 0;
+        localBall.z  = Math.max(0, (d.z || 0) + (d.vz || 0) * framesAhead - GRAVITY * framesAhead * framesAhead * 0.5);
+        // Guardar posición TARGET para el interpolador — no asignar en seco
+if (!(iAmBallAuthority && Date.now() - ballLastShotTime < 400)) {
+  localBall.targetX = (d.x || 0) + localBall.vx * framesAhead * 0.5;
+  localBall.targetY = (d.y || 0) + localBall.vy * framesAhead * 0.5;
+}
+        // Primera vez que aparece la pelota libre: teletransportar sin lerp
+        if (prevPossessed && prevPossessed !== myId) {
+          localBall.x = localBall.targetX;
+          localBall.y = localBall.targetY;
+        }
       } else {
         // Poseída por otro — seguir su posición de render interpolada
         const ownerRender = playersRenderPos[d.possessedBy];
@@ -2229,9 +2314,9 @@ function setupListeners() {
     if (!ev) return;
     if (ev.name === 'ganar')   playWinAudio();
     if (ev.name === 'encesta') playScoreAudio();
-    if (ev.name === 'muerte')  { playRandomAudio('muerte', 4, lastDeathRef); }
-    if (ev.name === 'pistola') playGunGrantAudio();
-    if (ev.name === 'disparo') playGunShotAudio();
+    if (ev.name === 'muerte')  { playRandomAudio('muerte', 8, lastDeathRef); }
+if (ev.name === 'pistola') { playRandomAudio('pistola', 4, lastPistolaRef); } // Cambia el 3 por tu cantidad real de audios
+if (ev.name === 'disparo') { playRandomAudio('disparo', 6, lastDisparoRef); }
   });
 
   // Mass Explosion Event
@@ -2258,9 +2343,8 @@ function setupListeners() {
       perrosSpawnTime   = ev.startTime || Date.now();
 
       // Audio — no bloquea otros sonidos (ver Sección 11)
-      const audioPerros = new Audio('salganperrosctm.mp3');
-      audioPerros.volume = 0.85;
-      audioPerros.play().catch(() => {});
+     audioPerrosPreload.currentTime = 0;
+      audioPerrosPreload.play().catch(() => {});
 
       // Banner visible 3 segundos
       const banner = document.getElementById('perros-banner');
@@ -2370,6 +2454,10 @@ async function handleGrabSteal() {
   const me = playersData[myId];
   if (!me) return;
 
+  // ── COOLDOWN DE ROBO: bloquear 200ms tras cualquier cambio de dueño ──
+  // Evita que la pelota salte infinitamente entre dos jugadores pegados
+  if (Date.now() - lastOwnerChangeTime < 200) return;
+
   // If ball is free & near me → grab
   if (!localBall.possessedBy) {
     const ballPos = { x: localBall.x, y: localBall.y };
@@ -2401,17 +2489,22 @@ async function handleGrabSteal() {
 async function grabBall() {
   const me = playersData[myId];
   if (!me) return;
+
+  // ── Bloquear estado LOCAL INMEDIATAMENTE, antes de cualquier await ──
+  ballGrabLockUntil     = Date.now() + 700;  // 700ms de protección
+  lastOwnerChangeTime   = Date.now();        // cooldown anti-robo 200ms
+  localBall.possessedBy = myId;
+  localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+  iAmBallAuthority      = true;
+  possessionFrames      = 0;
+  document.getElementById('possessionTimer').style.display = 'flex';
+
+  // Ahora sí escribir a Firebase (el estado local ya está asegurado)
   await update(ref(db, `rooms/${roomId}/ball`), {
     possessedBy: myId,
     x: me.x,
     y: me.y + 10
   });
-  localBall.possessedBy = myId;
-  localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
-  possessionFrames = 0;  // ← reiniciar reloj de 4s
-
-  // Mostrar el timer de posesión
-  document.getElementById('possessionTimer').style.display = 'flex';
   onDisconnect(ref(db, `rooms/${roomId}/ball`)).update({ possessedBy: null });
 }
 
@@ -2447,26 +2540,33 @@ async function shootBall() {
   const vx = (dx / d) * speed;
   const vy = (dy / d) * speed;
   const vz = 3 + power * 0.05; // arc height
-localBall.lastShooter = myId;
-ballLastShotTime = Date.now();
-  await update(ref(db, `rooms/${roomId}/ball`), {
+
+  // ── PREDICCIÓN LOCAL INSTANTÁNEA: la pelota sale en pantalla a 60fps
+  // SIN esperar confirmación de Firebase. El servidor se sincroniza después ──
+  localBall.lastShooter = myId;
+  localBall.possessedBy = null;
+  localBall.vx          = vx;
+  localBall.vy          = vy;
+  localBall.vz          = vz;
+  localBall.z           = 0;
+  localBall.targetX     = me.x;
+  localBall.targetY     = me.y;
+  powerLevel            = 0;
+  spacePressing         = false;
+  possessionFrames      = 0;
+  lastOwnerChangeTime   = Date.now();
+  document.getElementById('possessionTimer').style.display = 'none';
+  onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+
+  // Enviar a Firebase en segundo plano (asíncrono, no bloquea el canvas)
+  ballLastShotTime = Date.now();
+  update(ref(db, `rooms/${roomId}/ball`), {
     possessedBy: null,
     x: me.x, y: me.y,
-    vx, vy, vz, z: 0
-  });
-
-  localBall.possessedBy = null;
-  localBall.vx = vx;
-  localBall.vy = vy;
-  localBall.vz = vz;
-  localBall.z  = 0;
-  powerLevel   = 0;
-  spacePressing = false;
-
-  // Remove disconnect handler for ball since I released it
-  onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+    vx, vy, vz, z: 0,
+    updatedAt: Date.now()
+  }).catch(() => {});
 }
-
 // ─── GAME LOOP ────────────────────────────────────────────────
 function startGameLoop() {
   if (animId) cancelAnimationFrame(animId);
@@ -2566,7 +2666,8 @@ function tick() {
   // ── Velocidad modificada por perros ─────────────────────────
   if (perrosEventActive) {
     if (perroRageModeActive) {
-      currentSpeed = PLAYER_SPEED * 2.5;         // Modo Rabia: velocidad ×2
+      // ── MODO RABIA FATAL: +200% de velocidad base (3× PLAYER_SPEED) ──
+      currentSpeed = PLAYER_SPEED * 3;
     } else if (perroMordidaFrames[myId] > 0) {
       currentSpeed *= 0.70;        // Mordida: -30% velocidad
     }
@@ -2575,10 +2676,11 @@ function tick() {
   if (gunState && gunState.active && gunState.ownerId !== myId) {
     currentSpeed = PLAYER_SPEED;
   }
-  // ── Possession timer (5 seg: aviso 3s, perros 5s) ───────────
+    // ── Possession timer (5 seg: aviso 3s, perros 5s) ───────────
   if (localBall.possessedBy === myId) {
     possessionFrames++;
     const totalFrames = POSSESSION_MAX_FRAMES;  // 300 frames = 5 seg
+    const secsHeld    = (possessionFrames / 60).toFixed(1);
     const secsLeft    = Math.max(0, (totalFrames - possessionFrames) / 60).toFixed(1);
     const timerEl     = document.getElementById('possessionTimer');
     document.getElementById('possTimerVal').textContent = secsLeft;
@@ -2589,16 +2691,16 @@ function tick() {
     }
     timerEl.classList.toggle('urgent', possessionFrames >= POSSESSION_WARNING_FRAMES);
 
-    // Advertencia a 1.0 segundo (60 frames)
-    if (possessionFrames === 60 && !perrosEventActive) {
-      showToast('⚠️ ¡SUELTA LA WEÁ O VIENEN LOS PERROS!', 1400);
+    // Advertencia exacta al segundo 3 (180 frames)
+    if (possessionFrames === POSSESSION_WARNING_FRAMES && !perrosEventActive) {
+      showToast('⚠️ ¡SUELTA LA WEÁ O VIENEN LOS PERROS EN 2 SEGUNDOS!', 1800);
     }
-    // Último aviso a 1.4 segundos (84 frames)
+    // Último aviso al segundo 4 (240 frames)
     if (possessionFrames === POSSESSION_LAST_WARNING && !perrosEventActive) {
-      showToast('🐕🚨 ¡ÚLTIMO AVISO WN! ¡SUELTAAAAA!', 700);
+      showToast('🐕🚨 ¡¡ÚLTIMO AVISO WN!! ¡¡SUELTAAAAA EN 1 SEGUNDO!!', 900);
     }
 
-    // Activar perros a los 5 segundos
+    // Activar perros exactamente al segundo 5 (300 frames)
     if (possessionFrames >= totalFrames) {
       possessionFrames = 0;
       timerEl.style.display = 'none';
@@ -2744,17 +2846,25 @@ function tick() {
     const newY = clamp(me.y + dy, courtTop  + PLAYER_RADIUS, courtBottom - PLAYER_RADIUS);
 
     if (newX !== me.x || newY !== me.y) {
-      playersData[myId].x = newX;
-      playersData[myId].y = newY;
-      const dd  = Math.hypot(newX - lastPushedX, newY - lastPushedY);
-      const now = Date.now();
-      if (dd > 0.5 && now - lastPushTime > 17) {
-        update(ref(db, `rooms/${roomId}/players/${myId}`), { x: newX, y: newY, sprinting: sprintActive }).catch(()=>{});
-        lastPushedX  = newX;
-        lastPushedY  = newY;
-        lastPushTime = now;
-      }
-    }
+  playersData[myId].x = newX;
+  playersData[myId].y = newY;
+  // ── CLIENT-SIDE PREDICTION: actualizar local inmediatamente a 60fps,
+  //    enviar a Firebase en segundo plano cada 66-80ms ──
+  const now = Date.now();
+  if (now - lastPushTime > 66 && (Math.abs(newX - lastPushedX) > 1.5 || Math.abs(newY - lastPushedY) > 1.5)) {
+    // Envío asíncrono sin bloquear el loop local
+    update(ref(db, `rooms/${roomId}/players/${myId}`), {
+      x: newX, y: newY,
+      sprinting: sprintActive,
+      vx: keys.d ? currentSpeed : (keys.a ? -currentSpeed : 0),
+      vy: keys.s ? currentSpeed : (keys.w ? -currentSpeed : 0),
+      updatedAt: now
+    }).catch(()=>{});
+    lastPushedX  = newX;
+    lastPushedY  = newY;
+    lastPushTime = now;
+  }
+}
   }
 
   // ── Empuje gigante ───────────────────────────────────────────
@@ -2810,6 +2920,30 @@ function tick() {
 
   // ── Ball physics ────────────────────────
   if (!localBall.possessedBy) {
+    // ── INTERPOLADOR DE UMBRAL (Lerp anti-tiriteo) ──────────────────
+    // Si hay una posición target de Firebase, suavizar gradualmente hacia ella
+    // en lugar de saltar en seco. 20% por frame absorbe la vibración de red.
+    if (!iAmBallAuthority && localBall.targetX !== undefined && localBall.targetY !== undefined) {
+      const diffX = localBall.targetX - localBall.x;
+      const diffY = localBall.targetY - localBall.y;
+      const dist2 = Math.hypot(diffX, diffY);
+      // Solo aplicar lerp si la diferencia es perceptible (> 1px) pero no enorme (< 120px)
+      // Si la diferencia es enorme, teletransportar (el cliente perdió sync)
+      if (dist2 > 1 && dist2 < 120) {
+        localBall.x += diffX * 0.20;
+        localBall.y += diffY * 0.20;
+      } else if (dist2 >= 120) {
+        // Diferencia demasiado grande: snap y resetear target
+        localBall.x = localBall.targetX;
+        localBall.y = localBall.targetY;
+      }
+      // Una vez convergido, limpiar target para no interferir con física local
+      if (dist2 < 0.5) {
+        localBall.targetX = undefined;
+        localBall.targetY = undefined;
+      }
+    }
+
     localBall.x  += localBall.vx;
     localBall.y  += localBall.vy;
     localBall.vz -= GRAVITY;
@@ -2833,14 +2967,16 @@ function tick() {
 
     const speed = Math.hypot(localBall.vx, localBall.vy);
     const nowBall = Date.now();
-    if (speed > 0.3 && nowBall - lastBallPushTime > 66) {
+    // ── DEAD RECKONING: enviar posición + vectores de velocidad cada 66-80ms
+    // Los demás clientes simulan la trayectoria localmente entre paquetes ──
+    if (speed > 0.2 && nowBall - lastBallPushTime > 66 && nowBall > ballGrabLockUntil) {
       lastBallPushTime = nowBall;
       update(ref(db, `rooms/${roomId}/ball`), {
         x: localBall.x, y: localBall.y,
         vx: localBall.vx, vy: localBall.vy,
         vz: localBall.vz, z: localBall.z,
         possessedBy: null,
-        updatedAt: Date.now()
+        updatedAt: nowBall
       }).catch(()=>{});
     }
   } else if (localBall.possessedBy === myId) {
@@ -2858,9 +2994,10 @@ function tick() {
     }
   }
 
-  // ── Interpolación con extrapolación predictiva ──
+  // ── INTERPOLACIÓN + DEAD RECKONING para jugadores remotos ──────
   Object.values(playersData).forEach(p => {
     if (p.id === myId) {
+      // Jugador local: posición de render = posición física real (sin lag)
       playersRenderPos[myId] = { x: p.x, y: p.y };
       return;
     }
@@ -2870,9 +3007,30 @@ function tick() {
     }
     const vel    = playersVelocity[p.id] || { vx: 0, vy: 0 };
     const lagMs  = Date.now() - (playersLastUpdate[p.id] || Date.now());
-    const factor = lagMs < 120 ? 0.18 : 0.10;
-    playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * factor + vel.vx * 0.08;
-    playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * factor + vel.vy * 0.08;
+    // Factor de interpolación: más lento si hay más lag (evita overshooting)
+    const factor = lagMs < 80  ? 0.22
+                 : lagMs < 140 ? 0.15
+                 : lagMs < 220 ? 0.10
+                 : 0.07;
+
+    // Dead reckoning: avanzar con velocidad predicha mientras espera el próximo paquete (66-80ms)
+    const drWeight = Math.min(lagMs / 80, 1.0);  // peso creciente hasta el próximo paquete
+    const drX = vel.vx * drWeight * 0.9;
+    const drY = vel.vy * drWeight * 0.9;
+
+    playersRenderPos[p.id].x += (p.x - playersRenderPos[p.id].x) * factor + drX;
+    playersRenderPos[p.id].y += (p.y - playersRenderPos[p.id].y) * factor + drY;
+
+    // Clamp para evitar que el dead reckoning se aleje demasiado de la posición real
+    const maxDrift = 80;
+    const driftX   = playersRenderPos[p.id].x - p.x;
+    const driftY   = playersRenderPos[p.id].y - p.y;
+    const driftD   = Math.hypot(driftX, driftY);
+    if (driftD > maxDrift) {
+      const driftScale = maxDrift / driftD;
+      playersRenderPos[p.id].x = p.x + driftX * driftScale;
+      playersRenderPos[p.id].y = p.y + driftY * driftScale;
+    }
   });
 
   // ── Traición ─────────────────────────────────────────────────
@@ -2977,7 +3135,7 @@ function checkHoop() {
 
   if (inLeft || inRight) {
     let scoringTeam = inRight ? 'A' : 'B';
-if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
+    if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
     const pts = 2;
     scoreCooldown = 120;
 
@@ -2985,12 +3143,14 @@ if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
     const newB = (roomData?.score?.B || 0) + (scoringTeam === 'B' ? pts : 0);
 
     update(ref(db, `rooms/${roomId}/score`), { A: newA, B: newB });
+
     // ── Trigger pistola en múltiplos de 6 ──────────────────
     if (scoringTeam === 'A' && newA > 0 && newA % 6 === 0) {
       assignGunToTeam('B');
     } else if (scoringTeam === 'B' && newB > 0 && newB % 6 === 0) {
       assignGunToTeam('A');
     }
+
     // ── Mass Explosion: cuando un equipo llega a 15 ─────────
     const MASS_EXPLOSION_THRESHOLD = 15;
     const shouldExplodeA = scoringTeam === 'A' && newA >= MASS_EXPLOSION_THRESHOLD && !massExplosionTriggeredA;
@@ -2998,7 +3158,6 @@ if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
     if (shouldExplodeA || shouldExplodeB) {
       if (shouldExplodeA) massExplosionTriggeredA = true;
       if (shouldExplodeB) massExplosionTriggeredB = true;
-      // El inmune es el que metió el gol (lastShooter)
       const immuneId   = localBall.lastShooter || myId;
       const immunePlayer = playersData[immuneId];
       const immuneName = immunePlayer ? immunePlayer.name : '???';
@@ -3008,8 +3167,8 @@ if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
         t: Date.now()
       }).catch(() => {});
     }
-    // ── Remontada desesperada: a 1 canasta de ganar ─────────────
-    // (1 canasta = 2 pts → condición: newScore >= maxScore - 2)
+
+    // ── Remontada desesperada: a 1 canasta de ganar ─────────
     if (!perrosEventActive) {
       const closeA = (newA >= maxScore - 2) && (newA < maxScore);
       const closeB = (newB >= maxScore - 2) && (newB < maxScore);
@@ -3017,35 +3176,93 @@ if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
         iniciarEventoPerros('remontada');
       }
     }
-    // Reset pelota al centro — inmediato, antes de cualquier otra cosa
-    localBall.x = W/2; localBall.y = H/2;
-    localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
-    localBall.possessedBy = null;
-    localBall.lastShooter = null;  // ← evita que checkHoop vuelva a contar
-    possessionFrames = 0;
-    update(ref(db, `rooms/${roomId}/ball`), {
-      possessedBy: null,
-      x: W/2, y: H/2,
-      vx: 0, vy: 0, vz: 0, z: 0,
-      lastShooter: null
-    });
-    document.getElementById('possessionTimer').style.display = 'none';
 
+    // ─────────────────────────────────────────────────────────
+    // 🏀 NUEVO: ENTREGAR PELOTA AL EQUIPO CONTRARIO (saque de fondo)
+    // ─────────────────────────────────────────────────────────
+    const receivingTeam = scoringTeam === 'A' ? 'B' : 'A';
+    let receiverId = null;
+    let receiverPos = null;
+
+    // Buscar un jugador vivo del equipo receptor
+    for (let p of Object.values(playersData)) {
+      if (p.team === receivingTeam && !p.dead) {
+        receiverId = p.id;
+        receiverPos = { x: p.x, y: p.y };
+        break;
+      }
+    }
+
+    if (receiverId && receiverPos) {
+      // Asignar balón al jugador encontrado
+      localBall.possessedBy = receiverId;
+      localBall.x = receiverPos.x;
+      localBall.y = receiverPos.y + 10;
+      localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+      iAmBallAuthority = (receiverId === myId);
+
+      if (receiverId === myId) {
+        possessionFrames = 0;
+        document.getElementById('possessionTimer').style.display = 'flex';
+      } else {
+        possessionFrames = 0;
+        document.getElementById('possessionTimer').style.display = 'none';
+      }
+
+      // Escribir a Firebase (sin esperar, para no bloquear)
+      update(ref(db, `rooms/${roomId}/ball`), {
+        possessedBy: receiverId,
+        x: receiverPos.x,
+        y: receiverPos.y + 10,
+        vx: 0, vy: 0, vz: 0, z: 0,
+        lastShooter: null,
+        updatedAt: Date.now()
+      }).catch(() => {});
+    } else {
+      // No hay jugadores vivos del equipo receptor: dejar el balón cerca de su aro
+      let spawnX, spawnY;
+      if (receivingTeam === 'A') {
+        spawnX = 140;        // cerca del aro izquierdo (x=80)
+        spawnY = H / 2;
+      } else {
+        spawnX = W - 140;    // cerca del aro derecho (x=W-80)
+        spawnY = H / 2;
+      }
+      localBall.x = spawnX;
+      localBall.y = spawnY;
+      localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
+      localBall.possessedBy = null;
+      iAmBallAuthority = false;
+      possessionFrames = 0;
+      document.getElementById('possessionTimer').style.display = 'none';
+
+      update(ref(db, `rooms/${roomId}/ball`), {
+        possessedBy: null,
+        x: spawnX, y: spawnY,
+        vx: 0, vy: 0, vz: 0, z: 0,
+        lastShooter: null,
+        updatedAt: Date.now()
+      }).catch(() => {});
+    }
+
+    // Limpiar el shooter local para no volver a contar el mismo gol
+    localBall.lastShooter = null;
+
+    // ─────────────────────────────────────────────────────────
+    // Efectos visuales y audio (sin cambios)
     const hx = scoringTeam === 'A' ? W - 80 : 80;
     scorePopup(hx, H/2 - 60, `+${pts} ${scoringTeam === 'A' ? '🔴' : '🔵'}`);
     showToast(scoringTeam === 'A' ? '🔴 EQUIPO ROJO ANOTA!' : '🔵 EQUIPO AZUL ANOTA!', 2500);
-
-    // Audio de enceste (aleatorio entre encesta1, encesta2, encesta3)
     playScoreAudio();
 
-    // Animación bump en el score del equipo que anotó
     const scoreElId = scoringTeam === 'A' ? 'scoreA' : 'scoreB';
     const scoreElBump = document.getElementById(scoreElId);
     scoreElBump.classList.remove('score-bump');
-    void scoreElBump.offsetWidth; // force reflow
+    void scoreElBump.offsetWidth;
     scoreElBump.classList.add('score-bump');
     setTimeout(() => scoreElBump.classList.remove('score-bump'), 300);
-    // Verificar victoria con maxScore dinámico
+
+    // Verificar victoria
     if (newA >= maxScore || newB >= maxScore) {
       gameRunning = false;
       const winTeam  = newA >= maxScore ? 'A' : 'B';
@@ -3053,13 +3270,10 @@ if (traicionActive) scoringTeam = scoringTeam === 'A' ? 'B' : 'A';
       const overlay  = document.getElementById('winner-overlay');
       const titleEl  = document.getElementById('winnerTitle');
       const scoreEl  = document.getElementById('winnerScore');
-
       titleEl.textContent = `EQUIPO ${winTeam} GANA`;
       titleEl.className   = `winner-title ${winColor}`;
       scoreEl.textContent = `${newA} — ${newB}`;
       overlay.classList.add('show');
-
-      // Reproducir audio de victoria (sin repetir)
       playWinAudio();
     }
   }
@@ -3272,7 +3486,7 @@ function showDeadOverlay(respawnAt, reason) {
 
 function triggerExplosion(x, y) {
   // Partículas de fuego
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 25; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 1.5 + Math.random() * 9;
     const hue   = Math.random() * 60;
@@ -3287,7 +3501,7 @@ function triggerExplosion(x, y) {
     });
   }
   // Brasas
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 15; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 3 + Math.random() * 13;
     particles.push({
@@ -3335,9 +3549,8 @@ function spawnearPerros(triggerReason, comilon) {
   perrosComilon       = comilon;
   const W = LOGIC_W, H = LOGIC_H;
 
-  // 🐕 Escalar perros según cantidad de jugadores
-  const totalPlayers = Object.keys(playersData).length;
-  const numPerros = totalPlayers <= 2 ? 3 : (totalPlayers <= 4 ? 4 : 5);
+  // 🐕 Siempre exactamente 5 perros simultáneos (perro1.png → perro5.png)
+  const numPerros = 5;
 
   for (let i = 0; i < numPerros; i++) {
     const edge = Math.floor(Math.random() * 4);
@@ -3353,7 +3566,7 @@ function spawnearPerros(triggerReason, comilon) {
       y:            sy,
       vx:           0,
       vy:           0,
-      imgIndex:     i % 5,     // perro1.png … perro5.png
+      imgIndex:     i % 5,     // perro1.png … perro5.png (5 imágenes distintas)
       sprinting:    true,      // entran siempre en sprint
       sprintTimer:  240,       // 4 segundos de sprint inicial
       entryMode:    true,      // sprint de entrada (velocidad decae con distancia)
@@ -3377,7 +3590,9 @@ function actualizarPerros() {
   const BASE_SPD   = 2.8;
   const SPRINT_SPD   = BASE_SPD * 1.7;          // sprint normal
   const ENTRY_SPD    = SPRINT_SPD * 1.24;       // +24% en modo entrada
-  const REACTIVE_SPD = PLAYER_SPEED * 2 * 1.15; // 15% sobre la velocidad sprint del jugador      // +24% en modo entrada
+  // ── Sprint dinámico reactivo: velocidad de sprint del jugador + 0.5 unidades ──
+  // Si el jugador objetivo está sprinteando, los perros mutan instantáneamente a esta velocidad
+  const REACTIVE_SPD = (PLAYER_SPEED * 2) + 0.5;  // exactamente sprint del jugador + 0.5
   const me         = playersData[myId];
 
   perros.forEach(perro => {
@@ -3493,10 +3708,10 @@ function actualizarPerros() {
     if (perroMordidaFrames[pid] > 0) perroMordidaFrames[pid]--;
   });
 
-  // ── 9. Expiración Modo Rabia → muerte ────────────────────
+  // ── 9. Expiración Modo Rabia → muerte obligatoria con causa exacta ──
   if (perroRageModeActive && now >= perroRageModeUntil) {
     perroRageModeActive = false;
-    killPlayer(myId, '🐕 TE PICO UN PERRO RABIOSO Y REVENTASTE');
+    killPlayer(myId, '🐕🦠 Murió por rabia esquizofrenica y ataque de kiltros');
   }
 }
 /** Ralentiza, suelta pelota, flash rojo, cuenta mordidas, activa Modo Rabia. */
@@ -3562,14 +3777,21 @@ function aplicarMordida(playerId) {
 }
 
 
-/** Velocidad ×2, parpadeo rojo 2 s, puede taclear. Luego muerte. */
+/** Modo Rabia Fatal: exactamente 2 segundos con 200% aumento de velocidad, luego muerte obligatoria. */
 function aplicarModoRabia() {
   if (perroRageModeActive) return;
   perroRageModeActive = true;
-  perroRageModeUntil  = Date.now() + 2000;
+  perroRageModeUntil  = Date.now() + 2000;   // exactamente 2 segundos
   perroMordidaFrames[myId] = 0;   // quitar la ralentización
-  showToast('🔴 ¡MODO RABIA! Velocidad ×2 — 2 segundos... luego te mueres 😱', 2500);
+  showToast('🔴 ¡MODO RABIA FATAL! +200% velocidad — 2 segundos... luego EXPLOTA 😱🐕', 2500);
   if (navigator.vibrate) navigator.vibrate([500, 100, 500, 100, 800]);
+  // Flash pantalla rojo intenso para avisar
+  const fl = document.getElementById('perro-mordida-flash');
+  if (fl) {
+    fl.style.display = 'block';
+    fl.style.opacity = '0.9';
+    setTimeout(() => { fl.style.opacity = '0'; setTimeout(() => { fl.style.display = 'none'; }, 400); }, 300);
+  }
 }
 /** Renderiza los 5 perros con imágenes. */
 function dibujarPerros() {
@@ -4325,6 +4547,7 @@ window.addEventListener('beforeunload', cleanup);
 // ─── PLAY AGAIN: eliminar sala para todos ─────────────────────
 document.getElementById('playAgainBtn').addEventListener('click', async () => {
   if (!roomId) { location.reload(); return; }
+  await cleanup(); 
   try {
     // Primero escribir señal de reload en Firebase para avisar a todos
     await update(ref(db, `rooms/${roomId}`), { reloadAll: true });
