@@ -511,12 +511,15 @@ async function matarApp(usuarioActual) {
             return { x: ((rect.left + rect.right) / 2 - boardRect.left) / boardRect.width * 100, y: ((rect.top + rect.bottom) / 2 - boardRect.top) / boardRect.height * 100 };
         }
         function applyZoom(square, zoom) {
-            let boardDiv = $('#board-container');
-            if (zoom && square) {
-                let pos = getSquarePosition(square);
-                boardDiv.css({ 'transform': 'scale(1.3)', 'transform-origin': `${pos.x}% ${pos.y}%`, 'transition': 'transform 0.2s ease-out', 'z-index': '1000' });
-            } else { boardDiv.css({ 'transform': 'scale(1)', 'transform-origin': 'center center', 'transition': 'transform 0.2s ease-out' }); setTimeout(() => boardDiv.css('z-index', ''), 200); }
-        }
+    let boardDiv = $('#board-container');
+    if (zoom && square) {
+        let pos = getSquarePosition(square);
+        // Cambiado de scale(1.3) a scale(1.55) para que sea 25% más grande
+        boardDiv.css({ 'transform': 'scale(1.55)', 'transform-origin': `${pos.x}% ${pos.y}%`, 'transition': 'transform 0.2s ease-out', 'z-index': '1000' });
+    } else { 
+        boardDiv.css({ 'transform': 'scale(1)', 'transform-origin': 'center center', 'transition': 'transform 0.2s ease-out' }); setTimeout(() => boardDiv.css('z-index', ''), 200);
+    }
+}
         function handleTouchStart(square, e) {
             if (!isGameActive || !isMyTurn || game.game_over() || isTurnOverlayActive) return;
             let piece = game.get(square);
