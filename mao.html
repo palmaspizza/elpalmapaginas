@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>MAO ONLINE</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Lato:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --green-dark: #1b5e20;
+    --green-mid: #2e7d32;
+    --green-light: #388e3c;
+    --gold: #ffd700;
+    --gold-dark: #b8860b;
+    --red-card: #cc0000;
+    --black-card: #111111;
+    --white: #ffffff;
+    --yellow-panel: #fffde7;
+    --yellow-border: #f9a825;
+    --card-radius: 18px;
+    --shadow-card: 0 8px 24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4);
+    --shadow-glow: 0 0 0 4px #ffd700, 0 0 24px 8px #ffd70099, 0 8px 24px rgba(0,0,0,0.55);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--green-dark);
+    font-family: 'Lato', sans-serif;
+  }
+
+  /* ============ SCREENS ============ */
+  .screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity 0.5s ease;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; }
+
+  /* ============ LOBBY SCREEN ============ */
+  #lobby-screen {
+    background: radial-gradient(ellipse at center, #2e7d32 0%, #1b5e20 60%, #0a3d0f 100%);
+    gap: 28px; padding: 24px;
+  }
+  .lobby-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(52px, 14vw, 110px);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 4px 20px rgba(0,0,0,0.7), 0 0 40px #ffd70055;
+    letter-spacing: 6px;
+    text-align: center;
+    line-height: 1;
+  }
+  .lobby-subtitle {
+    font-size: clamp(16px, 4vw, 22px);
+    color: #a5d6a7;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .lobby-cards-deco {
+    display: flex; gap: 12px; margin: 8px 0;
+  }
+  .deco-card {
+    width: 54px; height: 78px;
+    background: white;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    box-shadow: var(--shadow-card);
+    animation: floatCard 3s ease-in-out infinite;
+  }
+  .deco-card:nth-child(2) { animation-delay: 0.4s; }
+  .deco-card:nth-child(3) { animation-delay: 0.8s; }
+  .deco-card:nth-child(4) { animation-delay: 1.2s; }
+  @keyframes floatCard {
+    0%,100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-10px) rotate(3deg); }
+  }
+  #player-name-input {
+    width: min(420px, 90vw);
+    padding: 22px 28px;
+    font-size: clamp(22px, 5vw, 30px);
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    border: 4px solid var(--gold);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.97);
+    color: #1b2e1b;
+    text-align: center;
+    outline: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  #player-name-input::placeholder { color: #888; font-weight: 400; }
+  #player-name-input:focus { border-color: #fff; box-shadow: 0 0 0 4px #ffd70066, 0 4px 20px rgba(0,0,0,0.3); }
+  #find-game-btn {
+    width: min(420px, 90vw);
+    padding: 26px 40px;
+    font-size: clamp(24px, 6vw, 34px);
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ffd700, #ff8f00);
+    color: #1a1a1a;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4), 0 2px 0 #b8860b inset;
+    transition: transform 0.1s, box-shadow 0.1s;
+    text-transform: uppercase;
+  }
+  #find-game-btn:active { transform: scale(0.97); box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+  #lobby-status {
+    font-size: clamp(18px, 4vw, 24px);
+    color: #fff; font-weight: 700;
+    text-align: center;
+    min-height: 36px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+  /* ============ GAME SCREEN ============ */
+  #game-screen {
+    background: radial-gradient(ellipse at center, #2e7d32 0%, #1b5e20 50%, #0d3d11 100%);
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+
+  /* NARRATOR PANEL */
+  #narrator-panel {
+    width: 100%;
+    background: var(--yellow-panel);
+    border-bottom: 5px solid var(--yellow-border);
+    padding: 14px 18px;
+    font-size: clamp(20px, 4.5vw, 26px);
+    font-weight: 900;
+    color: #3e2700;
+    text-align: center;
+    min-height: 70px;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1.3;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  /* GAME AREA */
+  #game-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  /* RIVAL ZONE */
+  #rival-zone {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  #rival-name-label {
+    font-size: clamp(16px, 3.5vw, 20px);
+    color: #a5d6a7;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  #rival-cards-count {
+    font-size: clamp(14px, 3vw, 18px);
+    color: #c8e6c9;
+    font-weight: 700;
+  }
+  #rival-hand {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: nowrap;
+  }
+  .rival-card-back {
+    width: 46px; height: 68px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
+    border: 3px solid #fff;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .rival-card-back::after {
+    content: '🂠';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; opacity: 0.3;
+  }
+
+  /* CENTER TABLE */
+  #center-table {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px;
+    position: relative;
+  }
+
+  /* DECK */
+  #deck-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #draw-pile {
+    width: 80px; height: 116px;
+    border-radius: var(--card-radius);
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
+    border: 4px solid rgba(255,255,255,0.7);
+    box-shadow: var(--shadow-card), 4px 4px 0 #0a3380, 8px 8px 0 #082880;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px;
+    color: rgba(255,255,255,0.2);
+    position: relative;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  #draw-pile:active { transform: scale(0.95); }
+  #draw-pile.blocked { opacity: 0.5; cursor: not-allowed; }
+  #deck-count-label {
+    font-size: clamp(16px, 3.5vw, 20px);
+    color: #c8e6c9;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  /* TOP CARD */
+  #top-card-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #top-card-display {
+    width: 100px; height: 144px;
+    border-radius: var(--card-radius);
+    background: white;
+    border: 4px solid rgba(255,255,255,0.9);
+    box-shadow: var(--shadow-card);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    position: relative;
+    flex-shrink: 0;
+    animation: cardLand 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes cardLand {
+    from { transform: scale(0.6) rotate(-15deg); opacity: 0; }
+    to { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .top-card-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 40px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .top-card-suit {
+    font-size: 48px;
+    line-height: 1;
+  }
+  #current-suit-label {
+    font-size: clamp(14px, 3vw, 18px);
+    color: #fff59d;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  /* PLAYER ZONE */
+  #player-zone {
+    padding: 8px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  #player-name-label {
+    font-size: clamp(16px, 3.5vw, 20px);
+    color: #fff176;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* PLAYER HAND */
+  #player-hand-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+  #player-hand {
+    display: flex;
+    gap: 10px;
+    padding: 8px 12px;
+    min-width: max-content;
+    justify-content: center;
+  }
+
+  /* CARDS */
+  .card {
+    width: 80px; height: 116px;
+    border-radius: var(--card-radius);
+    background: white;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s, opacity 0.2s;
+    flex-shrink: 0;
+    user-select: none;
+    border: 3px solid rgba(200,200,200,0.5);
+  }
+  .card .card-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .card .card-suit {
+    font-size: 34px;
+    line-height: 1;
+  }
+  .card .card-corner {
+    position: absolute;
+    top: 6px; left: 8px;
+    display: flex; flex-direction: column;
+    align-items: center;
+    line-height: 1;
+  }
+  .card .card-corner-val { font-size: 16px; font-weight: 900; font-family: 'Playfair Display', serif; }
+  .card .card-corner-suit { font-size: 16px; }
+  .card .card-corner-br {
+    position: absolute;
+    bottom: 6px; right: 8px;
+    display: flex; flex-direction: column;
+    align-items: center;
+    transform: rotate(180deg);
+    line-height: 1;
+  }
+  .card.red { color: var(--red-card); }
+  .card.black { color: var(--black-card); }
+  .card.valid {
+    animation: goldGlow 1.2s ease-in-out infinite;
+    border: 3px solid var(--gold);
+    transform: translateY(-10px);
+  }
+  .card.valid:hover { transform: translateY(-18px); }
+  @keyframes goldGlow {
+    0%,100% { box-shadow: var(--shadow-glow); }
+    50% { box-shadow: 0 0 0 6px #ffd700, 0 0 40px 14px #ffd700aa, 0 8px 24px rgba(0,0,0,0.55); }
+  }
+  .card.invalid { opacity: 0.38; cursor: not-allowed; }
+  .card.blocked { opacity: 0.38; cursor: not-allowed; animation: none !important; }
+  .card.playing-anim {
+    animation: cardPlay 0.5s ease-in forwards;
+  }
+  @keyframes cardPlay {
+    to { transform: scale(0.3) translateY(-200px); opacity: 0; }
+  }
+
+  /* ACTION BUTTONS */
+  #action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .action-btn {
+    padding: 16px 24px;
+    font-size: clamp(17px, 4vw, 22px);
+    font-family: 'Lato', sans-serif;
+    font-weight: 900;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.3) inset;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .action-btn:active { transform: scale(0.96); }
+  #mao-btn {
+    background: linear-gradient(135deg, #e53935, #b71c1c);
+    color: white;
+    display: none;
+    animation: maoPulse 0.8s infinite;
+    font-size: clamp(20px, 5vw, 28px);
+    padding: 20px 36px;
+  }
+  @keyframes maoPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(229,57,53,0.7), 0 4px 14px rgba(0,0,0,0.35); }
+    70% { box-shadow: 0 0 0 20px rgba(229,57,53,0), 0 4px 14px rgba(0,0,0,0.35); }
+  }
+  #order-btn {
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
+    color: white;
+    position: fixed;
+    bottom: 20px; right: 16px;
+    z-index: 100;
+    padding: 14px 18px;
+    font-size: clamp(15px, 3.5vw, 18px);
+    border-radius: 50px;
+    display: none;
+  }
+
+  /* ============ OVERLAYS ============ */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.82);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+    padding: 20px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay-box {
+    background: var(--yellow-panel);
+    border: 6px solid var(--yellow-border);
+    border-radius: 24px;
+    padding: 36px 32px;
+    max-width: 500px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  }
+  .overlay-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 6vw, 38px);
+    font-weight: 900;
+    color: #1b5e20;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .overlay-text {
+    font-size: clamp(20px, 4.5vw, 26px);
+    color: #3e2700;
+    text-align: center;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .overlay-btn {
+    padding: 20px 40px;
+    font-size: clamp(20px, 5vw, 28px);
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.1s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    text-transform: uppercase;
+  }
+  .overlay-btn:active { transform: scale(0.97); }
+  .overlay-btn.green {
+    background: linear-gradient(135deg, #43a047, #1b5e20);
+    color: white;
+  }
+  .overlay-btn.red {
+    background: linear-gradient(135deg, #e53935, #b71c1c);
+    color: white;
+  }
+  .overlay-btn.gold {
+    background: linear-gradient(135deg, #ffd700, #ff8f00);
+    color: #1a1a1a;
+  }
+  .overlay-btn.blue {
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
+    color: white;
+  }
+
+  /* SUIT PICKER */
+  #suit-picker .suit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+  }
+  .suit-pick-btn {
+    padding: 24px 16px;
+    font-size: clamp(32px, 8vw, 50px);
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    background: white;
+    border: 4px solid #ccc;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    transition: transform 0.1s, border-color 0.1s;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+  }
+  .suit-pick-btn:active { transform: scale(0.95); }
+  .suit-pick-btn span.suit-label { font-size: clamp(14px, 3.5vw, 18px); font-weight: 900; color: #333; }
+  .suit-pick-btn.red-suit { color: var(--red-card); border-color: var(--red-card); }
+  .suit-pick-btn.black-suit { color: #111; border-color: #333; }
+
+  /* MAO KING BUTTON */
+  #king-overlay .overlay-btn { font-size: clamp(18px, 4.5vw, 24px); }
+
+  /* ORDER PANEL */
+  #order-overlay .overlay-text { font-size: clamp(18px, 4vw, 22px); }
+
+  /* WIN SCREEN */
+  #win-overlay .overlay-title { font-size: clamp(32px, 8vw, 54px); color: #b8860b; }
+  #win-overlay .win-emoji { font-size: 80px; }
+
+  /* PENALTY TOAST */
+  #penalty-toast {
+    position: fixed;
+    top: 90px; left: 50%; transform: translateX(-50%);
+    background: #b71c1c;
+    color: white;
+    padding: 16px 28px;
+    border-radius: 14px;
+    font-size: clamp(18px, 4vw, 24px);
+    font-weight: 900;
+    z-index: 300;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    text-align: center;
+    display: none;
+    max-width: 90vw;
+  }
+
+  /* RIVAL PLAYED ANIMATION */
+  #rival-played-card {
+    position: fixed;
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    z-index: 150;
+    display: none;
+    width: 110px; height: 158px;
+    border-radius: 20px;
+    background: white;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: rivalCardAnim 1.5s ease-in-out forwards;
+  }
+  @keyframes rivalCardAnim {
+    0% { opacity: 0; transform: translate(-50%,-50%) scale(0.5) rotate(-20deg); }
+    30% { opacity: 1; transform: translate(-50%,-50%) scale(1.1) rotate(5deg); }
+    60% { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(0.8) rotate(10deg); }
+  }
+
+  /* Responsive tweaks */
+  @media (max-height: 700px) {
+    #narrator-panel { padding: 8px 12px; min-height: 54px; font-size: 18px; }
+    .card { width: 66px; height: 96px; }
+    .card .card-value { font-size: 22px; }
+    .card .card-suit { font-size: 26px; }
+    #draw-pile { width: 66px; height: 96px; }
+    #top-card-display { width: 80px; height: 116px; }
+    .top-card-value { font-size: 30px; }
+    .top-card-suit { font-size: 36px; }
+  }
+  @media (max-height: 560px) {
+    .rival-card-back { width: 36px; height: 54px; }
+    #rival-zone { padding: 6px 8px; gap: 4px; }
+    #player-zone { padding: 4px 8px 8px; gap: 4px; }
+    .action-btn { padding: 12px 16px; font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOBBY SCREEN ============ -->
+<div id="lobby-screen" class="screen">
+  <div class="lobby-title">MAO</div>
+  <div class="lobby-subtitle">El juego de cartas online</div>
+  <div class="lobby-cards-deco">
+    <div class="deco-card" style="color:#cc0000;">♥</div>
+    <div class="deco-card" style="color:#111;">♠</div>
+    <div class="deco-card" style="color:#cc0000;">♦</div>
+    <div class="deco-card" style="color:#111;">♣</div>
+  </div>
+  <input type="text" id="player-name-input" placeholder="Escribe tu nombre aquí" maxlength="20" autocomplete="off"/>
+  <button id="find-game-btn">🎯 BUSCAR PARTIDA</button>
+  <div id="lobby-status"></div>
+</div>
+
+<!-- ============ GAME SCREEN ============ -->
+<div id="game-screen" class="screen hidden">
+  <!-- NARRATOR -->
+  <div id="narrator-panel">Bienvenido a MAO Online</div>
+
+  <!-- GAME AREA -->
+  <div id="game-area">
+
+    <!-- RIVAL -->
+    <div id="rival-zone">
+      <div id="rival-name-label">Esperando rival...</div>
+      <div id="rival-cards-count">Cartas: 0</div>
+      <div id="rival-hand"></div>
+    </div>
+
+    <!-- CENTER -->
+    <div id="center-table">
+      <div id="deck-area">
+        <div id="draw-pile" title="Robar carta">🂠</div>
+        <div id="deck-count-label">Mazo: 0</div>
+      </div>
+      <div id="top-card-area">
+        <div id="top-card-display">
+          <span class="top-card-value">?</span>
+          <span class="top-card-suit"></span>
+        </div>
+        <div id="current-suit-label">Palo actual: —</div>
+      </div>
+    </div>
+
+    <!-- PLAYER -->
+    <div id="player-zone">
+      <div id="player-name-label">Tú</div>
+      <div id="player-hand-container">
+        <div id="player-hand"></div>
+      </div>
+      <div id="action-buttons">
+        <button class="action-btn" id="mao-btn">🏆 ¡CANTAR MAO!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDER BUTTON -->
+  <button class="action-btn" id="order-btn">❓ Punto de Orden</button>
+</div>
+
+<!-- ============ OVERLAYS ============ -->
+
+<!-- SUIT PICKER -->
+<div id="suit-picker" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="overlay-title">🃏 Elige el nuevo palo</div>
+    <div class="overlay-text">Tiraste una Jota. ¡Elige el palo que quieres!</div>
+    <div class="suit-grid">
+      <button class="suit-pick-btn red-suit" data-suit="♥">♥<span class="suit-label">Corazones</span></button>
+      <button class="suit-pick-btn red-suit" data-suit="♦">♦<span class="suit-label">Diamantes</span></button>
+      <button class="suit-pick-btn black-suit" data-suit="♣">♣<span class="suit-label">Tréboles</span></button>
+      <button class="suit-pick-btn black-suit" data-suit="♠">♠<span class="suit-label">Espadas</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- KING OVERLAY -->
+<div id="king-overlay" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="overlay-title">👑 ¡Se jugó un REY!</div>
+    <div class="overlay-text">El flujo del juego está bloqueado. Para continuar debes presionar el botón de abajo.</div>
+    <button class="overlay-btn gold" id="king-confirm-btn">¡VIVA EL PRESIDENTE MAO!</button>
+  </div>
+</div>
+
+<!-- PENALTY OVERLAY (MAO missed) -->
+<div id="penalty-overlay" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="overlay-title">⚠️ ¡Olvidaste cantar MAO!</div>
+    <div class="overlay-text">Cuando te queda <strong>1 sola carta</strong>, debes presionar el botón <strong>"¡CANTAR MAO!"</strong> antes de continuar.<br><br>Has recibido <strong>+1 carta de castigo</strong>.</div>
+    <button class="overlay-btn red" id="penalty-ok-btn">Entendido, gracias</button>
+  </div>
+</div>
+
+<!-- ORDER OVERLAY -->
+<div id="order-overlay" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="overlay-title">📋 Punto de Orden</div>
+    <div id="order-text" class="overlay-text"></div>
+    <button class="overlay-btn blue" id="order-close-btn">✅ Entendido, continuar</button>
+  </div>
+</div>
+
+<!-- WIN OVERLAY -->
+<div id="win-overlay" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="win-emoji" id="win-emoji">🏆</div>
+    <div class="overlay-title" id="win-title">¡Ganaste!</div>
+    <div class="overlay-text" id="win-text">¡Felicitaciones! Bajaste todas tus cartas.</div>
+    <button class="overlay-btn green" id="play-again-btn">🎯 Jugar de nuevo</button>
+  </div>
+</div>
+
+<!-- DISCONNECTED OVERLAY -->
+<div id="disconnected-overlay" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="overlay-title">📡 Tu rival se fue</div>
+    <div class="overlay-text" id="disconnected-text">Tu rival se ha desconectado. La partida ha terminado.</div>
+    <button class="overlay-btn green" id="disconnected-back-btn">🏠 Volver al inicio</button>
+  </div>
+</div>
+
+<!-- RIVAL PLAYED CARD ANIMATION -->
+<div id="rival-played-card">
+  <span id="rpc-value" class="top-card-value" style="font-family:'Playfair Display',serif;font-size:36px;font-weight:900;"></span>
+  <span id="rpc-suit" style="font-size:44px;"></span>
+</div>
+
+<!-- PENALTY TOAST -->
+<div id="penalty-toast"></div>
+
+<script type="module">
+// ==========================================
+// FIREBASE IMPORTS
+// ==========================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getDatabase, ref, set, get, update, onValue, remove,
+  onDisconnect, push, serverTimestamp, off
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ==========================================
+// FIREBASE CONFIG
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBKPYmxIBVFPYvSKJapm2B9lyW_7SBL_fs",
+  authDomain: "palmaxd-32720.firebaseapp.com",
+  databaseURL: "https://palmaxd-32720-default-rtdb.firebaseio.com",
+  projectId: "palmaxd-32720",
+  storageBucket: "palmaxd-32720.firebasestorage.app",
+  messagingSenderId: "527831930817",
+  appId: "1:527831930817:web:b06c15f3ccf0491bd4c140"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ==========================================
+// GAME STATE
+// ==========================================
+let myName = "";
+let myRole = ""; // "player1" or "player2"
+let roomId = "";
+let roomRef = null;
+let gameListener = null;
+let maoSung = false;
+let maoPending = false; // must sing MAO before next action
+let pendingJotaResolve = null;
+let pendingKingResolve = null;
+let isKingWaiting = false;
+
+// ==========================================
+// DECK UTILITIES
+// ==========================================
+const VALUES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SUITS  = ['♥','♦','♣','♠'];
+
+function buildDeck() {
+  const deck = [];
+  for (const s of SUITS) {
+    for (const v of VALUES) {
+      deck.push({ value: v, suit: s });
+    }
+  }
+  return deck;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function cardColor(suit) {
+  return (suit === '♥' || suit === '♦') ? 'red' : 'black';
+}
+
+function suitName(suit) {
+  const names = { '♥': 'Corazones', '♦': 'Diamantes', '♣': 'Tréboles', '♠': 'Espadas' };
+  return names[suit] || suit;
+}
+
+function valueName(val) {
+  const names = { 'A': 'As', 'J': 'Jota', 'Q': 'Reina', 'K': 'Rey' };
+  return names[val] || val;
+}
+
+function cardLabel(card) {
+  return `${valueName(card.value)} de ${suitName(card.suit)}`;
+}
+
+// ==========================================
+// UI HELPERS
+// ==========================================
+const lobbyScreen = document.getElementById('lobby-screen');
+const gameScreen  = document.getElementById('game-screen');
+const narratorPanel = document.getElementById('narrator-panel');
+const rivalHandEl = document.getElementById('rival-hand');
+const rivalNameLabel = document.getElementById('rival-name-label');
+const rivalCardsCount = document.getElementById('rival-cards-count');
+const playerHandEl = document.getElementById('player-hand');
+const playerNameLabel = document.getElementById('player-name-label');
+const drawPileEl = document.getElementById('draw-pile');
+const deckCountLabel = document.getElementById('deck-count-label');
+const topCardDisplay = document.getElementById('top-card-display');
+const currentSuitLabel = document.getElementById('current-suit-label');
+const maoBtn = document.getElementById('mao-btn');
+const orderBtn = document.getElementById('order-btn');
+const lobbyStatus = document.getElementById('lobby-status');
+const penaltyToast = document.getElementById('penalty-toast');
+const rivalPlayedCardEl = document.getElementById('rival-played-card');
+
+function setNarrator(text) {
+  narratorPanel.textContent = text;
+}
+
+function showScreen(name) {
+  lobbyScreen.classList.toggle('hidden', name !== 'lobby');
+  gameScreen.classList.toggle('hidden', name !== 'game');
+  orderBtn.style.display = name === 'game' ? 'block' : 'none';
+}
+
+function showOverlay(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+function hideOverlay(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+function showToast(msg, duration = 3500) {
+  penaltyToast.textContent = msg;
+  penaltyToast.style.display = 'block';
+  clearTimeout(penaltyToast._t);
+  penaltyToast._t = setTimeout(() => { penaltyToast.style.display = 'none'; }, duration);
+}
+
+function renderTopCard(card, currentSuit) {
+  const color = cardColor(card.suit);
+  topCardDisplay.innerHTML = `
+    <span class="top-card-value" style="color:${color === 'red' ? 'var(--red-card)' : 'var(--black-card)'}">${card.value}</span>
+    <span class="top-card-suit">${card.suit}</span>
+  `;
+  const displaySuit = currentSuit || card.suit;
+  currentSuitLabel.textContent = `Palo actual: ${displaySuit} ${suitName(displaySuit)}`;
+  // restart animation
+  topCardDisplay.style.animation = 'none';
+  requestAnimationFrame(() => { topCardDisplay.style.animation = ''; });
+}
+
+function renderRivalHand(count) {
+  rivalHandEl.innerHTML = '';
+  const show = Math.min(count, 8);
+  for (let i = 0; i < show; i++) {
+    const d = document.createElement('div');
+    d.className = 'rival-card-back';
+    rivalHandEl.appendChild(d);
+  }
+  rivalCardsCount.textContent = `Cartas: ${count}`;
+}
+
+function buildCardEl(card, isValid, isMyTurn) {
+  const el = document.createElement('div');
+  const color = cardColor(card.suit);
+  el.className = `card ${color}`;
+  if (!isMyTurn) {
+    el.classList.add('blocked');
+  } else if (isValid) {
+    el.classList.add('valid');
+  } else {
+    el.classList.add('invalid');
+  }
+  el.innerHTML = `
+    <div class="card-corner">
+      <span class="card-corner-val">${card.value}</span>
+      <span class="card-corner-suit">${card.suit}</span>
+    </div>
+    <span class="card-value">${card.value}</span>
+    <span class="card-suit">${card.suit}</span>
+    <div class="card-corner-br">
+      <span class="card-corner-val">${card.value}</span>
+      <span class="card-corner-suit">${card.suit}</span>
+    </div>
+  `;
+  return el;
+}
+
+function isCardPlayable(card, topCard, currentSuit) {
+  const effectiveSuit = currentSuit || topCard.suit;
+  if (card.value === 'J') return true; // Joker-like wild
+  return card.value === topCard.value || card.suit === effectiveSuit;
+}
+
+function renderPlayerHand(hand, topCard, currentSuit, isMyTurn) {
+  playerHandEl.innerHTML = '';
+  for (let i = 0; i < hand.length; i++) {
+    const card = hand[i];
+    const valid = isMyTurn && isCardPlayable(card, topCard, currentSuit);
+    const el = buildCardEl(card, valid, isMyTurn);
+    if (isMyTurn && valid) {
+      el.addEventListener('click', () => onCardClick(i, card));
+    }
+    playerHandEl.appendChild(el);
+  }
+
+  // MAO button: show when 1 card left and it's my turn
+  const showMao = hand.length === 1 && isMyTurn;
+  maoBtn.style.display = showMao ? 'block' : 'none';
+}
+
+// ==========================================
+// LOBBY LOGIC
+// ==========================================
+document.getElementById('find-game-btn').addEventListener('click', findGame);
+document.getElementById('player-name-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') findGame();
+});
+
+async function findGame() {
+  const nameInput = document.getElementById('player-name-input').value.trim();
+  if (!nameInput) {
+    lobbyStatus.textContent = '⚠️ Por favor escribe tu nombre primero.';
+    return;
+  }
+  myName = nameInput;
+  lobbyStatus.textContent = '🔍 Buscando partida...';
+  document.getElementById('find-game-btn').disabled = true;
+
+  // Look for a waiting room
+  const roomsRef = ref(db, 'rooms');
+  const snapshot = await get(roomsRef);
+  let foundRoom = null;
+  if (snapshot.exists()) {
+    const rooms = snapshot.val();
+    for (const [rid, rdata] of Object.entries(rooms)) {
+      if (rdata.status === 'waiting' && rdata.player1 && !rdata.player2) {
+        foundRoom = { id: rid, data: rdata };
+        break;
+      }
+    }
+  }
+
+  if (foundRoom) {
+    // Join as player2
+    myRole = 'player2';
+    roomId = foundRoom.id;
+    roomRef = ref(db, `rooms/${roomId}`);
+    await update(roomRef, { player2: myName, status: 'starting' });
+    lobbyStatus.textContent = '✅ ¡Partida encontrada! Iniciando...';
+    setupDisconnectHandler();
+    startGameAsPlayer2();
+  } else {
+    // Create room as player1
+    myRole = 'player1';
+    const newRoomRef = push(ref(db, 'rooms'));
+    roomId = newRoomRef.key;
+    roomRef = ref(db, `rooms/${roomId}`);
+    await set(roomRef, {
+      player1: myName,
+      player2: null,
+      status: 'waiting',
+      createdAt: serverTimestamp()
+    });
+    lobbyStatus.textContent = '⏳ Sala creada. Esperando rival...';
+    setupDisconnectHandler();
+    waitForPlayer2();
+  }
+}
+
+function setupDisconnectHandler() {
+  // When this player disconnects, remove the room and notify rival
+  const disconnectRef = ref(db, `rooms/${roomId}`);
+  onDisconnect(disconnectRef).update({ status: 'disconnected', disconnectedBy: myRole });
+}
+
+function waitForPlayer2() {
+  const statusRef = ref(db, `rooms/${roomId}/status`);
+  const unsubscribe = onValue(statusRef, (snap) => {
+    const status = snap.val();
+    if (status === 'starting') {
+      off(statusRef);
+      lobbyStatus.textContent = '🎉 ¡Rival encontrado! Iniciando juego...';
+      startGameAsPlayer1();
+    } else if (status === 'disconnected') {
+      off(statusRef);
+      lobbyStatus.textContent = '❌ Error al crear la sala. Intenta de nuevo.';
+      document.getElementById('find-game-btn').disabled = false;
+    }
+  });
+}
+
+// ==========================================
+// GAME INIT — PLAYER 1 (deals cards)
+// ==========================================
+async function startGameAsPlayer1() {
+  showScreen('game');
+  playerNameLabel.textContent = `Tú (${myName})`;
+  setNarrator('Repartiendo cartas...');
+
+  // Build and shuffle deck
+  let deck = shuffle(buildDeck());
+
+  // Deal 5 cards each
+  const p1Hand = deck.splice(0, 5);
+  const p2Hand = deck.splice(0, 5);
+
+  // Flip top card (skip special cards for first card)
+  let topCard;
+  do {
+    topCard = deck.shift();
+    if (['J','K','A','7','8'].includes(topCard.value)) {
+      deck.push(topCard);
+      deck = shuffle(deck);
+    } else {
+      break;
+    }
+  } while (true);
+
+  // Build played pile with just the top card
+  const playedPile = [topCard];
+
+  // Write full game state to Firebase
+  const gameState = {
+    status: 'playing',
+    player1Name: myName,
+    player2Name: (await get(ref(db, `rooms/${roomId}/player2`))).val(),
+    player1Hand: p1Hand,
+    player2Hand: p2Hand,
+    deck: deck,
+    playedPile: playedPile,
+    topCard: topCard,
+    currentSuit: topCard.suit,
+    currentTurn: 'player1',
+    lastAction: null,
+    kingWaiting: false,
+    maoPlayer1: false,
+    maoPlayer2: false,
+    gameOver: false,
+    winner: null
+  };
+
+  await set(roomRef, gameState);
+  listenToGame();
+}
+
+// ==========================================
+// GAME INIT — PLAYER 2 (just listens)
+// ==========================================
+function startGameAsPlayer2() {
+  showScreen('game');
+  playerNameLabel.textContent = `Tú (${myName})`;
+  setNarrator('Esperando que se repartan las cartas...');
+  // Wait for player1 to write game state
+  const statusRef = ref(db, `rooms/${roomId}/status`);
+  const unsubP2 = onValue(statusRef, (snap) => {
+    const s = snap.val();
+    if (s === 'playing') {
+      off(statusRef);
+      listenToGame();
+    } else if (s === 'disconnected') {
+      off(statusRef);
+      handleDisconnect();
+    }
+  });
+}
+
+// ==========================================
+// MAIN GAME LISTENER
+// ==========================================
+let lastGameState = null;
+let lastTopCardKey = '';
+
+function listenToGame() {
+  if (gameListener) off(roomRef, 'value', gameListener);
+  gameListener = onValue(roomRef, (snap) => {
+    const state = snap.val();
+    if (!state) return;
+
+    if (state.status === 'disconnected') {
+      off(roomRef);
+      handleDisconnect();
+      return;
+    }
+
+    if (state.status !== 'playing' && state.status !== 'gameover') return;
+
+    const prevState = lastGameState;
+    lastGameState = state;
+
+    const myHandKey = myRole === 'player1' ? 'player1Hand' : 'player2Hand';
+    const rivalHandKey = myRole === 'player1' ? 'player2Hand' : 'player1Hand';
+    const rivalNameKey = myRole === 'player1' ? 'player2Name' : 'player1Name';
+
+    const myHand = state[myHandKey] || [];
+    const rivalHand = state[rivalHandKey] || [];
+    const topCard = state.topCard;
+    const currentSuit = state.currentSuit;
+    const isMyTurn = state.currentTurn === myRole;
+    const rivalName = state[rivalNameKey] || 'Rival';
+
+    rivalNameLabel.textContent = rivalName;
+
+    // Check for rival playing a card (animation)
+    const topKey = topCard ? `${topCard.value}${topCard.suit}` : '';
+    if (prevState && topKey !== lastTopCardKey && lastTopCardKey !== '') {
+      // Check if rival played
+      if (!isMyTurn || (prevState && prevState.currentTurn !== myRole)) {
+        // Show rival card animation
+        showRivalCardAnimation(topCard);
+      }
+    }
+    lastTopCardKey = topKey;
+
+    // Render UI
+    renderTopCard(topCard, currentSuit);
+    renderRivalHand(rivalHand.length);
+    renderPlayerHand(myHand, topCard, currentSuit, isMyTurn);
+    deckCountLabel.textContent = `Mazo: ${(state.deck || []).length}`;
+
+    // King waiting
+    if (state.kingWaiting && state.currentTurn === myRole && !isKingWaiting) {
+      isKingWaiting = true;
+      showKingOverlay();
+    }
+    if (!state.kingWaiting) {
+      isKingWaiting = false;
+      hideOverlay('king-overlay');
+    }
+
+    // Narrator
+    if (state.gameOver) {
+      handleGameOver(state.winner, myRole, state.player1Name, state.player2Name);
+      return;
+    }
+
+    if (isMyTurn && !state.kingWaiting) {
+      const hasValidCard = myHand.some(c => isCardPlayable(c, topCard, currentSuit));
+      if (hasValidCard) {
+        setNarrator(`🟢 ES TU TURNO — ¡Juega una carta! Tienes ${myHand.length} carta${myHand.length !== 1 ? 's' : ''}.`);
+      } else {
+        setNarrator(`🟡 No tienes cartas válidas. Toca el mazo para robar una carta.`);
+      }
+    } else if (!state.kingWaiting) {
+      setNarrator(`⏳ ${rivalName} está pensando... Espera tu turno.`);
+    }
+
+    // Check MAO condition: if I have 1 card and didn't sing MAO yet
+    if (myHand.length === 1) {
+      maoBtn.style.display = isMyTurn ? 'block' : 'none';
+    } else {
+      maoBtn.style.display = 'none';
+      if (myHand.length > 1) maoSung = false;
+    }
+  });
+}
+
+function showRivalCardAnimation(card) {
+  if (!card) return;
+  const el = rivalPlayedCardEl;
+  const color = cardColor(card.suit);
+  document.getElementById('rpc-value').textContent = card.value;
+  document.getElementById('rpc-value').style.color = color === 'red' ? 'var(--red-card)' : 'var(--black-card)';
+  document.getElementById('rpc-suit').textContent = card.suit;
+  document.getElementById('rpc-suit').style.color = color === 'red' ? 'var(--red-card)' : 'var(--black-card)';
+  el.style.display = 'flex';
+  setTimeout(() => { el.style.display = 'none'; }, 1800);
+}
+
+// ==========================================
+// CARD CLICK HANDLER
+// ==========================================
+async function onCardClick(index, card) {
+  if (!lastGameState) return;
+  const myHandKey = myRole === 'player1' ? 'player1Hand' : 'player2Hand';
+  const rivalHandKey = myRole === 'player1' ? 'player2Hand' : 'player1Hand';
+
+  // Check MAO penalty: had 1 card last time and didn't sing
+  if (maoPending) {
+    // Apply penalty
+    maoPending = false;
+    showOverlay('penalty-overlay');
+    await drawCardsForPlayer(myRole, 1, lastGameState);
+    return;
+  }
+
+  const state = lastGameState;
+  const myHand = [...(state[myHandKey] || [])];
+  const topCard = state.topCard;
+  const currentSuit = state.currentSuit;
+
+  if (!isCardPlayable(card, topCard, currentSuit)) return;
+
+  // MAO check: if I had 2 cards and now will have 1, check if sung
+  // (penalty applies when trying to do next action with 1 card without singing)
+  // The MAO button is shown — we enforce at next action if missed.
+
+  // Remove card from hand
+  myHand.splice(index, 1);
+
+  // Add card to played pile
+  const playedPile = [...(state.playedPile || []), card];
+
+  const updates = {};
+  updates[`rooms/${roomId}/${myHandKey}`] = myHand;
+  updates[`rooms/${roomId}/topCard`] = card;
+  updates[`rooms/${roomId}/playedPile`] = playedPile;
+  updates[`rooms/${roomId}/currentSuit`] = card.suit; // reset, may be overridden
+
+  // SPADES NARRATION
+  if (card.suit === '♠') {
+    showToast(`♠ Se ha jugado el ${cardLabel(card)}`, 3000);
+  }
+
+  // Check win
+  if (myHand.length === 0) {
+    // Sang MAO?
+    if (!maoSung) {
+      // Didn't sing — penalty +1 (don't win yet)
+      showToast('⚠️ ¡Olvidaste cantar MAO antes de ganar! +1 carta de castigo.', 3500);
+      const newHand = await getDrawnCards(1, state);
+      updates[`rooms/${roomId}/${myHandKey}`] = [...myHand, ...newHand.cards];
+      updates[`rooms/${roomId}/deck`] = newHand.deck;
+      updates[`rooms/${roomId}/playedPile`] = newHand.playedPile;
+      updates[`rooms/${roomId}/currentTurn`] = nextTurn();
+      await update(ref(db), updates);
+      return;
+    }
+    updates[`rooms/${roomId}/gameOver`] = true;
+    updates[`rooms/${roomId}/winner`] = myRole;
+    updates[`rooms/${roomId}/status`] = 'gameover';
+    await update(ref(db), updates);
+    return;
+  }
+
+  // Set maoPending if now have 1 card and haven't sung
+  if (myHand.length === 1 && !maoSung) {
+    maoPending = true;
+  }
+
+  // APPLY CARD EFFECTS
+  let deck = [...(state.deck || [])];
+  let newPlayedPile = [...playedPile];
+
+  if (card.value === '7') {
+    // +2 to rival
+    const drawn = await getDrawnCards(2, { ...state, deck: deck, playedPile: newPlayedPile });
+    deck = drawn.deck;
+    newPlayedPile = drawn.playedPile;
+    const rivalHand = [...(state[rivalHandKey] || []), ...drawn.cards];
+    updates[`rooms/${roomId}/${rivalHandKey}`] = rivalHand;
+    updates[`rooms/${roomId}/deck`] = deck;
+    updates[`rooms/${roomId}/playedPile`] = newPlayedPile;
+    showToast(`🎴 ¡Tiraste un 7! El rival recibe 2 cartas de castigo.`, 3000);
+    // Turn advances (7 skips rival's turn — rival gets cards but turn still moves)
+    updates[`rooms/${roomId}/currentTurn`] = nextTurn(); // still next turn — rival draws but plays next
+    updates[`rooms/${roomId}/${myHandKey}`] = myHand;
+    await update(ref(db), updates);
+    return;
+  }
+
+  if (card.value === 'A') {
+    // Skip rival — current player plays again
+    showToast(`🅰️ ¡As jugado! Saltaste el turno del rival. Vuelves a jugar.`, 3000);
+    updates[`rooms/${roomId}/currentTurn`] = myRole;
+    updates[`rooms/${roomId}/${myHandKey}`] = myHand;
+    updates[`rooms/${roomId}/deck`] = deck;
+    await update(ref(db), updates);
+    return;
+  }
+
+  if (card.value === '8') {
+    // Reverse (in 1v1 = skip)
+    showToast(`🔄 ¡8 jugado! Se invirtió el sentido. Vuelves a jugar.`, 3000);
+    updates[`rooms/${roomId}/currentTurn`] = myRole;
+    updates[`rooms/${roomId}/${myHandKey}`] = myHand;
+    updates[`rooms/${roomId}/deck`] = deck;
+    await update(ref(db), updates);
+    return;
+  }
+
+  if (card.value === 'J') {
+    // Wild — pick suit
+    updates[`rooms/${roomId}/${myHandKey}`] = myHand;
+    updates[`rooms/${roomId}/deck`] = deck;
+    await update(ref(db), updates);
+    const chosenSuit = await pickSuit();
+    await update(ref(db), {
+      [`rooms/${roomId}/currentSuit`]: chosenSuit,
+      [`rooms/${roomId}/currentTurn`]: nextTurn()
+    });
+    showToast(`🃏 ¡Jota jugada! El nuevo palo es ${chosenSuit} ${suitName(chosenSuit)}.`, 3000);
+    return;
+  }
+
+  if (card.value === 'K') {
+    // King — blocks until confirmed
+    updates[`rooms/${roomId}/currentTurn`] = myRole;
+    updates[`rooms/${roomId}/kingWaiting`] = true;
+    updates[`rooms/${roomId}/${myHandKey}`] = myHand;
+    updates[`rooms/${roomId}/deck`] = deck;
+    showToast(`👑 ¡Rey jugado! Presiona el botón dorado para continuar.`, 3000);
+    await update(ref(db), updates);
+    return;
+  }
+
+  // Normal card — advance turn
+  updates[`rooms/${roomId}/currentTurn`] = nextTurn();
+  updates[`rooms/${roomId}/${myHandKey}`] = myHand;
+  updates[`rooms/${roomId}/deck`] = deck;
+  await update(ref(db), updates);
+}
+
+// ==========================================
+// DRAW CARD FROM PILE
+// ==========================================
+drawPileEl.addEventListener('click', async () => {
+  if (!lastGameState) return;
+  if (lastGameState.currentTurn !== myRole) return;
+  if (lastGameState.kingWaiting) return;
+
+  // MAO penalty check
+  if (maoPending) {
+    maoPending = false;
+    showOverlay('penalty-overlay');
+    await drawCardsForPlayer(myRole, 1, lastGameState);
+    return;
+  }
+
+  const myHandKey = myRole === 'player1' ? 'player1Hand' : 'player2Hand';
+  const state = lastGameState;
+  const drawn = await getDrawnCards(1, state);
+  const myHand = [...(state[myHandKey] || []), ...drawn.cards];
+
+  await update(ref(db), {
+    [`rooms/${roomId}/${myHandKey}`]: myHand,
+    [`rooms/${roomId}/deck`]: drawn.deck,
+    [`rooms/${roomId}/playedPile`]: drawn.playedPile,
+    [`rooms/${roomId}/currentTurn`]: nextTurn()
+  });
+  showToast(`🃏 Robaste 1 carta. Ahora tienes ${myHand.length}.`, 2500);
+});
+
+// ==========================================
+// MAO BUTTON
+// ==========================================
+maoBtn.addEventListener('click', async () => {
+  maoSung = true;
+  maoPending = false;
+  maoBtn.style.display = 'none';
+  showToast('🏆 ¡Cantaste MAO! Tienes 1 carta. ¡Buena suerte!', 3000);
+  setNarrator('🏆 ¡Cantaste MAO! Ahora juega tu última carta.');
+});
+
+// ==========================================
+// SUIT PICKER (Jota)
+// ==========================================
+function pickSuit() {
+  return new Promise((resolve) => {
+    showOverlay('suit-picker');
+    pendingJotaResolve = resolve;
+  });
+}
+
+document.querySelectorAll('.suit-pick-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const suit = btn.getAttribute('data-suit');
+    hideOverlay('suit-picker');
+    if (pendingJotaResolve) {
+      pendingJotaResolve(suit);
+      pendingJotaResolve = null;
+    }
+  });
+});
+
+// ==========================================
+// KING OVERLAY
+// ==========================================
+function showKingOverlay() {
+  showOverlay('king-overlay');
+}
+
+document.getElementById('king-confirm-btn').addEventListener('click', async () => {
+  hideOverlay('king-overlay');
+  isKingWaiting = false;
+  await update(ref(db), {
+    [`rooms/${roomId}/kingWaiting`]: false,
+    [`rooms/${roomId}/currentTurn`]: nextTurn()
+  });
+  showToast('👑 ¡VIVA EL PRESIDENTE MAO! El turno pasa al rival.', 2500);
+});
+
+// ==========================================
+// PENALTY OVERLAY
+// ==========================================
+document.getElementById('penalty-ok-btn').addEventListener('click', () => {
+  hideOverlay('penalty-overlay');
+});
+
+// ==========================================
+// PUNTO DE ORDEN
+// ==========================================
+orderBtn.addEventListener('click', () => {
+  if (!lastGameState) return;
+  const state = lastGameState;
+  const myHandKey = myRole === 'player1' ? 'player1Hand' : 'player2Hand';
+  const rivalHandKey = myRole === 'player1' ? 'player2Hand' : 'player1Hand';
+  const rivalNameKey = myRole === 'player1' ? 'player2Name' : 'player1Name';
+  const myHand = state[myHandKey] || [];
+  const rivalHand = state[rivalHandKey] || [];
+  const topCard = state.topCard;
+  const currentSuit = state.currentSuit || (topCard && topCard.suit);
+  const isMyTurn = state.currentTurn === myRole;
+  const rivalName = state[rivalNameKey] || 'Rival';
+
+  let info = `👤 TU NOMBRE: ${myName}\n`;
+  info += `🃏 TUS CARTAS: ${myHand.length} en mano\n`;
+  info += `👥 RIVAL (${rivalName}): ${rivalHand.length} cartas\n`;
+  info += `🎯 TURNO: ${isMyTurn ? '¡ES TU TURNO! Juega.' : `Es el turno de ${rivalName}.`}\n`;
+  info += `🂠 CARTA EN MESA: ${topCard ? cardLabel(topCard) : '—'}\n`;
+  info += `♠ PALO ACTIVO: ${currentSuit ? currentSuit + ' ' + suitName(currentSuit) : '—'}\n`;
+  info += `📦 CARTAS EN MAZO: ${(state.deck || []).length}`;
+
+  document.getElementById('order-text').textContent = info;
+  showOverlay('order-overlay');
+});
+
+document.getElementById('order-close-btn').addEventListener('click', () => {
+  hideOverlay('order-overlay');
+});
+
+// ==========================================
+// GAME OVER
+// ==========================================
+function handleGameOver(winner, myRole, p1Name, p2Name) {
+  const iWon = winner === myRole;
+  document.getElementById('win-emoji').textContent = iWon ? '🏆' : '😞';
+  document.getElementById('win-title').textContent = iWon ? '¡GANASTE!' : '¡Perdiste...';
+  document.getElementById('win-text').textContent = iWon
+    ? `¡Felicitaciones, ${myName}! Bajaste todas tus cartas primero.`
+    : `${winner === 'player1' ? p1Name : p2Name} ganó la partida. ¡Mejor suerte la próxima vez!`;
+  showOverlay('win-overlay');
+}
+
+document.getElementById('play-again-btn').addEventListener('click', () => {
+  hideOverlay('win-overlay');
+  resetToLobby();
+});
+
+// ==========================================
+// DISCONNECTION
+// ==========================================
+function handleDisconnect() {
+  hideOverlay('win-overlay');
+  showOverlay('disconnected-overlay');
+  document.getElementById('disconnected-text').textContent =
+    'Tu rival se ha desconectado de la partida. La partida ha terminado.';
+  // Clean up room
+  if (roomRef) remove(roomRef).catch(() => {});
+}
+
+document.getElementById('disconnected-back-btn').addEventListener('click', () => {
+  hideOverlay('disconnected-overlay');
+  resetToLobby();
+});
+
+function resetToLobby() {
+  myRole = '';
+  roomId = '';
+  roomRef = null;
+  lastGameState = null;
+  lastTopCardKey = '';
+  maoSung = false;
+  maoPending = false;
+  isKingWaiting = false;
+  pendingJotaResolve = null;
+  lobbyStatus.textContent = '';
+  document.getElementById('find-game-btn').disabled = false;
+  showScreen('lobby');
+}
+
+// ==========================================
+// UTILITIES
+// ==========================================
+function nextTurn() {
+  return myRole === 'player1' ? 'player2' : 'player1';
+}
+
+// Draw N cards from deck, reshuffling played pile if needed
+async function getDrawnCards(n, state) {
+  let deck = [...(state.deck || [])];
+  let playedPile = [...(state.playedPile || [])];
+  const drawn = [];
+
+  for (let i = 0; i < n; i++) {
+    if (deck.length === 0) {
+      // Reshuffle played pile (keep top card)
+      if (playedPile.length > 1) {
+        const topCard = playedPile.pop();
+        deck = shuffle(playedPile);
+        playedPile = [topCard];
+        showToast('🔀 El mazo estaba vacío. Se barajaron las cartas jugadas.', 3000);
+      } else {
+        // No cards anywhere — can't draw
+        break;
+      }
+    }
+    drawn.push(deck.shift());
+  }
+
+  return { cards: drawn, deck, playedPile };
+}
+
+async function drawCardsForPlayer(role, n, state) {
+  const handKey = role === 'player1' ? 'player1Hand' : 'player2Hand';
+  const drawn = await getDrawnCards(n, state);
+  const newHand = [...(state[handKey] || []), ...drawn.cards];
+  await update(ref(db), {
+    [`rooms/${roomId}/${handKey}`]: newHand,
+    [`rooms/${roomId}/deck`]: drawn.deck,
+    [`rooms/${roomId}/playedPile`]: drawn.playedPile
+  });
+}
+
+// ==========================================
+// INIT
+// ==========================================
+showScreen('lobby');
+</script>
+</body>
+</html>
