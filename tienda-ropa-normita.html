@@ -843,6 +843,90 @@
     font-size: 0.7rem;
   }
 }
+@media (max-width: 640px) {
+  .header-inner {
+    gap: 8px;            /* antes 24px, ahora mucho menor */
+    height: 60px;        /* opcional: un poco más bajo */
+  }
+}
+@media (max-width: 640px) {
+  #logo-circle {
+    width: 36px;
+    height: 36px;
+  }
+  .brand-name {
+    font-size: 1.1rem;    /* antes 1.75rem, ahora más pequeño */
+    white-space: nowrap;   /* evitar que se rompa en varias líneas */
+  }
+}
+@media (max-width: 640px) {
+  .cart-btn {
+    padding: 8px;          /* en lugar de 20px */
+    border-radius: 12px;
+  }
+  .cart-btn .lucide {
+    width: 20px;
+    height: 20px;
+  }
+  .hamburger {
+    gap: 4px;
+  }
+  .hamburger span {
+    width: 18px;
+    height: 2px;
+  }
+}
+@media (max-width: 640px) {
+  .site-header {
+    padding: 0 12px;       /* reducir el padding lateral */
+    overflow-x: hidden;    /* por si acaso */
+  }
+  .header-inner {
+    flex-wrap: nowrap;     /* mantener en una línea */
+    overflow-x: auto;      /* permitir scroll horizontal si es necesario? no, mejor evitar */
+    /* mejor: asegurar que no haya desbordamiento */
+    min-width: 0;          /* permite que los elementos se encojan */
+  }
+}
+.brand-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 130px;        /* ajusta según necesidad */
+}
+@media (max-width: 640px) {
+  /* ... reglas existentes ... */
+
+  /* === ARREGLOS HEADER === */
+  .site-header {
+    padding: 0 12px;
+  }
+  .header-inner {
+    gap: 8px;
+    height: 60px;
+  }
+  #logo-circle {
+    width: 36px;
+    height: 36px;
+  }
+  .brand-name {
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;  /* ajústalo según lo que quepa */
+  }
+  .cart-btn {
+    padding: 8px;
+  }
+  .cart-btn .lucide {
+    width: 20px;
+    height: 20px;
+  }
+  .hamburger span {
+    width: 18px;
+  }
+}
   </style>
 </head>
 <body>
