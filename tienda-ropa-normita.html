@@ -2206,7 +2206,7 @@ async function confirmOrder() {
 
   // Armar mensaje WhatsApp bonito
   const itemsText = cart.map((i,idx) =>
-    `  ${idx+1}. *${i.nombre}* (x${i.cantidad})` +
+    `  Producto ${idx+1}:%0A${i.cantidad} *${i.nombre}*` +
     (i.talla  ? `\n     📏 Talla: ${i.talla}`  : '') +
     (i.color  ? `\n     🎨 Color: ${i.color}`  : '') +
     `\n     💰 Subtotal: $${fmtNum(i.precio * i.cantidad)}`
@@ -2228,7 +2228,7 @@ ${itemsText}
 💎 *TOTAL: $${fmtNum(total)}*
 ━━━━━━━━━━━━━━━━━━━━━
 
-¡Muchas gracias por tu compra! 🎀`;
+¡Muchas gracias por tu compra! 🎀 %0A Envía este mensaje👉🏻`;
 
   const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
   window.open(waUrl, '_blank');
