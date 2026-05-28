@@ -1293,7 +1293,10 @@
     <div class="hint-key"><span>E</span> Agarrar/Robar</div>
     <div class="hint-key"><span>SPACE</span> Cargar · Soltar dispara</div>
     <div class="hint-key"><span>Click Der.</span> Pasar</div>
-    <div class="hint-key"><span>Shift</span> Sprint 3s</div></div>
+    <div class="hint-key"><span>Shift</span> Sprint 3s</div>
+  <div class="hint-key" id="bearBagHint" style="display:none"><span>CLIC DER</span> Lanzar bolsa 🛍️</div>
+</div>
+    
 </div>
 <!-- Mass Explosion Alert -->
 <div id="massExplosionAlert">
@@ -1356,6 +1359,30 @@ const LOGIC_W = 1200;
 const LOGIC_H = 600;
 const playersVelocity = {};   // { playerId: {vx, vy} }
 const playersLastUpdate = {};
+// ─── OSO EVENT STATE ──────────────────────────────────────────
+const honeyImg   = new Image(); honeyImg.src   = 'panal.png';
+const bearImg    = new Image(); bearImg.src    = 'oso.png';
+const bagImg     = new Image(); bagImg.src     = 'bolsa.png';
+const osoAudio   = new Audio('osoaudio.mp3');
+osoAudio.volume  = 0.85;
+
+let bearLastTriggerTotal = 0;   // se activa a los 25 pts totales (solo 1 vez)
+let honeyPowerups      = [];      // [{id, x, y, vx, vy, angle}] — 3 panales animados
+let honeyAnimId        = null;
+let bearActive         = false;
+let bearX = 0, bearY = 0;
+let bearVx = 0, bearVy = 0;
+let bearTargetId       = null;    // jugador que tiene la bolsa
+let bearSpeed          = 0;
+const BEAR_SPEED_BASE  = 2.8;     // velocidad base del oso
+const BEAR_SPEED_CAP   = BEAR_SPEED_BASE * 3; // máximo 3× velocidad base
+let bearSpeedMultiplier = 1.0;
+let bearSprintFrames   = 0;       // frames de sprint al entrar (90 frames = 1.5s)
+let bagHolderId        = null;    // jugador que lleva la bolsa
+let bagCooldown        = 0;       // frames de cooldown para lanzar la bolsa (60fps × 1s = 60)
+let osoAudioPlayCount  = 0;       // máximo 2 reproducciones
+let osoAudioInterval   = null;
+let bearFlipped        = false;   // espejo horizontal del oso
 // ─── STATE ────────────────────────────────────────────────────
 let myId        = null;
 let roomId      = null;
@@ -1517,6 +1544,352 @@ function buildCourtOffscreen(W, H) {
   const cx = courtOffscreen.getContext('2d');
   _drawCourtToCtx(cx, W, H);
 }
+
+// ─── HONEY / BEAR EVENT ───────────────────────────────────────
+function spawnHoneyPowerups() {
+  if (honeyPowerups.length > 0) return; // ya existen
+  const W = LOGIC_W, H = LOGIC_H;
+  const cx = W / 2, cy = H / 2;
+  const radius = Math.min(W, H) * 0.10; // radio 10% del mínimo de la cancha
+  honeyPowerups = [];
+  for (let i = 0; i < 3; i++) {
+    const angle = (i / 3) * Math.PI * 2;
+    honeyPowerups.push({
+      id:    'honey_' + i,
+      x:     cx + Math.cos(angle) * radius,
+      y:     cy + Math.sin(angle) * radius,
+      angle: angle,     // ángulo orbital actual
+      orbitR: radius,   // radio orbital
+      orbitSpeed: 0.018 + i * 0.004, // velocidades ligeramente distintas
+      grabbed: false
+    });
+  }
+  showToast('🍯 ¡APARECIERON PANALES! ¡Agárralos!', 3000);
+  playPowerupSpawnAudio();
+}
+
+function updateHoneyPowerups() {
+  // Mover en órbita
+  honeyPowerups.forEach(h => {
+    if (h.grabbed) return;
+    h.angle += h.orbitSpeed;
+    const cx = LOGIC_W / 2, cy = LOGIC_H / 2;
+    h.x = cx + Math.cos(h.angle) * h.orbitR;
+    h.y = cy + Math.sin(h.angle) * h.orbitR;
+  });
+
+  // Detección de pickup (cualquier jugador)
+  const me = playersData[myId];
+  if (!me || me.dead) return;
+  honeyPowerups.forEach(h => {
+    if (h.grabbed) return;
+    if (Math.hypot(me.x - h.x, me.y - h.y) < PLAYER_RADIUS + 18) {
+      h.grabbed = true;
+      playPowerupPickupAudio();
+      activateBearEvent();
+    }
+  });
+  // Limpiar panales recogidos
+  honeyPowerups = honeyPowerups.filter(h => !h.grabbed);
+}
+
+function drawHoneyPowerups() {
+  const now = Date.now();
+  honeyPowerups.forEach(h => {
+    if (h.grabbed) return;
+    ctx.save();
+    const pulse = 0.85 + Math.sin(now * 0.006 + h.angle * 3) * 0.15;
+    ctx.shadowColor = '#ffaa00';
+    ctx.shadowBlur  = 20;
+    ctx.globalAlpha = pulse;
+
+    // Fondo circular
+    ctx.fillStyle = 'rgba(255,180,0,0.25)';
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Imagen panal
+    if (honeyImg.complete && honeyImg.naturalWidth > 0) {
+      ctx.globalAlpha = pulse;
+      ctx.drawImage(honeyImg, h.x - 22, h.y - 22, 44, 44);
+    } else {
+      ctx.font = '32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillText('🍯', h.x, h.y);
+    }
+    ctx.restore();
+  });
+}
+
+function activateBearEvent() {
+  if (bearActive) return;
+  bearActive      = true;
+  bearSpeedMultiplier = 1.0;
+  bearFlipped     = false;
+  honeyPowerups   = []; // limpiar panales restantes
+  osoAudioPlayCount = 0;
+
+  // Spawnear oso en borde de cancha
+  const W = LOGIC_W, H = LOGIC_H;
+  bearX = W / 2;
+  bearY = H - 60; // borde inferior
+  bearVx = 0; bearVy = 0;
+  bearSprintFrames = 90; // 1.5s de sprint de entrada (90 frames)
+const hint = document.getElementById('bearBagHint');
+if (hint) hint.style.display = '';
+  // Elegir portador de bolsa: jugador aleatorio
+  const alivePlayers = Object.values(playersData).filter(p => !p.dead);
+  if (alivePlayers.length === 0) { bearActive = false; return; }
+  const lucky = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+  bagHolderId = lucky.id;
+  bagCooldown = 0;
+
+  // Mostrar oso gigante en pantalla (efecto sprint de entrada)
+  showToast('🐻 ¡¡EL OSO LLEGÓ!! ¡' + (lucky.name || '???') + ' TIENE LA BOLSA! 🛍️', 4000);
+
+  // Empezar audio
+  startOsoAudio();
+
+  // Sprint de entrada: velocidad doble los primeros 90 frames
+  // Esto se maneja en updateBear() con bearSprintFrames
+}
+
+function startOsoAudio() {
+  if (osoAudioInterval) { clearInterval(osoAudioInterval); osoAudioInterval = null; }
+  osoAudioPlayCount = 0;
+  // Primera reproducción inmediata
+  playOsoAudioOnce();
+  // Repetir cada 1 segundo, máximo 2 veces total
+  osoAudioInterval = setInterval(() => {
+    if (osoAudioPlayCount >= 2) {
+      clearInterval(osoAudioInterval);
+      osoAudioInterval = null;
+      return;
+    }
+    playOsoAudioOnce();
+  }, 1000);
+}
+
+function playOsoAudioOnce() {
+  if (osoAudioPlayCount >= 2) return;
+  osoAudioPlayCount++;
+  const a = new Audio('osoaudio.mp3');
+  a.volume = 0.85;
+  a.play().catch(() => {});
+}
+
+function stopOsoAudio() {
+  if (osoAudioInterval) { clearInterval(osoAudioInterval); osoAudioInterval = null; }
+  osoAudioPlayCount = 2; // bloquear futuras reproducciones
+}
+
+function updateBear() {
+  if (!bearActive) return;
+  if (!bagHolderId) return;
+
+  const target = playersData[bagHolderId];
+  if (!target || target.dead) {
+    // El portador murió sin ser alcanzado por el oso — oso también muere
+    killBear();
+    return;
+  }
+
+  // Velocidad actual (sprint de entrada los primeros 90 frames)
+  let speed = BEAR_SPEED_BASE * bearSpeedMultiplier;
+  if (bearSprintFrames > 0) {
+    speed *= 2;
+    bearSprintFrames--;
+  }
+  speed = Math.min(speed, BEAR_SPEED_CAP);
+
+  // Mover hacia el portador
+  const dx = target.x - bearX;
+  const dy = target.y - bearY;
+  const d  = Math.hypot(dx, dy) || 1;
+  bearVx = (dx / d) * speed;
+  bearVy = (dy / d) * speed;
+  bearX += bearVx;
+  bearY += bearVy;
+
+  // Actualizar dirección visual del oso (espejo si va a la izquierda)
+  // bearFlipped se actualiza cuando se hace throw (en throwBag)
+
+  // Cooldown de bolsa
+  if (bagCooldown > 0) bagCooldown--;
+
+  // Detectar si el oso llegó al portador (solo para myId localmente)
+  if (bagHolderId === myId) {
+    if (Math.hypot(bearX - playersData[myId].x, bearY - playersData[myId].y) < BEAR_RADIUS + PLAYER_RADIUS) {
+      // El oso atrapó al jugador local
+      bearCatchPlayer(myId);
+    }
+  } else {
+    // Para los demás, detectar colisión local (todos calculan)
+    const p = playersData[bagHolderId];
+    if (p && Math.hypot(bearX - p.x, bearY - p.y) < BEAR_RADIUS + PLAYER_RADIUS) {
+      bearCatchPlayer(bagHolderId);
+    }
+  }
+}
+
+function bearCatchPlayer(playerId) {
+  // Explosión del jugador y del oso
+  const p = playersData[playerId];
+  if (p) {
+    triggerExplosion(p.x, p.y);
+    showToast('💥 ¡EL OSO TE ATRAPÓ! ¡BOOM!', 3000);
+    killPlayer(playerId, '🐻 ¡EL OSO TE ATRAPÓ Y EXPLOTARON LOS DOS!');
+    emitSoundEvent('muerte');
+  }
+  // Explosión del oso también
+  triggerExplosion(bearX, bearY);
+  killBear();
+}
+
+function killBear() {
+  bearActive   = false;
+  bagHolderId  = null;
+  bagCooldown  = 0;
+  bearSprintFrames = 0;
+  bearSpeedMultiplier = 1.0;
+  bearFlipped  = false;
+  stopOsoAudio();
+  // Partículas de muerte del oso
+  triggerExplosion(bearX, bearY);
+  showToast('💨 El oso se fue (o explotó)', 2000);
+  const hint = document.getElementById('bearBagHint');
+if (hint) hint.style.display = 'none';
+}
+
+function throwBag() {
+  // Solo puede lanzar si yo tengo la bolsa y el cooldown terminó
+  if (bagHolderId !== myId) return;
+  if (bagCooldown > 0) {
+    showToast(`⏳ Cooldown bolsa: ${(bagCooldown / 60).toFixed(1)}s`, 1000);
+    return;
+  }
+  if (!bearActive) return;
+
+  // Buscar el jugador MÁS LEJANO (cualquier equipo, excepto yo)
+  const me = playersData[myId];
+  if (!me) return;
+  let farthestId   = null;
+  let farthestDist = -1;
+  Object.values(playersData).forEach(p => {
+    if (p.id === myId || p.dead) return;
+    const d = Math.hypot(p.x - me.x, p.y - me.y);
+    if (d > farthestDist) { farthestDist = d; farthestId = p.id; }
+  });
+
+  if (!farthestId) { showToast('❌ No hay a quién pasarle la bolsa', 1500); return; }
+
+  const prevHolder = bagHolderId;
+  bagHolderId = farthestId;
+  bagCooldown = 60; // 1 segundo @ 60fps
+
+  // El oso acelera un 15% (con cap)
+  bearSpeedMultiplier = Math.min(bearSpeedMultiplier * 1.15, BEAR_SPEED_CAP / BEAR_SPEED_BASE);
+
+  // Invertir imagen del oso (flip horizontal)
+  bearFlipped = !bearFlipped;
+
+  const target = playersData[farthestId];
+  showToast(`🛍️ ¡Bolsa lanzada a ${target?.name || '???'}! 🐻 ¡OSO MÁS RÁPIDO!`, 2000);
+
+  // Si el que recibe soy yo, mostrar aviso
+  if (farthestId === myId) {
+    showToast('🛍️ ¡TE MANDARON LA BOLSA! ¡HUYE DEL OSO!', 3000);
+  }
+}
+
+const BEAR_RADIUS = PLAYER_RADIUS * 3; // mismo tamaño que jugador con pistola (gigante)
+
+function drawBear() {
+  if (!bearActive) return;
+  const r   = BEAR_RADIUS;
+  const now = Date.now();
+
+  // Sombra
+  ctx.save();
+  ctx.shadowColor = 'rgba(80,30,0,0.6)';
+  ctx.shadowBlur  = 30;
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle   = '#000';
+  ctx.beginPath();
+  ctx.ellipse(bearX, bearY + r * 0.85, r * 0.7, r * 0.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  // Sprint de entrada: halo dorado pulsante
+  if (bearSprintFrames > 0) {
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur  = 50;
+  } else {
+    ctx.shadowColor = 'rgba(139,69,19,0.8)';
+    ctx.shadowBlur  = 25;
+  }
+
+  // Flip horizontal si bearFlipped
+  if (bearFlipped) {
+    ctx.translate(bearX, bearY);
+    ctx.scale(-1, 1);
+    ctx.translate(-bearX, -bearY);
+  }
+
+  if (bearImg.complete && bearImg.naturalWidth > 0) {
+    ctx.drawImage(bearImg, bearX - r, bearY - r, r * 2, r * 2);
+  } else {
+    ctx.font = `${r * 1.8}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#c67c30';
+    ctx.fillText('🐻', bearX, bearY);
+  }
+  ctx.restore();
+
+  // Dibuja la bolsa sobre el portador
+  drawBagOnHolder();
+}
+
+function drawBagOnHolder() {
+  if (!bagHolderId || !bearActive) return;
+  const holder = playersData[bagHolderId];
+  if (!holder || holder.dead) return;
+
+  const rpos  = playersRenderPos[bagHolderId] || holder;
+  const drawX = bagHolderId === myId ? holder.x : rpos.x;
+  const drawY = bagHolderId === myId ? holder.y : rpos.y;
+
+  // Bolsa ~15% más pequeña que el oso
+// Bolsa del mismo tamaño que el oso
+  const bagR = BEAR_RADIUS;
+  const now  = Date.now();
+  const pulse = 0.9 + Math.sin(now * 0.01) * 0.1;
+
+  ctx.save();
+  ctx.shadowColor = '#ff6600';
+  ctx.shadowBlur  = 20;
+  ctx.globalAlpha = pulse;
+
+  const holderRadius = holder.giant ? PLAYER_RADIUS * 3 : PLAYER_RADIUS;
+  const bx = drawX + holderRadius + bagR * 0.3;
+  const by = drawY - holderRadius * 0.5;
+
+  if (bagImg.complete && bagImg.naturalWidth > 0) {
+    ctx.drawImage(bagImg, bx - bagR, by - bagR, bagR * 2, bagR * 2);
+  } else {
+    ctx.font = `${bagR * 1.5}px sans-serif`;
+    ctx.textAlign   = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🛍️', bx, by);
+  }
+  ctx.restore();
+}
+
 function _drawCourtToCtx(cx, W, H) {
   const woodGrad = cx.createLinearGradient(0, 0, 0, H);
   woodGrad.addColorStop(0,   '#c8813a');
@@ -1713,8 +2086,16 @@ function selectSkin(file, name, card) {
 function onRightClick(e) {
   e.preventDefault();
   if (!gameRunning) return;
+  // Si el oso está activo y yo tengo la bolsa → lanzar bolsa
+  if (bearActive && bagHolderId === myId) {
+    throwBag();
+    return;
+  }
   passBall();
 }
+
+
+
 function showToast(msg, dur = 2000) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -2068,7 +2449,18 @@ window.addEventListener('resize', () => { resizeCanvas(); courtOffscreen = null;
 function setupListeners() {
   // Players
   unsubPlayers = onValue(ref(db, `rooms/${roomId}/players`), snap => {
-    playersData = snap.val() || {};
+    const remoteData = snap.val() || {};
+// Preservar posición local de myId — el servidor siempre tiene lag
+// Solo aceptar del servidor campos que NO son posición (dead, giant, shield, skin, etc.)
+if (playersData[myId] && remoteData[myId]) {
+  const savedX = playersData[myId].x;
+  const savedY = playersData[myId].y;
+  playersData = remoteData;
+  playersData[myId].x = savedX;
+  playersData[myId].y = savedY;
+} else {
+  playersData = remoteData;
+}
 
     // Inicializar posición de render y velocidad si es jugador nuevo
     Object.values(playersData).forEach(p => {
@@ -2374,6 +2766,15 @@ if (ev.name === 'disparo') { playRandomAudio('disparo', 6, lastDisparoRef); }
       limpiarPerros();
     }
   });
+
+  // ── Listener del Oso ────────────────────────────────────────
+  onValue(ref(db, `rooms/${roomId}/bearEvent`), snap => {
+    const ev = snap.val();
+    if (!ev) return;
+    if (ev.active && !bearActive && honeyPowerups.length === 0) {
+      spawnHoneyPowerups();
+    }
+  });
 }
 
 function startActualGame() {
@@ -2647,17 +3048,26 @@ function tick() {
   document.getElementById('stealBarFill').style.width = (stealPct * 100) + '%';
 
   // ── Sprint lógica ───────────────────────
-  let currentSpeed = PLAYER_SPEED;
-  if (sprintActive) {
+  // ── Sprint lógica ───────────────────────
+let currentSpeed = PLAYER_SPEED;
+if (sprintActive) {
+  // Si el oso está activo, el sprint no consume timer ni tiene cooldown
+  if (!bearActive) {
     sprintTimer--;
     if (sprintTimer <= 0) {
       sprintActive   = false;
       sprintCooldown = 240;
     }
-    currentSpeed = PLAYER_SPEED * 2;
-  } else if (sprintCooldown > 0) {
-    sprintCooldown--;
   }
+  currentSpeed = PLAYER_SPEED * 2;
+} else if (sprintCooldown > 0) {
+  if (!bearActive) sprintCooldown--;
+  // Si el oso activa mientras hay cooldown, permitir sprint inmediatamente
+  if (bearActive) {
+    sprintCooldown = 0;
+    if (sprintKeyHeld) { sprintActive = true; sprintTimer = 180; }
+  }
+}
 
   const sprintBarPct = sprintActive
     ? sprintTimer / 180
@@ -3058,7 +3468,11 @@ function tick() {
     playTraicionEndAudio();
     nextTraicionTime = Date.now()+45000+Math.random()*15000;
   }
+  // ── Evento Panales / Oso ─────────────────────────────────────
+  if (honeyPowerups.length > 0) updateHoneyPowerups();
+  if (bearActive) updateBear();
   checkPowerupPickup();
+
   // ── Evento Perros CTM ─────────────────────────────────────────
   if (perrosEventActive) actualizarPerros();
 }
@@ -3121,6 +3535,7 @@ ctx.fillText(letter, x, y);
     ctx.restore();
   });
 }
+
 function checkHoop() {
   if (scoreCooldown > 0) { scoreCooldown--; return; }
   // Solo el cliente que simuló el último tiro cuenta el gol
@@ -3141,6 +3556,17 @@ function checkHoop() {
 
     const newA = (roomData?.score?.A || 0) + (scoringTeam === 'A' ? pts : 0);
     const newB = (roomData?.score?.B || 0) + (scoringTeam === 'B' ? pts : 0);
+// ── Trigger Panales del Oso a los 25 pts totales ──
+// ── Trigger Panales del Oso cada 10 pts totales ──
+const totalPts = newA + newB;
+if (!bearActive && honeyPowerups.length === 0 && totalPts >= bearLastTriggerTotal + 10) {
+  bearLastTriggerTotal = totalPts;
+  set(ref(db, `rooms/${roomId}/bearEvent`), {
+    active: true,
+    startTime: Date.now()
+  }).catch(() => {});
+}
+
 
     update(ref(db, `rooms/${roomId}/score`), { A: newA, B: newB });
 
@@ -3180,70 +3606,31 @@ function checkHoop() {
     // ─────────────────────────────────────────────────────────
     // 🏀 NUEVO: ENTREGAR PELOTA AL EQUIPO CONTRARIO (saque de fondo)
     // ─────────────────────────────────────────────────────────
-    const receivingTeam = scoringTeam === 'A' ? 'B' : 'A';
-    let receiverId = null;
-    let receiverPos = null;
-
-    // Buscar un jugador vivo del equipo receptor
-    for (let p of Object.values(playersData)) {
-      if (p.team === receivingTeam && !p.dead) {
-        receiverId = p.id;
-        receiverPos = { x: p.x, y: p.y };
-        break;
-      }
-    }
-
-    if (receiverId && receiverPos) {
-      // Asignar balón al jugador encontrado
-      localBall.possessedBy = receiverId;
-      localBall.x = receiverPos.x;
-      localBall.y = receiverPos.y + 10;
-      localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
-      iAmBallAuthority = (receiverId === myId);
-
-      if (receiverId === myId) {
-        possessionFrames = 0;
-        document.getElementById('possessionTimer').style.display = 'flex';
-      } else {
-        possessionFrames = 0;
-        document.getElementById('possessionTimer').style.display = 'none';
-      }
-
-      // Escribir a Firebase (sin esperar, para no bloquear)
-      update(ref(db, `rooms/${roomId}/ball`), {
-        possessedBy: receiverId,
-        x: receiverPos.x,
-        y: receiverPos.y + 10,
-        vx: 0, vy: 0, vz: 0, z: 0,
-        lastShooter: null,
-        updatedAt: Date.now()
-      }).catch(() => {});
-    } else {
-      // No hay jugadores vivos del equipo receptor: dejar el balón cerca de su aro
-      let spawnX, spawnY;
-      if (receivingTeam === 'A') {
-        spawnX = 140;        // cerca del aro izquierdo (x=80)
-        spawnY = H / 2;
-      } else {
-        spawnX = W - 140;    // cerca del aro derecho (x=W-80)
-        spawnY = H / 2;
-      }
-      localBall.x = spawnX;
-      localBall.y = spawnY;
-      localBall.vx = 0; localBall.vy = 0; localBall.vz = 0; localBall.z = 0;
-      localBall.possessedBy = null;
-      iAmBallAuthority = false;
-      possessionFrames = 0;
-      document.getElementById('possessionTimer').style.display = 'none';
-
-      update(ref(db, `rooms/${roomId}/ball`), {
-        possessedBy: null,
-        x: spawnX, y: spawnY,
-        vx: 0, vy: 0, vz: 0, z: 0,
-        lastShooter: null,
-        updatedAt: Date.now()
-      }).catch(() => {});
-    }
+  // ── Pelota al centro tras encestar ──────────────────────────
+    const centerX = W / 2;
+    const centerY = H / 2;
+    localBall.x           = centerX;
+    localBall.y           = centerY;
+    localBall.vx          = 0;
+    localBall.vy          = 0;
+    localBall.vz          = 0;
+    localBall.z           = 0;
+    localBall.possessedBy = null;
+    iAmBallAuthority      = false;
+    possessionFrames      = 0;
+    ballGrabLockUntil     = 0;
+    iAmBallAuthority      = false;
+    document.getElementById('possessionTimer').style.display = 'none';
+    onDisconnect(ref(db, `rooms/${roomId}/ball`)).cancel();
+    update(ref(db, `rooms/${roomId}/ball`), {
+      possessedBy: null,
+      x: centerX,
+      y: centerY,
+      vx: 0, vy: 0, vz: 0, z: 0,
+      lastShooter: null,
+      passTarget: null,
+      updatedAt: Date.now()
+    }).catch(() => {});
 
     // Limpiar el shooter local para no volver a contar el mismo gol
     localBall.lastShooter = null;
@@ -4123,16 +4510,20 @@ function render() {
   drawCourt(W, H);
   drawHoops(W, H);
   drawPowerups();
-  if (perrosEventActive) dibujarMojones();  // ← suelo, antes de jugadores
+  if (honeyPowerups.length > 0) drawHoneyPowerups();
+  if (perrosEventActive) dibujarMojones();
   drawPlayers(W, H);
   drawBall(W, H);
   drawUI(W, H);
   drawParticles();
-  if (perrosEventActive) dibujarPerros();   // ← encima de todo lo anterior
+  if (perrosEventActive) dibujarPerros();
+  if (bearActive) drawBear();
   drawGunOverlay(W, H);
   if (perrosEventActive && (perroMordidaFrames[myId] || 0) > 0) drawSlowedMessage(W, H);
   drawTraicionHUD(W, H);
 }
+
+
 function drawTraicionHUD(W, H) {
   // Aviso de traición disponible
   if (traicionAviso) {
@@ -4542,6 +4933,9 @@ async function cleanup() {
   if (unsubPowerups) { unsubPowerups(); }
   if (unsubPerrosEvent) { unsubPerrosEvent(); unsubPerrosEvent = null; }
   limpiarPerros();
+  if (bearActive) killBear();
+  honeyPowerups = [];
+  bearLastTriggerTotal = 0;
 }
 window.addEventListener('beforeunload', cleanup);
 // ─── PLAY AGAIN: eliminar sala para todos ─────────────────────
