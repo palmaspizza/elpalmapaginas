@@ -1677,8 +1677,14 @@ function playOsoAudioOnce() {
   if (osoAudioPlayCount >= 2) return;
   osoAudioPlayCount++;
   const a = new Audio('osoaudio.mp3');
-  a.volume = 0.85;
+  a.volume = 0.30;
   a.play().catch(() => {});
+  const b = new Audio('osobasta.mp3');
+  b.volume = 0.80;
+  b.play().catch(() => {});
+  const c = new Audio('osoesmentira.mp3');
+  c.volume = 1.0;
+  c.play().catch(() => {});
 }
 
 function stopOsoAudio() {
