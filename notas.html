@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Notas 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07080d;--surface:#0f1018;--surface2:#161822;--surface3:#1e2030;
+  --border:#242638;--border2:#323450;
+  --text:#eeeef8;--muted:#6a6a8a;--dim:#3a3a58;
+  --alg:#e05cff;--alg-l:rgba(224,92,255,.13);--alg-b:rgba(224,92,255,.28);
+  --hw:#7b6cf5;--hw-l:rgba(123,108,245,.13);--hw-b:rgba(123,108,245,.28);
+  --prog:#f5a020;--prog-l:rgba(245,160,32,.13);--prog-b:rgba(245,160,32,.28);
+  --db:#20d4bf;--db-l:rgba(32,212,191,.13);--db-b:rgba(32,212,191,.28);
+  --pass:#4ade80;--pass-l:rgba(74,222,128,.14);
+  --fail:#f87171;--fail-l:rgba(248,113,113,.14);
+  --warn:#fbbf24;--warn-l:rgba(251,191,36,.14);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:72px;}
+
+/* topbar */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
+.topbar-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.02em;}
+.pill{font-family:'Syne',sans-serif;font-size:.52rem;letter-spacing:.18em;text-transform:uppercase;padding:.25rem .65rem;border-radius:5px;border:1px solid var(--border2);color:var(--muted);background:var(--surface2);}
+
+/* summary strip */
+.strip{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border);}
+.strip-cell{padding:.9rem 1rem;border-right:1px solid var(--border);}
+.strip-cell:last-child{border-right:none;}
+.s-lbl{font-family:'Syne',sans-serif;font-size:.48rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:.3rem;}
+.s-val{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;line-height:1;}
+.s-sub{font-size:.52rem;color:var(--muted);margin-top:.2rem;}
+
+/* section divider */
+.divider{padding:.45rem 1.25rem;font-family:'Syne',sans-serif;font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);background:var(--surface);border-bottom:1px solid var(--border);border-top:1px solid var(--border);}
+
+/* course block */
+.course{border-bottom:2px solid var(--border);}
+.course-head{padding:1.1rem 1.25rem .6rem;display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;}
+.c-tag{font-family:'Syne',sans-serif;font-size:.5rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;padding:.2rem .55rem;border-radius:4px;display:inline-block;margin-bottom:.35rem;}
+.c-name{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;line-height:1.25;color:var(--text);}
+.c-meta{font-size:.55rem;color:var(--muted);margin-top:.2rem;}
+.c-right{flex-shrink:0;text-align:right;}
+.c-right-lbl{font-family:'Syne',sans-serif;font-size:.48rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:.15rem;}
+.c-acum{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;line-height:1;}
+.c-acum-sub{font-size:.5rem;color:var(--muted);margin-top:.15rem;}
+
+/* progress track */
+.prog-wrap{padding:0 1.25rem .6rem;}
+.prog-track{height:4px;background:var(--surface3);border-radius:99px;overflow:hidden;display:flex;gap:2px;}
+.prog-seg{height:100%;border-radius:99px;transition:width .5s cubic-bezier(.22,.68,0,1.2),background .3s;}
+
+/* evals */
+.evals{padding:0 .75rem .75rem;}
+.eval-row{display:flex;align-items:center;gap:.65rem;padding:.65rem .5rem;border-bottom:1px solid var(--border);border-radius:8px;transition:background .15s;}
+.eval-row:last-child{border-bottom:none;}
+.eval-row:hover{background:var(--surface2);}
+.e-date{min-width:42px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:.35rem .25rem;flex-shrink:0;}
+.e-date-n{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;line-height:1;}
+.e-date-m{font-size:.5rem;text-transform:uppercase;color:var(--muted);letter-spacing:.07em;}
+.e-info{flex:1;min-width:0;}
+.e-name{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:600;color:var(--text);}
+.e-w{font-size:.54rem;color:var(--muted);margin-top:.1rem;}
+.e-right{display:flex;align-items:center;gap:.45rem;flex-shrink:0;}
+
+/* acumulado chip */
+.acum-chip{font-size:.56rem;min-width:38px;text-align:center;padding:.18rem .4rem;border-radius:4px;border:1px solid var(--border);background:var(--surface3);color:var(--muted);transition:all .2s;white-space:nowrap;}
+.acum-chip.live{color:var(--text);border-color:var(--border2);}
+
+/* nota input */
+.nota-inp{width:54px;height:32px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);font-family:'IBM Plex Mono',monospace;font-size:.92rem;font-weight:500;color:var(--text);text-align:center;outline:none;transition:border-color .2s,background .2s,color .2s;-moz-appearance:textfield;}
+.nota-inp::-webkit-inner-spin-button,.nota-inp::-webkit-outer-spin-button{-webkit-appearance:none;}
+.nota-inp:focus{border-color:var(--border2);background:var(--surface3);}
+.nota-inp.p{border-color:var(--pass);color:var(--pass);background:var(--pass-l);}
+.nota-inp.f{border-color:var(--fail);color:var(--fail);background:var(--fail-l);}
+.nota-inp.w{border-color:var(--warn);color:var(--warn);background:var(--warn-l);}
+.nota-inp.nd{color:var(--dim);}
+
+/* algebra special row — examen */
+.exam-row{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;margin:0 .75rem .75rem;}
+
+/* bottom fixed bar */
+.botbar{position:fixed;bottom:0;left:0;right:0;background:rgba(7,8,13,.96);border-top:1px solid var(--border2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
+.bot-cell{padding:.55rem .5rem;text-align:center;border-right:1px solid var(--border);}
+.bot-cell:last-child{border-right:none;}
+.bot-lbl{font-family:'Syne',sans-serif;font-size:.45rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:.15rem;}
+.bot-val{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;line-height:1;color:var(--muted);transition:color .3s;}
+.bot-val.p{color:var(--pass);}
+.bot-val.f{color:var(--fail);}
+.bot-sub{font-size:.44rem;color:var(--dim);margin-top:.12rem;}
+
+@media(max-width:380px){.strip{grid-template-columns:repeat(2,1fr);}.strip-cell:nth-child(2){border-right:none;}.strip-cell:nth-child(3){border-top:1px solid var(--border)}.strip-cell:nth-child(4){border-top:1px solid var(--border);border-right:none;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-title">Mis Notas 2026</span>
+  <span class="pill">Semestre · 4 ramos</span>
+</div>
+
+<div class="strip">
+  <div class="strip-cell">
+    <div class="s-lbl">Ramos</div>
+    <div class="s-val" style="color:var(--text)">4</div>
+    <div class="s-sub">activos</div>
+  </div>
+  <div class="strip-cell">
+    <div class="s-lbl">Evaluaciones</div>
+    <div class="s-val" id="s-count" style="color:var(--text)">—</div>
+    <div class="s-sub">ingresadas</div>
+  </div>
+  <div class="strip-cell">
+    <div class="s-lbl">Acum. promedio</div>
+    <div class="s-val" id="s-avg" style="color:var(--muted)">—</div>
+    <div class="s-sub">sobre 7.0</div>
+  </div>
+  <div class="strip-cell">
+    <div class="s-lbl">Estado</div>
+    <div class="s-val" id="s-status" style="color:var(--muted)">—</div>
+    <div class="s-sub" id="s-status-sub">esperando datos</div>
+  </div>
+</div>
+
+<!-- ══════════ ÁLGEBRA ══════════ -->
+<div class="divider">Resolución de Problemas en Álgebra</div>
+<div class="course" id="sec-alg">
+  <div class="course-head">
+    <div>
+      <span class="c-tag" style="color:var(--alg);background:var(--alg-l);border:1px solid var(--alg-b)">Álgebra</span>
+      <div class="c-name">Resolución de Problemas<br>en Álgebra</div>
+      <div class="c-meta">8 evaluaciones · Presentación 75% + Examen 25%</div>
+    </div>
+    <div class="c-right">
+      <div class="c-right-lbl">Acumulado</div>
+      <div class="c-acum" id="acum-alg" style="color:var(--alg)">—</div>
+      <div class="c-acum-sub" id="acum-alg-sub">sobre 7.0</div>
+    </div>
+  </div>
+  <div class="prog-wrap"><div class="prog-track" id="prog-alg"></div></div>
+  <div class="evals" id="evals-alg"></div>
+</div>
+
+<!-- ══════════ HARDWARE ══════════ -->
+<div class="divider">Fundamentos de Hardware y Software</div>
+<div class="course" id="sec-hw">
+  <div class="course-head">
+    <div>
+      <span class="c-tag" style="color:var(--hw);background:var(--hw-l);border:1px solid var(--hw-b)">Hardware & SW</span>
+      <div class="c-name">Fundamentos de<br>Hardware y Software</div>
+      <div class="c-meta">4 evaluaciones · 100% presentación</div>
+    </div>
+    <div class="c-right">
+      <div class="c-right-lbl">Acumulado</div>
+      <div class="c-acum" id="acum-hw" style="color:var(--hw)">—</div>
+      <div class="c-acum-sub">sobre 7.0</div>
+    </div>
+  </div>
+  <div class="prog-wrap"><div class="prog-track" id="prog-hw"></div></div>
+  <div class="evals" id="evals-hw"></div>
+</div>
+
+<!-- ══════════ PROGRAMACIÓN ══════════ -->
+<div class="divider">Introducción a la Programación Segura</div>
+<div class="course" id="sec-prog">
+  <div class="course-head">
+    <div>
+      <span class="c-tag" style="color:var(--prog);background:var(--prog-l);border:1px solid var(--prog-b)">Programación</span>
+      <div class="c-name">Introducción a la<br>Programación Segura</div>
+      <div class="c-meta">4 evaluaciones · 100% presentación</div>
+    </div>
+    <div class="c-right">
+      <div class="c-right-lbl">Acumulado</div>
+      <div class="c-acum" id="acum-prog" style="color:var(--prog)">—</div>
+      <div class="c-acum-sub">sobre 7.0</div>
+    </div>
+  </div>
+  <div class="prog-wrap"><div class="prog-track" id="prog-prog"></div></div>
+  <div class="evals" id="evals-prog"></div>
+</div>
+
+<!-- ══════════ BASE DE DATOS ══════════ -->
+<div class="divider">Fundamentos de Base de Datos</div>
+<div class="course" id="sec-db">
+  <div class="course-head">
+    <div>
+      <span class="c-tag" style="color:var(--db);background:var(--db-l);border:1px solid var(--db-b)">Base de Datos</span>
+      <div class="c-name">Fundamentos de<br>Base de Datos</div>
+      <div class="c-meta">4 evaluaciones · 100% presentación</div>
+    </div>
+    <div class="c-right">
+      <div class="c-right-lbl">Acumulado</div>
+      <div class="c-acum" id="acum-db" style="color:var(--db)">—</div>
+      <div class="c-acum-sub">sobre 7.0</div>
+    </div>
+  </div>
+  <div class="prog-wrap"><div class="prog-track" id="prog-db"></div></div>
+  <div class="evals" id="evals-db"></div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="botbar">
+  <div class="bot-cell">
+    <div class="bot-lbl">Álgebra</div>
+    <div class="bot-val" id="bot-alg">—</div>
+    <div class="bot-sub" id="bots-alg">—</div>
+  </div>
+  <div class="bot-cell">
+    <div class="bot-lbl">Hardware</div>
+    <div class="bot-val" id="bot-hw">—</div>
+    <div class="bot-sub" id="bots-hw">—</div>
+  </div>
+  <div class="bot-cell">
+    <div class="bot-lbl">Prog.</div>
+    <div class="bot-val" id="bot-prog">—</div>
+    <div class="bot-sub" id="bots-prog">—</div>
+  </div>
+  <div class="bot-cell">
+    <div class="bot-lbl">Base Datos</div>
+    <div class="bot-val" id="bot-db">—</div>
+    <div class="bot-sub" id="bots-db">—</div>
+  </div>
+</div>
+
+<script>
+const PASS = 4.0;
+
+// ── Course definitions ─────────────────────────────────────────────
+const COURSES = {
+  alg: {
+    color:'--alg', acumEl:'acum-alg', acumSubEl:'acum-alg-sub',
+    progEl:'prog-alg', evalsEl:'evals-alg',
+    botEl:'bot-alg', botSubEl:'bots-alg',
+    evals:[
+      {date:'08 abr', name:'Evaluación 1', pond:0.05, val:6.5},
+      {date:'11 abr', name:'Evaluación 2', pond:0.10, val:4.5},
+      {date:'13 may', name:'Evaluación 3', pond:0.05, val:7.0},
+      {date:'20 may', name:'Evaluación 4', pond:0.20, val:null},
+      {date:'17 jun', name:'Evaluación 5', pond:0.05, val:null},
+      {date:'18 jun', name:'Evaluación 6', pond:0.25, val:null},
+      {date:'08 jul', name:'Evaluación 7', pond:0.05, val:null},
+      {date:'09 jul', name:'Evaluación 8 (Examen)', pond:0.25, val:null, isExam:true},
+    ]
+  },
+  hw: {
+    color:'--hw', acumEl:'acum-hw', acumSubEl:null,
+    progEl:'prog-hw', evalsEl:'evals-hw',
+    botEl:'bot-hw', botSubEl:'bots-hw',
+    evals:[
+      {date:'07 abr', name:'Evaluación 1', pond:0.20, val:6.1},
+      {date:'19 may', name:'Evaluación 2', pond:0.35, val:6.5},
+      {date:'16 jun', name:'Evaluación 3', pond:0.35, val:null},
+      {date:'23 jun', name:'Evaluación 4', pond:0.10, val:null},
+    ]
+  },
+  prog: {
+    color:'--prog', acumEl:'acum-prog', acumSubEl:null,
+    progEl:'prog-prog', evalsEl:'evals-prog',
+    botEl:'bot-prog', botSubEl:'bots-prog',
+    evals:[
+      {date:'06 abr', name:'Evaluación 1', pond:0.15, val:6.2},
+      {date:'18 may', name:'Evaluación 2', pond:0.25, val:null},
+      {date:'15 jun', name:'Evaluación 3', pond:0.30, val:null},
+      {date:'13 jul', name:'Evaluación 4', pond:0.30, val:null},
+    ]
+  },
+  db: {
+    color:'--db', acumEl:'acum-db', acumSubEl:null,
+    progEl:'prog-db', evalsEl:'evals-db',
+    botEl:'bot-db', botSubEl:'bots-db',
+    evals:[
+      {date:'01 abr', name:'Evaluación 1', pond:0.15, val:5.4},
+      {date:'06 may', name:'Evaluación 2', pond:0.30, val:6.6},
+      {date:'10 jun', name:'Evaluación 3', pond:0.30, val:null},
+      {date:'01 jul', name:'Evaluación 4', pond:0.25, val:null},
+    ]
+  }
+};
+
+// ── Build UI ─────────────────────────────────────────────────────────
+function notaClass(v) {
+  if (v === null) return 'nd';
+  if (v >= 5.0) return 'p';
+  if (v >= 4.0) return 'w';
+  return 'f';
+}
+
+function buildCourse(key) {
+  const cfg = COURSES[key];
+  const container = document.getElementById(cfg.evalsEl);
+  container.innerHTML = '';
+
+  cfg.evals.forEach((ev, i) => {
+    const parts = ev.date.split(' ');
+    const row = document.createElement('div');
+    row.className = 'eval-row' + (ev.isExam ? ' exam-row' : '');
+
+    const valStr = ev.val !== null ? ev.val.toFixed(1) : '';
+    const cls = notaClass(ev.val);
+    const pondPct = (ev.pond * 100).toFixed(0);
+    const contrib = ev.val !== null ? (ev.val * ev.pond).toFixed(3) : '—';
+
+    row.innerHTML = `
+      <div class="e-date">
+        <div class="e-date-n">${parts[0]}</div>
+        <div class="e-date-m">${parts[1]}</div>
+      </div>
+      <div class="e-info">
+        <div class="e-name">${ev.name}${ev.isExam ? ' ★' : ''}</div>
+        <div class="e-w">Ponderación: ${pondPct}% · aporte: <span id="chip-${key}-${i}">—</span></div>
+      </div>
+      <div class="e-right">
+        <input class="nota-inp ${cls}" id="inp-${key}-${i}"
+          type="number" min="1" max="7" step="0.1"
+          value="${valStr}" placeholder="—"
+          data-course="${key}" data-idx="${i}">
+      </div>`;
+
+    container.appendChild(row);
+  });
+}
+
+Object.keys(COURSES).forEach(buildCourse);
+
+// ── Calculate ─────────────────────────────────────────────────────────
+function calcCourse(key) {
+  const cfg = COURSES[key];
+  let acum = 0;
+  let filled = 0;
+  const color = getComputedStyle(document.documentElement).getPropertyValue(cfg.color).trim();
+
+  cfg.evals.forEach((ev, i) => {
+    const inp = document.getElementById(`inp-${key}-${i}`);
+    const chip = document.getElementById(`chip-${key}-${i}`);
+    const raw = parseFloat(inp.value);
+    const nota = isNaN(raw) ? null : Math.min(Math.max(raw, 1), 7);
+
+    // update stored value for recalc
+    COURSES[key].evals[i]._current = nota;
+
+    if (nota !== null) {
+      const contrib = nota * ev.pond;
+      acum += contrib;
+      filled++;
+      chip.textContent = contrib.toFixed(3);
+      chip.style.color = 'var(--text)';
+      inp.className = 'nota-inp ' + notaClass(nota);
+    } else {
+      chip.textContent = '—';
+      chip.style.color = '';
+      inp.className = 'nota-inp nd';
+    }
+  });
+
+  // progress bar
+  const track = document.getElementById(cfg.progEl);
+  track.innerHTML = '';
+  cfg.evals.forEach((ev, i) => {
+    const nota = COURSES[key].evals[i]._current;
+    const seg = document.createElement('div');
+    seg.className = 'prog-seg';
+    seg.style.width = (ev.pond * 100) + '%';
+    if (nota !== null) {
+      seg.style.background = nota >= 5.0 ? 'var(--pass)' : nota >= PASS ? 'var(--warn)' : 'var(--fail)';
+      seg.style.opacity = '.85';
+    } else {
+      seg.style.background = 'var(--surface3)';
+    }
+    track.appendChild(seg);
+  });
+
+  // acumulado display
+  const acumEl = document.getElementById(cfg.acumEl);
+  const botEl = document.getElementById(cfg.botEl);
+  const botSubEl = document.getElementById(cfg.botSubEl);
+
+  if (filled > 0) {
+    acumEl.textContent = acum.toFixed(2);
+    botEl.textContent = acum.toFixed(2);
+    const pass = acum >= PASS; // acum is partial, but show status
+    acumEl.style.color = acum >= 4.0 ? 'var(--pass)' : 'var(--fail)';
+    botEl.className = 'bot-val ' + (acum >= PASS ? 'p' : 'f');
+    botSubEl.textContent = acum >= PASS ? '✓ va aprobando' : '✗ va reprobando';
+    if (cfg.acumSubEl) {
+      document.getElementById(cfg.acumSubEl).textContent =
+        `${filled}/${cfg.evals.length} eval · ${(filled/cfg.evals.length*100).toFixed(0)}% rendido`;
+    }
+  } else {
+    acumEl.textContent = '—';
+    acumEl.style.color = `var(${cfg.color})`;
+    botEl.textContent = '—';
+    botEl.className = 'bot-val';
+    botSubEl.textContent = 'sin notas';
+    if (cfg.acumSubEl) document.getElementById(cfg.acumSubEl).textContent = 'sobre 7.0';
+  }
+
+  return { filled, total: cfg.evals.length, acum };
+}
+
+function calcAll() {
+  let totalFilled = 0, totalEvals = 0, acumSum = 0, coursesWithData = 0;
+
+  for (const key of Object.keys(COURSES)) {
+    const { filled, total, acum } = calcCourse(key);
+    totalFilled += filled;
+    totalEvals += total;
+    if (filled > 0) { acumSum += acum; coursesWithData++; }
+  }
+
+  document.getElementById('s-count').textContent = `${totalFilled}/${totalEvals}`;
+  const avgEl = document.getElementById('s-avg');
+  const statEl = document.getElementById('s-status');
+  const statSub = document.getElementById('s-status-sub');
+
+  if (coursesWithData > 0) {
+    const ga = acumSum / coursesWithData;
+    avgEl.textContent = ga.toFixed(2);
+    avgEl.style.color = ga >= PASS ? 'var(--pass)' : 'var(--fail)';
+    statEl.textContent = ga >= PASS ? '✓' : '✗';
+    statEl.style.color = ga >= PASS ? 'var(--pass)' : 'var(--fail)';
+    statSub.textContent = ga >= PASS ? 'aprobando' : 'reprobando';
+  } else {
+    avgEl.textContent = '—'; avgEl.style.color = 'var(--muted)';
+    statEl.textContent = '—'; statEl.style.color = 'var(--muted)';
+    statSub.textContent = 'esperando datos';
+  }
+}
+
+// ── Event listeners ───────────────────────────────────────────────────
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('nota-inp')) calcAll();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────
+calcAll();
+</script>
+</body>
+</html>
