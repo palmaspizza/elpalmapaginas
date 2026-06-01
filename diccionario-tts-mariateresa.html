@@ -327,6 +327,117 @@
     .student-btn { min-width: 140px; padding: 1.2rem 1.4rem; }
     .btn-name { font-size: 1.1rem; }
   }
+  /* ── QUIZ BUTTON ANIMADO ── */
+.quiz-cta {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 200;
+}
+
+@keyframes pulseGrow {
+  0%   { transform: scale(1);    box-shadow: 0 8px 28px rgba(26,22,18,0.35), 0 0 0 0 rgba(212,168,67,0.7); }
+  30%  { transform: scale(1.18); box-shadow: 0 18px 48px rgba(26,22,18,0.5), 0 0 0 14px rgba(212,168,67,0.3); }
+  60%  { transform: scale(0.93); box-shadow: 0 4px 14px rgba(26,22,18,0.2), 0 0 0 22px rgba(212,168,67,0); }
+  80%  { transform: scale(1.08); box-shadow: 0 12px 36px rgba(26,22,18,0.4), 0 0 0 0 rgba(212,168,67,0); }
+  100% { transform: scale(1);    box-shadow: 0 8px 28px rgba(26,22,18,0.35), 0 0 0 0 rgba(212,168,67,0.7); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes floatUp {
+  0%, 100% { bottom: 2rem; }
+  50%       { bottom: 2.5rem; }
+}
+
+.quiz-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.95rem 1.8rem;
+  border-radius: 99px;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+
+  /* Fondo con brillo animado */
+  background: linear-gradient(
+    110deg,
+    #1A1612 0%,
+    #1A1612 30%,
+    #D4A843 48%,
+    #FFD97A 52%,
+    #1A1612 70%,
+    #1A1612 100%
+  );
+  background-size: 300% 100%;
+
+  /* Animaciones combinadas */
+  animation:
+    pulseGrow 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite,
+    shimmer    2.4s linear infinite,
+    floatUp    3s ease-in-out infinite;
+}
+
+/* Halo exterior giratorio */
+.quiz-btn::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 99px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    rgba(212,168,67,0.9) 20%,
+    rgba(255,220,100,1) 40%,
+    rgba(212,168,67,0.9) 60%,
+    transparent 80%
+  );
+  animation: spin 2s linear infinite;
+  z-index: -1;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Capa interna para tapar el halo dentro del botón */
+.quiz-btn::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 99px;
+  background: #1A1612;
+  z-index: -1;
+}
+
+.quiz-btn:hover {
+  animation-play-state: paused;
+  transform: scale(1.12);
+  box-shadow: 0 20px 50px rgba(212,168,67,0.6), 0 0 0 6px rgba(212,168,67,0.25);
+}
+
+.quiz-icon {
+  font-size: 1.1rem;
+  animation: wiggle 1.8s ease-in-out infinite;
+}
+
+@keyframes wiggle {
+  0%, 70%, 100% { transform: rotate(0deg); }
+  75%            { transform: rotate(-15deg); }
+  85%            { transform: rotate(12deg); }
+  92%            { transform: rotate(-8deg); }
+}
 </style>
 </head>
 <body>
