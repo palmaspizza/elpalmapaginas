@@ -1,1 +1,1552 @@
-asd
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Diccionario de Trabajo Social</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --cream: #F5F0E8;
+    --dark: #1A1612;
+    --ink: #2C2620;
+    --accent-m: #C8553D;
+    --accent-ma: #4A7C59;
+    --accent-c: #2B5F8E;
+    --accent-a: #7B4E9E;
+    --gold: #D4A843;
+    --light-bg: #FAF7F2;
+    --border: rgba(44,38,32,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── LANDING ── */
+  #landing {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .landing-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 80%, rgba(200,85,61,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 80% at 80% 20%, rgba(43,95,142,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 50% 50%, rgba(212,168,67,0.05) 0%, transparent 80%);
+  }
+
+  .landing-inner { position: relative; z-index: 1; width: 100%; max-width: 860px; text-align: center; }
+
+  .eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    font-weight: 900;
+    line-height: 1.05;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+  }
+
+  h1 em { font-style: italic; color: var(--accent-m); }
+
+  .subtitle {
+    font-size: 1rem;
+    color: #5A504A;
+    font-weight: 300;
+    margin-bottom: 3rem;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .divider {
+    width: 60px; height: 2px;
+    background: var(--gold);
+    margin: 0 auto 3rem;
+    border-radius: 2px;
+  }
+
+  .student-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  @media(max-width: 560px) {
+    .student-grid { grid-template-columns: 1fr; }
+  }
+
+  .student-card {
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    background: white;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .student-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    border-radius: 16px 16px 0 0;
+    transition: opacity 0.2s;
+    opacity: 0.7;
+  }
+
+  .student-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.12);
+  }
+
+  .student-card:hover::before { opacity: 1; }
+
+  .card-m::before { background: var(--accent-m); }
+  .card-ma::before { background: var(--accent-ma); }
+  .card-c::before { background: var(--accent-c); }
+  .card-a::before { background: var(--accent-a); }
+
+  .card-m:hover { border-color: var(--accent-m); }
+  .card-ma:hover { border-color: var(--accent-ma); }
+  .card-c:hover { border-color: var(--accent-c); }
+  .card-a:hover { border-color: var(--accent-a); }
+
+  .card-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    opacity: 0.5;
+  }
+
+  .card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+  }
+
+  .card-range {
+    font-size: 0.8rem;
+    color: #6A6060;
+    font-weight: 400;
+  }
+
+  .card-count {
+    position: absolute;
+    bottom: 1.5rem; right: 1.5rem;
+    font-size: 2rem;
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    opacity: 0.06;
+    color: var(--dark);
+  }
+
+  /* ── QUIZ SCREEN ── */
+  #quiz {
+    display: none;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .quiz-header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(245,240,232,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .quiz-header-left {
+    display: flex; align-items: center; gap: 1rem;
+  }
+
+  .back-btn {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--ink);
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+
+  .back-btn:hover { background: white; border-color: var(--ink); }
+
+  .quiz-name-badge {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark);
+  }
+
+  .progress-wrap {
+    flex: 1;
+    max-width: 300px;
+  }
+
+  .progress-label {
+    font-size: 0.72rem;
+    color: #7A706A;
+    margin-bottom: 0.35rem;
+    display: flex; justify-content: space-between;
+  }
+
+  .progress-bar {
+    height: 6px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+    background: var(--gold);
+  }
+
+  .quiz-body {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 3rem 2rem 6rem;
+  }
+
+  .question-counter {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 1.2rem;
+  }
+
+  .question-card {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 2.5rem 2.5rem 2rem;
+    margin-bottom: 1.5rem;
+    animation: slideUp 0.35s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .question-type-tag {
+    display: inline-block;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.25rem 0.7rem;
+    border-radius: 99px;
+    margin-bottom: 1.2rem;
+    background: rgba(212,168,67,0.12);
+    color: var(--gold);
+    border: 1px solid rgba(212,168,67,0.3);
+  }
+
+  .question-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.45;
+    color: var(--dark);
+    margin-bottom: 0.4rem;
+  }
+
+  .question-hint {
+    font-size: 0.82rem;
+    color: #8A8080;
+    margin-bottom: 1.8rem;
+    font-weight: 400;
+  }
+
+  .options-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .option-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.2rem;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.16s ease;
+    background: var(--light-bg);
+    user-select: none;
+  }
+
+  .option-item:hover:not(.answered) {
+    border-color: #999;
+    background: white;
+    transform: translateX(3px);
+  }
+
+  .option-item.selected:not(.answered) {
+    border-color: var(--ink);
+    background: white;
+  }
+
+  .option-letter {
+    width: 26px; height: 26px;
+    min-width: 26px;
+    border: 1.5px solid currentColor;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #9A9090;
+    transition: all 0.15s;
+    margin-top: 1px;
+  }
+
+  .option-item.selected:not(.answered) .option-letter {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: white;
+  }
+
+  .option-text {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+
+  /* Feedback states */
+  .option-item.correct {
+    background: #EFF8F2;
+    border-color: #4A7C59 !important;
+  }
+
+  .option-item.correct .option-letter {
+    background: #4A7C59;
+    border-color: #4A7C59;
+    color: white;
+  }
+
+  .option-item.wrong {
+    background: #FEF1EF;
+    border-color: var(--accent-m) !important;
+    opacity: 0.8;
+  }
+
+  .option-item.wrong .option-letter {
+    background: var(--accent-m);
+    border-color: var(--accent-m);
+    color: white;
+  }
+
+  .option-item.answered { cursor: default; transform: none !important; }
+
+  .feedback-box {
+    display: none;
+    margin-top: 1.2rem;
+    padding: 1rem 1.2rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  .feedback-box.show { display: block; }
+  .feedback-box.ok { background:#EFF8F2; border-left: 3px solid #4A7C59; color: #2A5A3A; }
+  .feedback-box.no { background:#FEF1EF; border-left: 3px solid #C8553D; color: #8A2A1A; }
+
+  .feedback-icon { font-weight: 700; margin-right: 0.4rem; }
+
+  .next-btn {
+    display: none;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border: none;
+    border-radius: 12px;
+    background: var(--dark);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.2s;
+  }
+
+  .next-btn:hover { background: #3A3028; transform: translateY(-1px); }
+  .next-btn.show { display: block; animation: fadeIn 0.3s ease; }
+
+  /* ── RESULTS ── */
+  #results {
+    display: none;
+    min-height: 100vh;
+    padding: 4rem 2rem;
+  }
+
+  .results-inner {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .score-hero {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .score-ring-wrap {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  .score-circle {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border: 5px solid;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+
+  .score-circle.great { border-color: #4A7C59; background: #EFF8F2; }
+  .score-circle.good  { border-color: var(--gold); background: #FBF5E6; }
+  .score-circle.poor  { border-color: var(--accent-m); background: #FEF1EF; }
+
+  .score-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.6rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .score-circle.great .score-num { color: #2A5A3A; }
+  .score-circle.good  .score-num { color: #8A6010; }
+  .score-circle.poor  .score-num { color: #8A2A1A; }
+
+  .score-denom {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    font-weight: 500;
+  }
+
+  .score-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 0.4rem;
+  }
+
+  .score-sub {
+    font-size: 0.9rem;
+    color: #6A6060;
+  }
+
+  .results-breakdown {
+    margin-bottom: 2.5rem;
+  }
+
+  .breakdown-title {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: #8A8080;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .breakdown-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.8rem;
+    align-items: flex-start;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+
+  .bi-icon {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .bi-icon.ok  { background:#EFF8F2; color:#4A7C59; }
+  .bi-icon.no  { background:#FEF1EF; color:#C8553D; }
+
+  .bi-question { font-size: 0.88rem; color: var(--ink); line-height: 1.4; }
+  .bi-answer { font-size: 0.78rem; color: #7A7070; margin-top: 0.2rem; }
+  .bi-answer strong { color: #4A7C59; }
+  .bi-answer span   { color: #C8553D; }
+
+  .bi-num {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #AAA098;
+    padding-top: 4px;
+  }
+
+  .results-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-retry, .btn-home {
+    flex: 1;
+    padding: 0.9rem 1.5rem;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+    min-width: 140px;
+    text-align: center;
+  }
+
+  .btn-retry {
+    background: var(--dark);
+    color: white;
+    border: 2px solid var(--dark);
+  }
+
+  .btn-retry:hover { background: #3A3028; transform: translateY(-2px); }
+
+  .btn-home {
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--border);
+  }
+
+  .btn-home:hover { border-color: var(--ink); background: white; transform: translateY(-2px); }
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LANDING ═══════════ -->
+<div id="landing">
+  <div class="landing-bg"></div>
+  <div class="landing-inner">
+    <p class="eyebrow">Preparación para exposición</p>
+    <h1>Diccionario de<br><em>Trabajo Social</em></h1>
+    <p class="subtitle">Selecciona tu nombre para comenzar el quiz con las palabras que te corresponden.</p>
+    <div class="divider"></div>
+    <div class="student-grid">
+      <div class="student-card card-m" onclick="startQuiz('mariateresa')">
+        <p class="card-label">Estudiante</p>
+        <p class="card-name">María Teresa</p>
+        <p class="card-range">Sección A — B</p>
+        <span class="card-count">1</span>
+      </div>
+      <div class="student-card card-ma" onclick="startQuiz('marion')">
+        <p class="card-label">Estudiante</p>
+        <p class="card-name">Marion</p>
+        <p class="card-range">Sección C — D</p>
+        <span class="card-count">2</span>
+      </div>
+      <div class="student-card card-c" onclick="startQuiz('catalina')">
+        <p class="card-label">Estudiante</p>
+        <p class="card-name">Catalina</p>
+        <p class="card-range">Sección E — M</p>
+        <span class="card-count">3</span>
+      </div>
+      <div class="student-card card-a" onclick="startQuiz('alexis')">
+        <p class="card-label">Estudiante</p>
+        <p class="card-name">Alexis</p>
+        <p class="card-range">Sección N — Z</p>
+        <span class="card-count">4</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ QUIZ ═══════════ -->
+<div id="quiz">
+  <div class="quiz-header">
+    <div class="quiz-header-left">
+      <button class="back-btn" onclick="goHome()">← Inicio</button>
+      <span class="quiz-name-badge" id="quizStudentName"></span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progressText">Pregunta 1 de 20</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div class="quiz-body">
+    <p class="question-counter" id="qCounter">Pregunta 1</p>
+    <div class="question-card" id="questionCard">
+      <span class="question-type-tag" id="qTypeTag">Definición</span>
+      <p class="question-text" id="qText"></p>
+      <p class="question-hint" id="qHint"></p>
+      <ul class="options-list" id="optionsList"></ul>
+      <div class="feedback-box" id="feedbackBox"></div>
+      <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Siguiente pregunta →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ RESULTS ═══════════ -->
+<div id="results">
+  <div class="results-inner">
+    <div class="score-hero">
+      <div class="score-ring-wrap">
+        <div class="score-circle" id="scoreCircle">
+          <span class="score-num" id="scoreNum">0</span>
+          <span class="score-denom" id="scoreDenom">de 0</span>
+        </div>
+      </div>
+      <p class="score-headline" id="scoreHeadline"></p>
+      <p class="score-sub" id="scoreSub"></p>
+    </div>
+    <div class="results-breakdown">
+      <p class="breakdown-title">Detalle por pregunta</p>
+      <div id="breakdownList"></div>
+    </div>
+    <div class="results-actions">
+      <button class="btn-retry" onclick="retryQuiz()">🔄 Repetir (orden diferente)</button>
+      <button class="btn-home" onclick="goHome()">← Volver al inicio</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//   BANCO DE PREGUNTAS
+// ═══════════════════════════════════════════════════
+
+const QUESTIONS = {
+
+  mariateresa: [
+    {
+      type:"Definición",
+      q:"¿Qué es el 'abandono' según el Diccionario de Trabajo Social?",
+      hint:"Piensa en vínculos afectivos rotos.",
+      options:["Ausencia o ruptura de un lazo afectivo que provoca frustración","Sanción legal impuesta por el Estado a un individuo","Proceso de integración de un individuo a un nuevo medio","Acción de ayudar económicamente a personas en necesidad"],
+      correct:0,
+      explanation:"El abandono es la ausencia o ruptura de un lazo afectivo entre personas, que acarrea olvido de obligaciones y provoca frustración."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué significa 'abolicionismo' en el contexto del trabajo social?",
+      hint:"Se relaciona con derechos humanos y leyes.",
+      options:["Doctrina que impulsa la anulación de leyes que atentan contra los derechos humanos","Sistema de gobierno sin restricciones constitucionales","Proceso de integración cultural entre comunidades","Movimiento de trabajadores de inspiración anarquista"],
+      correct:0,
+      explanation:"El abolicionismo es la doctrina que impulsa la anulación de leyes o preceptos que atentan contra los derechos humanos y los principios morales."
+    },
+    {
+      type:"Concepto",
+      q:"El 'absolutismo' como sistema de gobierno se caracteriza por:",
+      hint:"Siglos XVI-XVIII en Europa.",
+      options:["Un soberano cuyas facultades no son limitadas por ninguna ley constitucional","La distribución del poder entre varios grupos sociales","La participación popular en la toma de decisiones","Un modelo económico basado en la producción nacional"],
+      correct:0,
+      explanation:"El absolutismo es el sistema de gobierno en que el soberano o corporación dirigente no tienen limitadas sus facultades por ninguna ley constitucional."
+    },
+    {
+      type:"Concepto",
+      q:"¿Cuál de las siguientes describe mejor la 'acción social' según el texto?",
+      hint:"Piensa en micro y macro social.",
+      options:["Conjunto de actividades para influir sobre personas, grupos o comunidades con el fin de alcanzar resultados, desde lo micro hasta lo macro social","Una política gubernamental para redistribuir ingresos económicos","Un proceso jurídico para resolver conflictos laborales","La investigación científica sobre comportamiento humano"],
+      correct:0,
+      explanation:"La acción social es el conjunto de actividades que realiza un trabajador social o ciudadanos para influir sobre personas, grupos o comunidades, desde lo micro hasta lo macro social."
+    },
+    {
+      type:"Definición",
+      q:"La 'aceptación' como principio en trabajo social significa:",
+      hint:"No equivale a aprobar conductas.",
+      options:["Situarse ante los demás recibiéndolos tal como son, entendiendo al otro dentro de su contexto, sin necesariamente aprobar su comportamiento","Valorar positivamente todas las acciones del usuario para construir confianza","Seleccionar solo los casos que tienen posibilidades de mejora","Aceptar los recursos disponibles sin cuestionarlos"],
+      correct:0,
+      explanation:"La aceptación significa situarse ante los demás recibiéndolos tal y como son, sin aprobar necesariamente su comportamiento, sino entendiendo al otro en su contexto."
+    },
+    {
+      type:"Definición",
+      q:"Un 'actor social' es:",
+      hint:"Tiene capacidad real o potencial.",
+      options:["Individuo, grupo, familia o comunidad con capacidad real o potencial de incidir económica, política y culturalmente en su propio desarrollo","Una institución pública que gestiona servicios sociales","Un profesional que realiza diagnóstico social","Un voluntario que presta ayuda humanitaria"],
+      correct:0,
+      explanation:"Un actor social es individuo, grupo, familia, comunidad u organización formal o informal con capacidad real o potencial de incidir económica, política y culturalmente en su desarrollo."
+    },
+    {
+      type:"Concepto",
+      q:"¿Cómo define el texto el 'altruismo'?",
+      hint:"El término fue creado por Augusto Comte.",
+      options:["Doctrina que establece como norma suprema de la moralidad el preocuparse por los otros de forma desinteresada","Modelo de intervención que prioriza los intereses del profesional","Sistema político de distribución igualitaria de recursos","Enfoque terapéutico orientado al bienestar individual"],
+      correct:0,
+      explanation:"El altruismo es la doctrina que establece como norma suprema de la moralidad el preocuparse por otros de forma desinteresada. Término creado por Augusto Comte en oposición a egoísmo."
+    },
+    {
+      type:"Definición",
+      q:"La 'autonomía' en trabajo social refiere a:",
+      hint:"Incluye decidir y actuar libremente.",
+      options:["Capacidad de un individuo, grupo u organización de decidir y actuar de forma independiente, libre y responsable","La obligación institucional de seguir normas sin cuestionarlas","La independencia económica de una nación respecto a importaciones","El proceso por el cual se asignan roles dentro de un grupo"],
+      correct:0,
+      explanation:"La autonomía es la capacidad que tiene un individuo, grupo u organización social de decidir y actuar de forma independiente, libre y responsable."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué es la 'beneficencia social'?",
+      hint:"Fue reemplazado por otro término.",
+      options:["Conjunto de servicios gubernamentales y no gubernamentales para asistir a los necesitados; término reemplazado por bienestar social","Derecho constitucional de todos los ciudadanos a recibir ayuda del Estado","Organización privada sin fines de lucro que gestiona proyectos comunitarios","Política pública de redistribución de la riqueza nacional"],
+      correct:0,
+      explanation:"La beneficencia social es el conjunto de servicios gubernamentales y no gubernamentales para asistir a los necesitados. Este término fue reemplazado por bienestar social y seguridad social."
+    },
+    {
+      type:"Concepto",
+      q:"El 'bienestar social' implica:",
+      hint:"Piensa en necesidades humanas y calidad de vida.",
+      options:["Un sistema organizado de políticas, leyes y servicios para promover niveles satisfactorios de vida y el desarrollo de las potencialidades de los ciudadanos","La acumulación de riqueza material a nivel nacional","La ausencia total de conflictos dentro de una comunidad","Un programa de asistencia económica para sectores vulnerables"],
+      correct:0,
+      explanation:"El bienestar social es el grado en que una sociedad satisface las necesidades humanas fundamentales, implicando un sistema organizado de políticas, leyes y servicios para promover niveles satisfactorios de vida."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué es el 'asistencialismo' según el diccionario?",
+      hint:"Tiene una connotación crítica.",
+      options:["Actividad social implementada históricamente por clases dominantes para mitigar la miseria y perpetuar el sistema, dando alivio para frenar el conflicto social","Un modelo progresista de intervención social basado en la igualdad","El conjunto de técnicas profesionales para acompañar a comunidades vulnerables","La obligación del Estado de garantizar todos los derechos sociales"],
+      correct:0,
+      explanation:"El asistencialismo es una de las actividades sociales implementadas por clases dominantes para mitigar la miseria y perpetuar el sistema, frenando el conflicto social."
+    },
+    {
+      type:"Definición",
+      q:"La 'asertividad' en el contexto profesional del trabajo social es:",
+      hint:"Tiene que ver con el código deontológico.",
+      options:["Capacidad de decir lo que hay que decir en el momento oportuno y de la forma más adecuada, manteniendo el propio código deontológico","Habilidad para convencer a los usuarios de seguir las indicaciones del profesional","Actitud de evitar confrontaciones para mantener la paz en el equipo","Capacidad de adaptarse completamente a las necesidades del usuario"],
+      correct:0,
+      explanation:"La asertividad es la capacidad de decir lo que hay que decir en el momento oportuno y de la forma más adecuada para no dejarse influir y mantener siempre su propio código deontológico."
+    },
+    {
+      type:"Concepto",
+      q:"El término 'asistente social' fue reemplazado en Colombia por trabajador social porque:",
+      hint:"Tiene que ver con profesionalización.",
+      options:["El nuevo término fue cobrando fuerza en la medida en que la profesión se fue profesionalizando desde los años sesenta","El término era considerado peyorativo para los usuarios de los servicios","Una ley internacional obligó a todos los países a adoptar el nuevo nombre","El nombre anterior se asociaba exclusivamente con trabajo voluntario"],
+      correct:0,
+      explanation:"El término asistente social fue reemplazado por trabajador social en Colombia después de los sesenta, cobrando fuerza en la medida en que la profesión se fue profesionalizando."
+    },
+    {
+      type:"Concepto",
+      q:"La 'autodeterminación del usuario' es un principio del trabajo social que alude a:",
+      hint:"Es un derecho del usuario.",
+      options:["El derecho del usuario a ser él mismo, tomar sus propias decisiones y usar sus habilidades para resolver sus problemas","La obligación del profesional de seguir las instrucciones del usuario sin cuestionarlas","La capacidad del Estado para determinar las necesidades de los ciudadanos","La autonomía del trabajador social para elegir los métodos de intervención"],
+      correct:0,
+      explanation:"La autodeterminación del usuario es el principio que alude al derecho del usuario a ser él mismo, tomar sus propias decisiones, usar sus habilidades y recursos para resolver sus problemas."
+    },
+    {
+      type:"Definición",
+      q:"La 'auditoría social' es un proceso que:",
+      hint:"Evalúa eficiencia social y ética.",
+      options:["Busca evaluar y garantizar que el desempeño de un proyecto se ajuste a políticas existentes, permitiendo mejorar resultados sociales y rendir cuentas","Fiscaliza el uso de fondos públicos en programas de bienestar","Supervisa la conducta ética de los trabajadores sociales en ejercicio","Mide el impacto económico de las políticas de asistencia pública"],
+      correct:0,
+      explanation:"La auditoría social busca evaluar y garantizar que el desempeño de un proyecto se ajuste a políticas y normas, permitiendo a una organización evaluar su eficiencia social y comportamiento ético."
+    },
+    {
+      type:"Concepto",
+      q:"La 'actitud no enjuiciadora' del trabajador social implica:",
+      hint:"Tiene que ver con empatía y clasismo.",
+      options:["Abstenerse de hacer juicios valorativos de carácter clasista, sexista, étnico o cultural para permitir empatía con el usuario","Aceptar sin cuestionamiento cualquier conducta del usuario por respeto a su autonomía","Evitar tomar decisiones sobre los casos para no interferir con el libre albedrío","Nunca expresar ningún tipo de emoción frente a los problemas del usuario"],
+      correct:0,
+      explanation:"La actitud no enjuiciadora implica que el profesional se abstenga de hacer juicios de carácter clasista, sexista, étnico o cultural, para permitir una relación de empatía con el usuario."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué son las 'acciones de masa'?",
+      hint:"Implica grandes grupos organizados.",
+      options:["Expresión de lucha en la que intervienen organizadamente grandes grupos de personas con un fin bien definido (marchas, huelgas, etc.)","Campañas de comunicación masiva para sensibilizar sobre temas sociales","Programas gubernamentales dirigidos a poblaciones vulnerables","Técnicas de investigación social aplicadas a grandes grupos"],
+      correct:0,
+      explanation:"Las acciones de masa son expresiones de lucha en que intervienen organizadamente grandes grupos con un fin bien definido: marchas, manifestaciones, combates, tomas de tierras, huelgas, asambleas populares."
+    },
+    {
+      type:"Concepto",
+      q:"Según el texto, la 'adaptación' puede entenderse como:",
+      hint:"Puede ser estado o proceso.",
+      options:["Estado o proceso de integración de un individuo, grupo o comunidad a un medio determinado, ya sea físico o sociocultural","La resistencia activa de una comunidad frente a cambios impuestos externamente","La modificación del entorno para ajustarlo a las necesidades del individuo","El proceso de aprendizaje formal dentro de una institución educativa"],
+      correct:0,
+      explanation:"La adaptación es el estado o proceso de integración de un individuo, grupo o comunidad a un medio determinado, como resultado de un contacto directo con el mismo ambiente físico o sociocultural."
+    },
+    {
+      type:"Concepto",
+      q:"El 'biopsicosocial' es un modelo que postula que:",
+      hint:"Va más allá de lo puramente biológico.",
+      options:["Los factores biológicos, psicológicos y sociales desempeñan un papel significativo en la actividad humana en el contexto de enfermedad o discapacidad","La salud depende exclusivamente de factores genéticos y biológicos","Los problemas sociales tienen origen principalmente en factores psicológicos individuales","La salud mental es independiente de las condiciones socioeconómicas"],
+      correct:0,
+      explanation:"El modelo biopsicosocial postula que el factor biológico, psicológico (pensamientos, emociones y conductas) y los factores sociales desempeñan un papel significativo en la actividad humana."
+    },
+    {
+      type:"Definición",
+      q:"La 'agencia de servicio social' se define como:",
+      hint:"Puede ser pública o privada.",
+      options:["Oficina pública o privada donde personas de servicio social ofrecen ayuda a personas, grupos, organizaciones y comunidades con el fin de orientar una gestión","Un tribunal especializado en conflictos relacionados con bienestar social","Una empresa consultora que vende servicios de diagnóstico comunitario","Un programa universitario de formación en trabajo social"],
+      correct:0,
+      explanation:"Una agencia de servicio social es una oficina pública o privada donde personas de servicio social ofrecen o ayudan a personas, grupos u organizaciones y comunidades para orientar una gestión."
+    }
+  ],
+
+  marion: [
+    {
+      type:"Definición",
+      q:"¿Qué es el 'cambio social' según el diccionario?",
+      hint:"Involucra estructuras y funcionamiento de la sociedad.",
+      options:["Variaciones producidas dentro de un periodo que afectan las estructuras y funcionamiento de una sociedad de manera estable y permanente","Un proceso individual de transformación de actitudes y comportamientos","La renovación periódica de los gobiernos mediante elecciones democráticas","Modificaciones temporales en las costumbres de un grupo específico"],
+      correct:0,
+      explanation:"El cambio social designa las variaciones producidas dentro de un cierto periodo, que afectan las estructuras y funcionamiento de una sociedad de manera no efímera sino estable o permanente."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué es la 'calidad de vida' según el texto?",
+      hint:"Surgió en los años setenta.",
+      options:["Expresión que se aproxima a un modelo de sociedad donde se da prioridad a la satisfacción de necesidades humanas; sinónimo de bienestar esencialmente cualitativo","El nivel de ingresos económicos que permite a una persona vivir cómodamente","El acceso a servicios de salud y educación garantizado por el Estado","La ausencia de conflictos en el entorno familiar y comunitario"],
+      correct:0,
+      explanation:"La calidad de vida surgió en los años setenta y se aproxima a un modelo de sociedad donde se da prioridad a la satisfacción de necesidades humanas antes que a las exigencias económicas."
+    },
+    {
+      type:"Concepto",
+      q:"El 'campo de intervención' en trabajo social es:",
+      hint:"Depende de la coyuntura sociopolítica.",
+      options:["El espacio específico o delimitado de una realidad donde el trabajador social realiza acciones profesionales, dependiente de la situación histórica y coyuntura sociopolítica","El conjunto de técnicas disponibles para un profesional del trabajo social","El territorio geográfico asignado a una institución de servicios sociales","El periodo de tiempo durante el cual se desarrolla un proyecto social"],
+      correct:0,
+      explanation:"El campo de intervención es el espacio específico o delimitado de una realidad donde el trabajador social realiza acciones profesionales, cuyas características dependen de la sustitución histórica y la coyuntura sociopolítica."
+    },
+    {
+      type:"Definición",
+      q:"La 'clase social' en la sociedad capitalista se caracteriza por:",
+      hint:"Incluye actitudes, ingresos y posición social.",
+      options:["Estratos con homogeneidad ideológica y cultural y un estatus económico determinado, basados en relaciones de actitudes, ingresos, tipo de trabajo y posición social","El nivel educativo formal alcanzado por los miembros de una comunidad","La participación de las personas en actividades políticas y electorales","La pertenencia a grupos religiosos o étnicos específicos"],
+      correct:0,
+      explanation:"La clase social es cada estrato en que se divide la sociedad capitalista, con homogeneidad ideológica y cultural y un status económico determinado, basado en actitudes, ingresos, tipo de trabajo y posición social."
+    },
+    {
+      type:"Concepto",
+      q:"La 'cohesión social' se describe como:",
+      hint:"Involucra pertenencia y objetivos comunes.",
+      options:["La unión de personas en un grupo, caracterizada por motivaciones de pertenencia, participación en fines comunes y aceptación de iguales objetivos","El proceso por el cual el Estado impone normas de convivencia a la población","La solidaridad económica entre naciones en tiempos de crisis","El acuerdo entre partidos políticos para gobernar conjuntamente"],
+      correct:0,
+      explanation:"La cohesión social es la unión de personas en un grupo, caracterizada por grandes motivaciones en la pertenencia, la participación en fines comunes, la aceptación de iguales objetivos y la identificación con el grupo."
+    },
+    {
+      type:"Definición",
+      q:"¿Cómo define el texto la 'comunidad'?",
+      hint:"Incluye lazos de solidaridad y pertenencia.",
+      options:["Organización social resultante de un proceso donde individuos o grupos comparten actividades y objetivos comunes, con fuertes lazos de solidaridad y garantía de pertenencia a escala local","Un área geográfica delimitada donde vive un conjunto de personas","Un grupo de profesionales que trabajan en la misma institución","Una nación o Estado con características culturales compartidas"],
+      correct:0,
+      explanation:"La comunidad es la organización social resultante de un proceso donde individuos o grupos comparten actividades y objetivos comunes, con fuertes lazos de solidaridad y cierta garantía de pertenencia a escala local."
+    },
+    {
+      type:"Definición",
+      q:"El 'conflicto social' según el diccionario:",
+      hint:"Trasciende lo individual.",
+      options:["Trasciende lo individual y procede de la propia estructura de la sociedad; oposición donde el objetivo es el daño que puede causarse a los individuos o grupos opuestos, sus propiedades o valores","Es un desacuerdo interpersonal que surge de diferencias de personalidad","Una disputa legal entre dos partes con intereses opuestos","Un problema de comunicación entre grupos que puede resolverse con mediación"],
+      correct:0,
+      explanation:"El conflicto social trasciende lo individual y procede de la propia estructura de la sociedad. Es la lucha por valores y status, el poder y los recursos en que los oponentes desean neutralizar o dañar a su rival."
+    },
+    {
+      type:"Concepto",
+      q:"El 'control social' se ejerce mediante:",
+      hint:"Tiene formas coactivas y persuasivas.",
+      options:["Mecanismos como el control coactivo (fuerza, castigos) y el persuasivo (elogio, recompensa) por los cuales la sociedad condiciona comportamientos, normas y valores","Únicamente leyes y tribunales que sancionan conductas ilegales","Solo la educación formal impartida en instituciones escolares","La presencia permanente de fuerzas policiales en espacios públicos"],
+      correct:0,
+      explanation:"El control social incluye mecanismos coactivos (fuerza, castigos, sanciones) y persuasivos (elogio, recompensa, sugestión). Condiciona comportamientos, normas, reglas de conducta, valores e ideas."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué es el 'desarrollo comunitario' según el texto?",
+      hint:"Suma los esfuerzos de la población y su gobierno.",
+      options:["Proceso en que los esfuerzos de una población se suman a los de su gobierno para mejorar condiciones económicas, sociales y culturales, despertando ciudadanos responsables de su propio progreso","La construcción de infraestructura física en zonas rurales mediante fondos estatales","Un programa de capacitación laboral para reducir el desempleo en zonas marginadas","La planificación urbana diseñada por expertos para comunidades vulnerables"],
+      correct:0,
+      explanation:"El desarrollo comunitario es el proceso en cuya virtud los esfuerzos de una población se suman a los de su gobierno para mejorar condiciones económicas, sociales y culturales de las comunidades."
+    },
+    {
+      type:"Definición",
+      q:"Los 'derechos humanos' según el diccionario son:",
+      hint:"Son inherentes e inalienables.",
+      options:["Conjunto de derechos fundamentales que cada persona posee por el solo hecho de pertenecer a la especie humana; le son inherentes e inalienables y deben ser consagrados y garantizados","Privilegios otorgados por el Estado a quienes cumplen con sus obligaciones ciudadanas","Acuerdos internacionales firmados voluntariamente por los gobiernos","Normas establecidas por cada cultura para regular la convivencia social"],
+      correct:0,
+      explanation:"Los derechos humanos son el conjunto de derechos fundamentales que cada persona posee por el solo hecho de pertenecer a la especie humana, inherentes e inalienables, que deben ser consagrados y garantizados."
+    },
+    {
+      type:"Concepto",
+      q:"El 'diagnóstico social' es:",
+      hint:"Es la primera fase de la planificación social.",
+      options:["La primera fase de la planificación social donde se investiga para conocer los factores que inciden en la problemática, describir la realidad y detectar problemas","El tratamiento médico aplicado a personas con problemas de salud mental","La evaluación final de un proyecto social para medir su impacto","El proceso de selección de usuarios que recibirán servicios sociales"],
+      correct:0,
+      explanation:"El diagnóstico social es la primera fase de la planificación social, donde se realiza la investigación de base que permite conocer los factores que inciden en la problemática social, describir la realidad y detectar problemas."
+    },
+    {
+      type:"Definición",
+      q:"La 'democracia participativa' exige:",
+      hint:"Va desde lo micro hasta lo macro.",
+      options:["La intervención de personas y asociaciones en los poderes sociales para ejercer cotidianamente mayor control de procesos y decisiones, desde lo micro hasta lo nacional","Solo la participación en elecciones periódicas para elegir representantes","La gestión exclusiva de los asuntos públicos por parte de expertos técnicos","La consulta no vinculante a la ciudadanía sobre decisiones ya tomadas"],
+      correct:0,
+      explanation:"La democracia participativa exige la intervención de personas y asociaciones en poderes sociales, tanto públicos como privados, para ejercer cotidianamente mayor control de procesos y decisiones desde lo micro hasta lo nacional."
+    },
+    {
+      type:"Concepto",
+      q:"La 'discriminación' implica:",
+      hint:"Es injusto, inmotivado y arbitrario.",
+      options:["Un trato injusto, inmotivado y arbitrario de inferioridad hacia una persona o colectivo por motivos raciales, políticos, religiosos, étnicos, etc.","La selección de candidatos más competentes para un cargo público","El reconocimiento de diferencias culturales entre grupos sociales distintos","La aplicación diferenciada de normas según la situación económica"],
+      correct:0,
+      explanation:"La discriminación es dar trato de inferioridad a una persona o colectividad por motivos raciales, políticos, religiosos, etc. Implica un trato injusto, inmotivado y arbitrario en la imposición de cargas o beneficios."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué es la 'desigualdad' en términos sociales?",
+      hint:"Es un supuesto de la estructura social vertical.",
+      options:["Resultado de la diferencia en valoración, reconocimientos, privilegios, derechos, deberes e ingresos de las personas en la sociedad; supuesto de la estructura social vertical","La falta de acceso a tecnología en sectores rurales de un país en desarrollo","La diferencia en las capacidades físicas o intelectuales entre individuos","La distribución desigual del territorio entre distintos países"],
+      correct:0,
+      explanation:"La desigualdad es el resultado de la diferencia en valoración, reconocimientos, privilegios, en situaciones de derechos y deberes, ingresos o bienes de las personas en la sociedad."
+    },
+    {
+      type:"Definición",
+      q:"El 'diagnóstico participativo' se lleva a cabo:",
+      hint:"Incluye a todos activamente.",
+      options:["Con la presencia activa de todos, dando valor y oportunidad a cada uno para opinar y comprometerse asumiendo el trabajo como propio, aceptando riesgos y éxitos","Solo por expertos externos que recogen datos de la comunidad","Por el trabajador social sin involucrar directamente a los usuarios","Mediante encuestas anónimas para garantizar objetividad en los resultados"],
+      correct:0,
+      explanation:"El diagnóstico participativo es aquel que se lleva a cabo con la presencia activa de todos, con las cualidades y particularidades de cada uno, dándole valor y oportunidad al otro para opinar y comprometerse."
+    },
+    {
+      type:"Concepto",
+      q:"La 'depauperización' es un fenómeno que:",
+      hint:"Relacionado con pobreza permanente.",
+      options:["Se presenta cuando circunstancias socioeconómicas hacen que determinados sectores de la población permanezcan en situación de pobreza; es la disminución del ingreso y no satisfacción de necesidades básicas","Ocurre cuando el gobierno retira todos los subsidios a la población","Se da cuando grupos inmigrantes no logran integrarse al mercado laboral","Resulta de catástrofes naturales que destruyen la infraestructura productiva"],
+      correct:0,
+      explanation:"La depauperización es el fenómeno que se presenta cuando circunstancias socioeconómicas hacen que sectores de la población permanezcan en pobreza; es la disminución total del ingreso y la no satisfacción básica de necesidades."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué es un 'desplazado' según el texto?",
+      hint:"Abandona su hogar por amenaza a su seguridad.",
+      options:["Toda persona o grupo forzada a escapar de su hogar o lugar de residencia habitual porque su vida, seguridad o libertad han sido vulneradas o se encuentran amenazadas","Una persona que decide mudarse voluntariamente por razones laborales","Un estudiante que estudia en una ciudad distinta a la de su origen","Un trabajador temporal que cambia de ciudad según las demandas del mercado"],
+      correct:0,
+      explanation:"El desplazado es toda persona o grupo que se ha visto forzada a escapar de su hogar o lugar de residencia habitual, abandonando su espacio y actividades porque su vida, seguridad o libertad han sido vulneradas o amenazadas."
+    },
+    {
+      type:"Concepto",
+      q:"El 'capitalismo' según el diccionario es:",
+      hint:"Incluye propiedad privada de medios de producción.",
+      options:["Sistema económico-social basado en la propiedad privada de los medios de producción, la importancia del capital como generador de riqueza y la asignación de recursos a través del mercado","Un sistema donde los bienes son propiedad colectiva de todos los ciudadanos","Un modelo económico donde el Estado controla toda la producción y distribución","Una forma de organización política basada en la igualdad de todos los ciudadanos"],
+      correct:0,
+      explanation:"El capitalismo es el sistema económico y social basado en la propiedad privada de los medios de producción, la importancia del capital como generador de riqueza y la asignación de recursos a través del mecanismo del mercado."
+    },
+    {
+      type:"Definición",
+      q:"La 'causalidad' en la actividad profesional hace referencia a:",
+      hint:"Relaciona causa y resultado.",
+      options:["La relación lógica que se da entre causa y resultado, entre antecedente y consecuencia en el quehacer profesional","La capacidad del trabajador social de predecir resultados futuros","El principio de que todos los problemas sociales tienen solución conocida","La obligación legal del profesional de reportar ciertos hechos a las autoridades"],
+      correct:0,
+      explanation:"La causalidad en la actividad profesional hace referencia a la relación lógica que se da entre causa y resultado, entre antecedente y consecuencia."
+    },
+    {
+      type:"Concepto",
+      q:"El 'desarrollo humano' se define como:",
+      hint:"Es multidimensional.",
+      options:["Proceso multidimensional que incluye el mejoramiento de dimensiones psicológicas, sociales, culturales y familiares, donde el ser biológico se constituye en el ser social y cultural según su sentido histórico","El crecimiento económico que permite a una nación mejorar sus indicadores de productividad","La adquisición de habilidades técnicas que aumentan la empleabilidad de los trabajadores","El acceso universal a servicios de salud, educación y vivienda garantizados por el Estado"],
+      correct:0,
+      explanation:"El desarrollo humano es el proceso multidimensional que incluye el mejoramiento de dimensiones psicológicas, sociales, culturales y familiares, donde el ser biológico se constituye en el ser social y cultural de acuerdo a su sentido y tiempo histórico."
+    }
+  ],
+
+  catalina: [
+    {
+      type:"Definición",
+      q:"¿Qué es la 'entrevista' como técnica en trabajo social?",
+      hint:"Implica comunicación entre dos o más personas.",
+      options:["Técnica que exige la comunicación entre dos o más personas que comparten un problema, desarrollada como una conversación donde el entrevistador hace preguntas y los entrevistados las responden","Un documento escrito que recoge información sobre la historia personal de un usuario","Una reunión formal entre profesionales para discutir casos institucionales","Una observación sistemática del comportamiento del usuario en su entorno natural"],
+      correct:0,
+      explanation:"La entrevista es una técnica que exige la comunicación entre dos o más personas que comparten un problema, se desarrolla como una conversación donde el entrevistador hace preguntas y los entrevistados las responden."
+    },
+    {
+      type:"Definición",
+      q:"La 'exclusión social' es:",
+      hint:"Afecta posibilidades laborales, económicas, políticas y culturales.",
+      options:["Proceso social de separación de un individuo o grupo respecto a las posibilidades laborales, económicas, políticas y culturales a las que otros tienen acceso y disfrutan","La expulsión formal de un miembro de una organización por incumplir sus normas","La falta de documentos de identidad que impide acceder a servicios estatales","El aislamiento voluntario de ciertos grupos que rechazan la sociedad dominante"],
+      correct:0,
+      explanation:"La exclusión social es el proceso social de separación de un individuo o grupo respecto a las posibilidades laborales, económicas, políticas y culturales a las que otros tienen acceso y disfrutan."
+    },
+    {
+      type:"Concepto",
+      q:"La 'evaluación' en trabajo social es:",
+      hint:"Es una forma de investigación social aplicada.",
+      options:["Operación sistemática, flexible y funcional llevada a cabo en todo proceso de intervención profesional; forma de investigación social para identificar datos que apoyen un juicio sobre el mérito de un trabajo","El proceso de calificación del desempeño académico de los estudiantes de trabajo social","La revisión periódica del presupuesto asignado a programas sociales","La medición del nivel de satisfacción de los usuarios con los servicios recibidos"],
+      correct:0,
+      explanation:"La evaluación es la operación sistemática, flexible y funcional que se lleva a cabo en todo proceso de intervención profesional; es una forma de investigación social aplicada para identificar datos que apoyen un juicio sobre el mérito del trabajo."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué es la 'ética profesional' según el diccionario?",
+      hint:"Guía la relación entre el profesional y los demás.",
+      options:["Parte de la conducta profesional que implica directrices que guían la relación entre el profesional y los demás para distinguir la acción correcta de la equivocada","El conjunto de normas legales que regulan el ejercicio de una profesión","La formación académica requerida para obtener un título universitario","El reglamento interno de las instituciones de bienestar social"],
+      correct:0,
+      explanation:"La ética profesional es parte de la conducta profesional que se aplica en la práctica e implica las directrices que guían la relación entre el profesional y los demás, diseñadas para distinguir la acción correcta de la equivocada."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué es la 'etnicidad'?",
+      hint:"Incluye lengua, historia, religión y formas de vestir.",
+      options:["Prácticas culturales y perspectivas que distinguen a una comunidad de personas; sus miembros se ven a sí mismos como culturalmente diferentes, distinguidos por lengua, historia, religión y vestimenta","La clasificación de las personas según sus características biológicas y genéticas","La identidad nacional de un grupo de personas que comparten un territorio","El conjunto de tradiciones religiosas de una comunidad específica"],
+      correct:0,
+      explanation:"La etnicidad hace referencia a las prácticas culturales y perspectivas que distinguen a una determinada comunidad de personas, cuyos miembros se ven a sí mismos como culturalmente diferentes de otros grupos sociales."
+    },
+    {
+      type:"Concepto",
+      q:"El 'etnocentrismo' es la actitud de:",
+      hint:"Sirve como referencia para juzgar a los demás.",
+      options:["Considerar el propio pueblo, cultura, sociedad o grupo como el centro de todo, usando la propia cultura como referencia para juzgar a todos los demás","Promover la diversidad cultural y el respeto por todas las culturas del mundo","Estudiar objetivamente las diferencias entre distintas culturas y sociedades","Adoptar elementos de culturas extranjeras abandonando la propia identidad cultural"],
+      correct:0,
+      explanation:"El etnocentrismo es la actitud o tendencia a considerar su pueblo, su cultura, su sociedad o su propio grupo como el centro de todo, usando la propia cultura como referencia para juzgar a todos los demás."
+    },
+    {
+      type:"Definición",
+      q:"La 'estructura social' es:",
+      hint:"Son relaciones de interdependencia relativamente estables.",
+      options:["Trama de relaciones de interdependencia relativamente estables que existen en posiciones sociales, instituciones, grupos, clases u otros componentes de la realidad social","El conjunto de instituciones formales que componen el gobierno de un Estado","La organización jerárquica de los trabajadores dentro de una empresa","Los valores y normas que regulan el comportamiento de una comunidad"],
+      correct:0,
+      explanation:"La estructura social es la trama de relaciones de interdependencia relativamente estables que existen en un conjunto determinado de posiciones sociales, instituciones, grupos, clases u otros componentes de la realidad social."
+    },
+    {
+      type:"Concepto",
+      q:"El 'estudio de caso' como método implica:",
+      hint:"Permite ordenar información sobre una persona.",
+      options:["Esquema comprensivo donde están reunidos y ordenados todos los datos relevantes pertenecientes a una vida concreta, para realizar un diagnóstico que posibilite plantear un proceso de cambio","La observación sistemática de un grupo durante un período prolongado de tiempo","La aplicación de cuestionarios estadísticos a una muestra representativa de la población","El análisis comparativo de múltiples situaciones similares para extraer conclusiones generales"],
+      correct:0,
+      explanation:"El estudio de caso es el esquema comprensivo donde están reunidos y ordenados todos los datos relevantes pertenecientes a una vida concreta, para realizar un diagnóstico que posibilite plantear un proceso de cambio."
+    },
+    {
+      type:"Definición",
+      q:"La 'familia nuclear' se define como:",
+      hint:"También se llama familia elemental.",
+      options:["Llamada también familia elemental, constituida por el hombre, la mujer y los hijos unidos por lazos de consanguinidad que conviven bajo el mismo techo","Cualquier grupo de personas que viven juntas y comparten recursos económicos","La red de parientes que incluye abuelos, tíos, primos y otros familiares","Una pareja sin hijos que comparte vivienda y proyecto de vida"],
+      correct:0,
+      explanation:"La familia nuclear, llamada también familia elemental, está constituida por el hombre, la mujer y los hijos unidos por los lazos de consanguinidad que conviven bajo el mismo techo."
+    },
+    {
+      type:"Concepto",
+      q:"La 'filantropía' actualmente designa:",
+      hint:"Se basa en la fraternidad humana.",
+      options:["El espíritu de buena voluntad y dedicación activa dirigida a promover la felicidad y el bienestar de los semejantes, basado en la idea y sentimiento de fraternidad humana","La donación de fondos económicos a proyectos de investigación científica","La inversión de empresas privadas en proyectos de responsabilidad social","La ayuda económica que los gobiernos brindan a países menos desarrollados"],
+      correct:0,
+      explanation:"Actualmente la filantropía designa el espíritu de buena voluntad y dedicación activa, dirigida a promover la felicidad y el bienestar de los semejantes, basado en la idea y el sentimiento de fraternidad humana."
+    },
+    {
+      type:"Definición",
+      q:"La 'identidad cultural' es:",
+      hint:"Incluye valores, tradiciones, símbolos y creencias.",
+      options:["Conjunto de valores, orgullo, tradiciones, símbolos, creencias y modos de comportamiento que funcionan como elementos dentro de un grupo social, permitiendo a los individuos fundamentar su sentimiento de pertenencia","El documento oficial que certifica la ciudadanía de una persona","El idioma oficial que comparte un grupo de personas dentro de un territorio","El conjunto de leyes que regulan la vida en sociedad"],
+      correct:0,
+      explanation:"La identidad cultural es el conjunto de valores, orgullo, tradiciones, símbolos, creencias y modos de comportamiento que funcionan como elementos dentro de un grupo social, permitiendo fundamentar el sentimiento de pertenencia."
+    },
+    {
+      type:"Concepto",
+      q:"El 'impacto social' va más allá de la eficacia porque:",
+      hint:"Se puede ver como un cambio en el resultado de un proceso.",
+      options:["Estudia el alcance de los efectos previstos, los deseados y los mencionados sobre la población beneficiaria, pudiendo verse como un cambio en el resultado o en las prácticas de un proceso","Solo mide si los recursos económicos fueron usados eficientemente","Únicamente evalúa la satisfacción de los usuarios con los servicios recibidos","Se limita a contar el número de personas atendidas por un programa"],
+      correct:0,
+      explanation:"El impacto social va más allá de la eficacia: estudia el alcance de efectos previstos y deseados sobre la población beneficiaria. Puede verse como un cambio en el resultado de un proceso o en la forma como se realizan las prácticas."
+    },
+    {
+      type:"Definición",
+      q:"La 'inclusión social' significa:",
+      hint:"Incluye independientemente del origen o condición.",
+      options:["Integrar a la vida comunitaria a todos los miembros de la sociedad, independientemente de su origen, actividad, condición socioeconómica o pensamiento, para evitar la exclusión y la espiral de violencia","Dar prioridad en el acceso a servicios a los grupos más vulnerables de la sociedad","Garantizar que todos los ciudadanos tengan el mismo nivel de ingresos económicos","Permitir el acceso a educación básica para toda la población en edad escolar"],
+      correct:0,
+      explanation:"La inclusión social significa integrar a la vida comunitaria a todos los miembros de la sociedad, independientemente de su origen, actividad, condición socioeconómica o pensamiento, para evitar que grandes sectores queden por fuera."
+    },
+    {
+      type:"Concepto",
+      q:"La 'intervención social' es:",
+      hint:"Implica educar y generar procesos organizativos.",
+      options:["Proceso sistemático y coherente frente a problemáticas sociales no resueltas, que se desarrolla a través de acciones educativas y organizativas orientadas a modificar y transformar las maneras de ver, actuar y sentir de los individuos","La imposición de normas legales a personas que cometen infracciones sociales","La prestación de servicios económicos a personas en situación de pobreza","La supervisión externa de proyectos sociales por parte de organismos internacionales"],
+      correct:0,
+      explanation:"La intervención social es el proceso sistemático y coherente frente a problemáticas sociales no resueltas, que se desarrolla mediante acciones con carácter educativo y organizativo, orientadas a la modificación y transformación de las maneras de ver, actuar y sentir."
+    },
+    {
+      type:"Definición",
+      q:"La 'investigación acción participativa' (IAP) combina:",
+      hint:"IAP: conocer y actuar.",
+      options:["Dos procesos, el de conocer y el de actuar, implicando en ambos a la población cuya realidad se aborda, para analizar mejor la realidad, sus problemas, necesidades y capacidades y planificar acciones transformadoras","La investigación académica con la enseñanza universitaria en programas de trabajo social","El diagnóstico institucional con la planificación estratégica de programas públicos","La recopilación estadística de datos con el análisis experto de tendencias sociales"],
+      correct:0,
+      explanation:"La IAP combina dos procesos: el de conocer y el de actuar, implicando en ambos a la población cuya realidad se aborda. Proporciona un método para analizar y comprender mejor la realidad y planificar acciones para transformarla."
+    },
+    {
+      type:"Concepto",
+      q:"El 'hecho social' según el texto:",
+      hint:"Se transmite de generación en generación.",
+      options:["Todo comportamiento o idea presente en un grupo social que es transmitido de generación en generación por la sociedad, recreado por sus miembros, que la mayoría comparte y todos conocen","Un acontecimiento noticioso que afecta a una comunidad en un momento determinado","Un dato estadístico que describe las condiciones de vida de una población","Una observación científica que puede ser verificada por cualquier investigador"],
+      correct:0,
+      explanation:"El hecho social es todo comportamiento o idea presente en un grupo social que es transmitido de generación en generación a cada individuo por la sociedad, recreado por sus miembros, de manera que la mayoría la comparte y todos la conocen."
+    },
+    {
+      type:"Definición",
+      q:"La 'igualdad' como valor social se refiere a:",
+      hint:"Puede ser radical o moderada en su exigencia.",
+      options:["Ideal o valor humanitario que puede exigirse de forma radical (mismas condiciones de vida) o moderada (mismas oportunidades), relacionado históricamente con la lucha contra el feudalismo y los privilegios","La distribución exactamente igual de recursos materiales entre todos los ciudadanos","La uniformidad absoluta en las capacidades y talentos de las personas","La eliminación de todas las diferencias entre individuos en una sociedad"],
+      correct:0,
+      explanation:"La igualdad es el ideal o valor humanitario cuya realización puede exigirse radicalmente (mismas condiciones) o moderadamente (mismas oportunidades). Históricamente fue lucha contra el feudalismo y la supresión de privilegios sociales."
+    },
+    {
+      type:"Concepto",
+      q:"La 'ideología' es:",
+      hint:"Proporciona un sistema de representaciones mentales.",
+      options:["Conjunto de creencias, opiniones e ideas sobre el hombre, sociedad, historia y el mundo, que proporciona un sistema de representaciones mentales y significaciones desde las cuales el individuo se percibe en el mundo","Un programa político formal elaborado por un partido de gobierno","Un conjunto de normas legales que regulan el comportamiento ciudadano","Una teoría científica verificada sobre el funcionamiento de la sociedad"],
+      correct:0,
+      explanation:"La ideología es el conjunto de creencias, opiniones e ideas sobre el hombre, sociedad, historia y el mundo, que proporciona un sistema de representaciones mentales y significaciones desde las cuales cada individuo se percibe en el mundo."
+    },
+    {
+      type:"Definición",
+      q:"El 'grupo social' se distingue de un mero conjunto de personas porque:",
+      hint:"Necesita objetivo común, interacción y conciencia de pertenencia.",
+      options:["Requiere un objetivo común, interacción y comunicación regular entre sus miembros, una identificación como grupo y ser fuente de apoyo y seguridad social para sus integrantes","Solo necesita compartir un espacio físico común durante un tiempo","Se define únicamente por tener el mismo nivel de ingresos económicos","Se forma cuando personas hablan el mismo idioma y comparten costumbres"],
+      correct:0,
+      explanation:"El grupo es un conjunto de personas pero no todo conjunto es un grupo; requiere objetivo común, interacción y comunicación regular entre sus miembros, identificación como grupo y ser fuente de apoyo y seguridad social."
+    },
+    {
+      type:"Concepto",
+      q:"La 'marginalidad' en América Latina se interpreta principalmente desde tres corrientes: desarrollismo, escuela de la dominación y dependencia, y crítica a la dependencia. La visión de la escuela de dominación dice que la marginalidad es:",
+      hint:"No es falta de educación.",
+      options:["Una consecuencia del proceso de modernización y desarrollo, no una falta de educación de vastos sectores para ingresar al modernismo","La forma de estar al margen del desarrollo del país sin participar en lo económico, social y cultural","El resultado de la falta de valores y compromiso cívico de sectores específicos","Una consecuencia natural de la escasez de recursos en sociedades pobres"],
+      correct:0,
+      explanation:"La escuela de la dominación y dependencia ve la marginalidad no como falta de educación para ingresar al modernismo, sino como una consecuencia de dicho proceso de desarrollo y modernización."
+    }
+  ],
+
+  alexis: [
+    {
+      type:"Definición",
+      q:"¿Qué es una 'necesidad social' según el texto?",
+      hint:"Se refiere a las relaciones entre seres humanos.",
+      options:["La manera como los seres humanos se relacionan entre sí, a nivel familiar, con amigos y con otras personas en general","La carencia de recursos económicos que impide a una persona subsistir","El conjunto de bienes materiales que el Estado debe garantizar a sus ciudadanos","Un derecho constitucional que puede ser exigido legalmente al Estado"],
+      correct:0,
+      explanation:"La necesidad social se refiere a la manera como los seres humanos se relacionan entre sí, a nivel familiar, con amigos y con otras personas en general."
+    },
+    {
+      type:"Concepto",
+      q:"El 'objeto de intervención del trabajo social' está asociado a:",
+      hint:"Incluye políticas, programas y proyectos.",
+      options:["La participación e intervención del profesional en interacciones sociales para potenciar individuos, grupos y comunidades; asociado al espacio entre la necesidad y la satisfacción, entre la demanda y el servicio institucional","La producción de conocimiento científico sobre fenómenos sociales sin aplicación práctica","La administración eficiente de los recursos económicos destinados a asistencia social","La formación académica de los futuros trabajadores sociales en las universidades"],
+      correct:0,
+      explanation:"El objeto de intervención del trabajo social es la participación del profesional en interacciones sociales para potenciar individuos, grupos y comunidades; está asociado al espacio entre la necesidad y la satisfacción: la demanda y el servicio institucional."
+    },
+    {
+      type:"Definición",
+      q:"¿Qué son los 'principios' del trabajo social?",
+      hint:"Incluyen individualización, aceptación, confidencialidad y otros.",
+      options:["Pautas particulares por las que deben regirse los profesionales en el momento de la intervención: individualización, expresión de sentimientos, aceptación, actitud no enjuiciadora, autodeterminación del usuario y confidencialidad","Las teorías científicas que fundamentan el conocimiento del trabajo social como disciplina","Los reglamentos institucionales que regulan el trabajo de los profesionales del área","Los modelos de intervención más utilizados en la práctica del trabajo social"],
+      correct:0,
+      explanation:"Los principios son las pautas por las que deben conducirse los profesionales del trabajo social en la intervención: individualización, expresión explícita de sentimientos, implicación emocional controlada, aceptación, actitud no enjuiciadora, autodeterminación del usuario y confidencialidad."
+    },
+    {
+      type:"Concepto",
+      q:"La 'política social' nace y se configura a partir de:",
+      hint:"Surgió en Alemania e Inglaterra.",
+      options:["Las primeras medidas de protección a los trabajadores en Alemania y las primeras medidas públicas frente a la pobreza en Inglaterra","Las declaraciones internacionales de derechos humanos firmadas en el siglo XX","Las reformas constitucionales que reconocieron los derechos sociales de los ciudadanos","Los movimientos estudiantiles que exigieron mayor equidad en la distribución de la riqueza"],
+      correct:0,
+      explanation:"La política social nace y se configura a partir de las primeras medidas de protección a los trabajadores (que surgen en Alemania) y de las primeras medidas públicas de acción organizada frente al hecho de la pobreza (que se originan en Inglaterra)."
+    },
+    {
+      type:"Definición",
+      q:"El 'problema social' es:",
+      hint:"Producto de contradicciones del sistema social vigente.",
+      options:["Situación de desequilibrio, desajuste o desorganización que constituye asuntos inquietantes en el seno de una sociedad respecto a los cuales se tiene conciencia de la necesidad de encontrar solución; producto de contradicciones del sistema social","Un conflicto interpersonal que afecta temporalmente la convivencia en un grupo","Una dificultad administrativa en la gestión de programas de bienestar social","Una condición individual que requiere tratamiento psicológico especializado"],
+      correct:0,
+      explanation:"El problema social es una situación de desequilibrio, desajuste o desorganización que constituye los asuntos inquietantes en el seno de una sociedad, respecto a los cuales se tiene conciencia de la necesidad de encontrarles solución."
+    },
+    {
+      type:"Concepto",
+      q:"La 'praxis' se diferencia de la práctica porque:",
+      hint:"Tiene dimensión proyectiva y referencia teórica.",
+      options:["Tiene como referencia una teoría determinada y una dimensión proyectiva a mediano y largo plazo; responde a un fin y un proyecto respecto del futuro, mientras que la simple práctica carece de esa intencionalidad","Es una actividad exclusivamente intelectual sin aplicación en el mundo real","Se realiza solo en contextos académicos de educación formal","Es la práctica cotidiana que no requiere reflexión ni teoría de respaldo"],
+      correct:0,
+      explanation:"La praxis se diferencia de la práctica porque tiene como referencia una teoría determinada y una dimensión proyectiva a mediano y largo plazo, respondiendo a un fin y un proyecto respecto del futuro."
+    },
+    {
+      type:"Definición",
+      q:"El 'rol' en sociología es:",
+      hint:"Tiene responsabilidades, recompensas y comportamientos propios.",
+      options:["El papel o representación social que consiste en la principal función que desempeña un individuo en un momento determinado, con sus responsabilidades, recompensas y comportamientos propios","El cargo formal que una persona ocupa dentro de una organización laboral","La personalidad innata que define el comportamiento de una persona en sociedad","El conjunto de habilidades técnicas que posee un profesional en su área"],
+      correct:0,
+      explanation:"El rol es el papel o representación social que consiste en la principal función que desempeña un individuo en un momento determinado, con sus responsabilidades, recompensas y comportamientos propios."
+    },
+    {
+      type:"Concepto",
+      q:"La 'seguridad social' en sentido amplio abarca:",
+      hint:"Equivale a bienestar social.",
+      options:["La previsión social, la educación, la protección de la familia, la regulación de salarios, la reglamentación de condiciones de trabajo, pensiones y atención médica","Solo los seguros de desempleo y pensiones de vejez otorgados por el Estado","Únicamente los programas de asistencia a personas en extrema pobreza","La protección policial de los ciudadanos frente a amenazas de seguridad pública"],
+      correct:0,
+      explanation:"En sentido amplio, la seguridad social tiene un alcance similar a bienestar social y abarca la previsión social, la educación, la protección de la familia, la regulación de salarios, la reglamentación de condiciones de trabajo, pensiones y atención médica."
+    },
+    {
+      type:"Definición",
+      q:"El 'servicio social' se define como:",
+      hint:"Supera a la asistencia social.",
+      options:["Forma de acción social superadora de la asistencia social, que organiza de manera más sistemática y mediante procedimientos técnicos más elaborados la ayuda a individuos, grupos o comunidades para satisfacer sus necesidades","La prestación de servicios por parte de voluntarios sin remuneración económica","Un programa académico universitario de formación en trabajo social","Una rama del gobierno dedicada a la administración de programas de bienestar"],
+      correct:0,
+      explanation:"El servicio social es la forma de acción social superadora de la asistencia social, que organiza de manera más sistemática y mediante procedimientos técnicos más elaborados la ayuda a individuos, grupos o comunidades para satisfacer sus necesidades."
+    },
+    {
+      type:"Concepto",
+      q:"La 'solidaridad' según el diccionario es:",
+      hint:"Lo colectivo prima sobre lo individual.",
+      options:["Trabajo coordinado de los miembros de una comunidad en beneficio de organizaciones y acciones, estableciendo prioridades de lo colectivo sobre lo individual; obligación moral de asistencia mutua entre personas con conciencia de comunidad","La distribución equitativa de los recursos económicos entre todos los ciudadanos","La competencia sana entre grupos para mejorar sus condiciones de vida","El apoyo emocional que un individuo recibe de su familia en momentos difíciles"],
+      correct:0,
+      explanation:"La solidaridad es el trabajo coordinado y unificado de los miembros de una comunidad en beneficio de las organizaciones, estableciendo prioridades de lo colectivo sobre lo individual; es la obligación moral de asistencia mutua."
+    },
+    {
+      type:"Definición",
+      q:"La 'sociedad' en su sentido más general designa:",
+      hint:"Uno de los términos más importantes y ambiguos de la sociología.",
+      options:["El conjunto de seres vivientes entre los cuales existen relaciones organizadas; puede hacer referencia a la humanidad, a formaciones sociales, a naciones o a grupos que cooperan para alcanzar fines limitados","Solo a los seres humanos que comparten el mismo territorio político","Un conjunto de individuos que hablan el mismo idioma y comparten tradiciones","El Estado y sus instituciones formales de gobierno y administración pública"],
+      correct:0,
+      explanation:"La sociedad en su sentido más general designa el conjunto de seres vivientes entre los cuales existen relaciones organizadas; puede hacer referencia a la humanidad total, a formaciones sociales, a naciones o a agrupaciones que buscan alcanzar fines comunes."
+    },
+    {
+      type:"Concepto",
+      q:"El 'trabajo social' en América Latina tiene como función:",
+      hint:"Diferente al social-work norteamericano.",
+      options:["Concientización, organización y movilización del pueblo para generar un proceso de promoción del autodesarrollo interdependiente que contribuya a la transformación social, dentro del ámbito de acción propio de la profesión","La gestión administrativa de programas de asistencia financiados por el Estado","La aplicación de técnicas psicoterapéuticas para resolver problemas individuales","La capacitación técnica de trabajadores desempleados en áreas productivas"],
+      correct:0,
+      explanation:"El trabajo social latinoamericano tiene una función de concientización, organización y movilización del pueblo para generar un proceso de promoción del autodesarrollo interdependiente que contribuya a la transformación social."
+    },
+    {
+      type:"Definición",
+      q:"Los 'valores' en trabajo social son:",
+      hint:"Sostienen las normas y subyacen a estas.",
+      options:["Comportamientos, normas y conceptos que se reconocen válidos y son aceptados culturalmente para la convivencia de una colectividad; sostienen las normas y subyacen a estas","Las preferencias personales de cada trabajador social respecto a cómo ejercer su profesión","Los criterios económicos que determinan la asignación de recursos institucionales","Los objetivos específicos de cada programa de intervención social"],
+      correct:0,
+      explanation:"Los valores son los comportamientos, normas y conceptos que se reconocen válidos y son aceptados culturalmente para la convivencia de una colectividad. Estos sostienen las normas y subyacen a estas."
+    },
+    {
+      type:"Concepto",
+      q:"La 'vulnerabilidad' es la incapacidad de una comunidad para:",
+      hint:"Se relaciona con autoajuste y riesgo.",
+      options:["Absorber, mediante el autoajuste, los efectos de un determinado cambio en su medio ambiente, o sea su inflexibilidad o incapacidad para adaptarse a ese cambio, que para la comunidad constituye un riesgo","Protegerse de catástrofes naturales como terremotos e inundaciones","Generar suficientes recursos económicos para mantener su subsistencia","Acceder a servicios básicos de salud, educación y vivienda"],
+      correct:0,
+      explanation:"La vulnerabilidad es la incapacidad de una comunidad para absorber, mediante el autoajuste, los efectos de un determinado cambio en su medio ambiente, o sea su inflexibilidad o incapacidad para adaptarse a ese cambio, que constituye un riesgo."
+    },
+    {
+      type:"Definición",
+      q:"El 'trabajo social comunitario' nació:",
+      hint:"Fue después de la Segunda Guerra Mundial.",
+      options:["Después de la Segunda Guerra Mundial, cuando se habían desarrollado formas de movilización masiva; consiste en un proceso de abordaje de la comunidad para orientarla hacia objetivos comunes que den respuesta a necesidades detectadas","Durante la Revolución Industrial para atender a los trabajadores desplazados","En el siglo XX como respuesta a las guerras mundiales y la crisis económica del 29","Con el movimiento feminista de los años sesenta que exigió igualdad de derechos"],
+      correct:0,
+      explanation:"El trabajo social comunitario nace después de la Segunda Guerra Mundial, cuando se habían desarrollado formas de movilización masiva. Consiste en un proceso de abordaje de la comunidad para orientarla hacia objetivos comunes."
+    },
+    {
+      type:"Concepto",
+      q:"La 'sistematización' en el contexto del método del trabajo social implica:",
+      hint:"Incluye diagnóstico, programa, ejecución y evaluación.",
+      options:["El método básico que articula el proceso de intervención en etapas: investigación, diagnóstico, programa, ejecución y evaluación, intentando superar la división caso-grupo-comunidad","La recopilación desordenada de información sobre los usuarios de un servicio","La aplicación repetitiva de las mismas técnicas en todos los casos por igual","La documentación final de los resultados obtenidos en un proyecto terminado"],
+      correct:0,
+      explanation:"El método básico intenta suprimir la división caso-grupo-comunidad, articulando el proceso de intervención en etapas: investigación, diagnóstico, programa, ejecución y evaluación."
+    },
+    {
+      type:"Definición",
+      q:"El 'proceso de ayuda' en trabajo social:",
+      hint:"Descansa en la iniciativa del sistema cliente.",
+      options:["Es la secuencia lógica de intervenciones entre el trabajador social y el sistema cliente para considerar una necesidad, ponderarla y contribuir a su solución; descansa en la iniciativa y recursos del sistema cliente","Es la entrega de recursos materiales del Estado a personas en situación de pobreza","Es el acompañamiento psicológico que brinda un terapeuta a sus pacientes","Es la supervisión externa que realizan organismos internacionales sobre programas sociales"],
+      correct:0,
+      explanation:"El proceso de ayuda es la secuencia lógica de intervenciones entre el trabajador social y el sistema cliente para considerar una necesidad, ponderarla y contribuir a su solución. Esta solución descansa en la iniciativa y recursos del sistema cliente."
+    },
+    {
+      type:"Concepto",
+      q:"La 'socialización' en psicología designa:",
+      hint:"El individuo internaliza pautas y normas.",
+      options:["El proceso mediante el cual el individuo internaliza las pautas y normas de la sociedad en que vive para funcionar adecuadamente como miembro de ella","La enseñanza formal impartida en instituciones educativas a lo largo de la vida","La adaptación voluntaria del individuo a las modas y tendencias culturales del momento","El proceso legal de integración de inmigrantes a una nueva sociedad"],
+      correct:0,
+      explanation:"La socialización en psicología designa el proceso mediante el cual el individuo internaliza las pautas y normas de la sociedad en que vive, para que puedan funcionar adecuadamente como miembros de ella."
+    },
+    {
+      type:"Definición",
+      q:"Los 'movimientos sociales' del siglo XX se caracterizan por:",
+      hint:"Actúan al margen de organizaciones tradicionales.",
+      options:["Actuar al margen de organizaciones tradicionales como partidos y sindicatos, fuera de los cauces políticos institucionales, siendo una forma de ejercicio de la ciudadanía en la lucha por derechos sociales","Buscar la toma del poder del Estado mediante la fuerza o los procesos electorales","Enfocarse exclusivamente en reivindicaciones económicas de los trabajadores","Ser controlados y dirigidos por líderes políticos con agenda electoral clara"],
+      correct:0,
+      explanation:"Los movimientos sociales del siglo XX actúan al margen de organizaciones tradicionales como partidos políticos y sindicatos, fuera de cauces institucionales. Son una forma de ejercicio de la ciudadanía y lucha por los derechos sociales."
+    },
+    {
+      type:"Concepto",
+      q:"La 'teoría' en trabajo social es:",
+      hint:"Es un punto de partida y una herramienta permanente.",
+      options:["La esfera del conocimiento que explica el conjunto de fenómenos y sus bases reales, siendo un punto de partida y herramienta permanente que permite articular distintos tipos de conocimiento para producir conocimiento nuevo","El conjunto de actividades prácticas que realiza el trabajador social en su intervención cotidiana","El reglamento institucional que guía el trabajo de los profesionales sociales","Los datos estadísticos que describen la situación social de una población"],
+      correct:0,
+      explanation:"La teoría es la esfera del conocimiento que explica el conjunto de fenómenos y sus bases reales. Es un punto de partida y una herramienta permanente que permite articular diversos tipos de conocimiento para producir conocimiento nuevo."
+    }
+  ]
+
+};
+
+// ═══════════════════════════════════════════════════
+//   APP STATE
+// ═══════════════════════════════════════════════════
+
+let currentStudent = '';
+let questions = [];
+let qIndex = 0;
+let selected = null;
+let answered = false;
+let results = [];
+
+const COLORS = {
+  mariateresa: '--accent-m',
+  marion:      '--accent-ma',
+  catalina:    '--accent-c',
+  alexis:      '--accent-a'
+};
+
+const NAMES = {
+  mariateresa: 'María Teresa',
+  marion:      'Marion',
+  catalina:    'Catalina',
+  alexis:      'Alexis'
+};
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz(student) {
+  currentStudent = student;
+  const pool = [...QUESTIONS[student]];
+  questions = shuffle(pool).map(q => {
+    // shuffle options keeping track of correct
+    const correctText = q.options[q.correct];
+    const shuffled = shuffle(q.options);
+    return { ...q, options: shuffled, correct: shuffled.indexOf(correctText) };
+  });
+  qIndex = 0;
+  results = [];
+
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz').style.display = 'block';
+  document.getElementById('quizStudentName').textContent = NAMES[student];
+
+  // Apply accent color to progress fill
+  const c = getComputedStyle(document.documentElement).getPropertyValue(COLORS[student]).trim();
+  document.getElementById('progressFill').style.background = c || 'var(--gold)';
+
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[qIndex];
+  const total = questions.length;
+
+  // Progress
+  const pct = Math.round((qIndex / total) * 100);
+  document.getElementById('progressText').textContent = `Pregunta ${qIndex + 1} de ${total}`;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  document.getElementById('qCounter').textContent = `Pregunta ${qIndex + 1}`;
+  document.getElementById('qTypeTag').textContent = q.type;
+  document.getElementById('qText').textContent = q.q;
+  document.getElementById('qHint').textContent = '💡 ' + q.hint;
+
+  // Options
+  const list = document.getElementById('optionsList');
+  list.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D'];
+  q.options.forEach((opt, i) => {
+    const li = document.createElement('li');
+    li.className = 'option-item';
+    li.innerHTML = `<span class="option-letter">${letters[i]}</span><span class="option-text">${opt}</span>`;
+    li.onclick = () => selectOption(i, li);
+    list.appendChild(li);
+  });
+
+  // Reset feedback & next
+  const fb = document.getElementById('feedbackBox');
+  fb.className = 'feedback-box';
+  fb.innerHTML = '';
+  const nb = document.getElementById('nextBtn');
+  nb.className = 'next-btn';
+  nb.textContent = qIndex === questions.length - 1 ? 'Ver resultados →' : 'Siguiente pregunta →';
+
+  selected = null;
+  answered = false;
+
+  // Animate card
+  const card = document.getElementById('questionCard');
+  card.style.animation = 'none';
+  void card.offsetWidth;
+  card.style.animation = 'slideUp 0.35s ease';
+}
+
+function selectOption(idx, el) {
+  if (answered) return;
+  if (selected !== null) {
+    document.querySelectorAll('.option-item')[selected].classList.remove('selected');
+  }
+  selected = idx;
+  el.classList.add('selected');
+
+  // Auto-confirm on click
+  confirmAnswer();
+}
+
+function confirmAnswer() {
+  if (answered || selected === null) return;
+  answered = true;
+
+  const q = questions[qIndex];
+  const isCorrect = selected === q.correct;
+  results.push({ q: q.q, correct: isCorrect, correctText: q.options[q.correct], selectedText: q.options[selected], explanation: q.explanation });
+
+  const items = document.querySelectorAll('.option-item');
+  items.forEach((item, i) => {
+    item.classList.add('answered');
+    if (i === q.correct) item.classList.add('correct');
+    else if (i === selected && !isCorrect) item.classList.add('wrong');
+  });
+
+  const fb = document.getElementById('feedbackBox');
+  if (isCorrect) {
+    fb.className = 'feedback-box show ok';
+    fb.innerHTML = `<span class="feedback-icon">✓ Correcto.</span>${q.explanation}`;
+  } else {
+    fb.className = 'feedback-box show no';
+    fb.innerHTML = `<span class="feedback-icon">✗ Incorrecto.</span>${q.explanation}`;
+  }
+
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function nextQuestion() {
+  qIndex++;
+  if (qIndex >= questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+
+  const correct = results.filter(r => r.correct).length;
+  const total = results.length;
+  const pct = Math.round((correct / total) * 100);
+
+  document.getElementById('scoreNum').textContent = correct;
+  document.getElementById('scoreDenom').textContent = `de ${total}`;
+
+  const circle = document.getElementById('scoreCircle');
+  let headline, sub;
+  if (pct >= 80) {
+    circle.className = 'score-circle great';
+    headline = '¡Excelente trabajo!';
+    sub = `Respondiste correctamente el ${pct}% de las preguntas. ¡Estás muy bien preparado/a!`;
+  } else if (pct >= 50) {
+    circle.className = 'score-circle good';
+    headline = 'Buen intento';
+    sub = `Lograste el ${pct}%. Repasa las preguntas incorrectas para afianzar los conceptos.`;
+  } else {
+    circle.className = 'score-circle poor';
+    headline = 'Sigue practicando';
+    sub = `Obtuviste el ${pct}%. Te recomendamos repasar el material y volver a intentarlo.`;
+  }
+
+  document.getElementById('scoreHeadline').textContent = headline;
+  document.getElementById('scoreSub').textContent = sub;
+
+  const list = document.getElementById('breakdownList');
+  list.innerHTML = '';
+  results.forEach((r, i) => {
+    const div = document.createElement('div');
+    div.className = 'breakdown-item';
+    div.innerHTML = `
+      <span class="bi-icon ${r.correct ? 'ok' : 'no'}">${r.correct ? '✓' : '✗'}</span>
+      <div>
+        <p class="bi-question">${r.q}</p>
+        <p class="bi-answer">
+          ${r.correct
+            ? `<strong>✓ ${r.correctText}</strong>`
+            : `<span>Tu respuesta: ${r.selectedText}</span><br><strong>Correcta: ${r.correctText}</strong>`
+          }
+        </p>
+      </div>
+      <span class="bi-num">${i + 1}</span>
+    `;
+    list.appendChild(div);
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function retryQuiz() {
+  startQuiz(currentStudent);
+}
+
+function goHome() {
+  document.getElementById('quiz').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('landing').style.display = 'flex';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
