@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guión Podcast Ciudadano</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rojo: #C0392B;
+    --rojo-oscuro: #922B21;
+    --rojo-claro: #FADBD8;
+    --negro: #111;
+    --gris: #1a1a1a;
+    --gris-claro: #2a2a2a;
+    --blanco: #f5f5f5;
+    --texto: #ccc;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--negro);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--blanco);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #login {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    padding: 40px 20px;
+    background: radial-gradient(ellipse at top, #2a0a08 0%, var(--negro) 60%);
+  }
+
+  #login h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    color: var(--rojo);
+    text-align: center;
+    letter-spacing: 3px;
+    line-height: 1.1;
+    text-shadow: 0 0 40px rgba(192,57,43,0.4);
+  }
+
+  #login p {
+    color: var(--texto);
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+  .nombres-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .btn-nombre {
+    background: var(--gris-claro);
+    border: 2px solid #333;
+    color: var(--blanco);
+    padding: 20px 16px;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .btn-nombre span {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--rojo);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .btn-nombre:hover {
+    background: var(--rojo);
+    border-color: var(--rojo);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(192,57,43,0.4);
+  }
+
+  #app { display: none; }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(17,17,17,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--rojo);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .topbar-titulo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--rojo);
+    letter-spacing: 2px;
+  }
+
+  .topbar-usuario {
+    font-size: 0.85rem;
+    color: var(--texto);
+    background: var(--gris-claro);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid #333;
+  }
+
+  .btn-salir {
+    background: none;
+    border: 1px solid #444;
+    color: #666;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-salir:hover { border-color: var(--rojo); color: var(--rojo); }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    padding: 20px 24px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    background: var(--gris-claro);
+    border: 2px solid #333;
+    color: var(--texto);
+    padding: 10px 20px;
+    border-radius: 8px 8px 0 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .tab:hover { border-color: var(--rojo); color: var(--blanco); }
+  .tab.active {
+    background: var(--rojo);
+    border-color: var(--rojo);
+    color: white;
+  }
+
+  .contenido {
+    padding: 0 24px 60px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .bloque { display: none; animation: fadeIn 0.3s ease; }
+  .bloque.visible { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .bloque-header {
+    background: linear-gradient(135deg, var(--rojo-oscuro), var(--rojo));
+    border-radius: 0 12px 12px 12px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+
+  .bloque-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  .meta {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .meta-badge {
+    background: rgba(0,0,0,0.3);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+  }
+
+  .guion-texto {
+    background: var(--gris);
+    border-left: 4px solid var(--rojo);
+    border-radius: 0 12px 12px 0;
+    padding: 28px;
+    font-size: 1.05rem;
+    line-height: 1.9;
+    color: var(--blanco);
+    margin-bottom: 20px;
+    white-space: pre-line;
+  }
+
+  .guion-texto .senal {
+    display: inline-block;
+    background: rgba(192,57,43,0.2);
+    border: 1px solid var(--rojo);
+    color: var(--rojo);
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin: 4px 0;
+    font-style: normal;
+  }
+
+  .frase-cierre {
+    background: var(--gris-claro);
+    border: 2px solid var(--rojo);
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--blanco);
+    text-align: center;
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  .progreso-wrap {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 3px;
+    z-index: 999;
+    background: #222;
+  }
+  #barra-progreso {
+    height: 100%;
+    background: var(--rojo);
+    width: 0%;
+    transition: width 0.1s;
+  }
+
+  @media (max-width: 480px) {
+    .topbar { padding: 12px 16px; }
+    .contenido { padding: 0 16px 60px; }
+    .guion-texto { padding: 20px; font-size: 0.98rem; }
+    .tabs { padding: 16px 16px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progreso-wrap"><div id="barra-progreso"></div></div>
+
+<div id="login">
+  <div>
+    <h1>Podcast<br>Ciudadano</h1>
+    <h3>Hecho por Diego Palma</h3>
+    <p style="margin-top:12px;">Pincha tu nombre para ver tu parte del guión</p>
+  </div>
+  <div class="nombres-grid">
+    <button class="btn-nombre" onclick="entrar('Tomás', 'tomas')">
+      Tomás Crisóstomo
+      <span>Conductor</span>
+    </button>
+    <button class="btn-nombre" onclick="entrar('Diego', 'diego')">
+      Diego Palma
+      <span>Periodista</span>
+    </button>
+    <button class="btn-nombre" onclick="entrar('Ignacio', 'ignacio')">
+      Ignacio Escalona
+      <span>Experto</span>
+    </button>
+    <button class="btn-nombre" onclick="entrar('Benjamín', 'benja')">
+      Benjamín Orellana
+      <span>Innovador</span>
+    </button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <span class="topbar-titulo">Guión Podcast</span>
+    <span class="topbar-usuario" id="label-usuario"></span>
+    <button class="btn-salir" onclick="salir()">Salir</button>
+  </div>
+  <div class="tabs" id="tabs-container"></div>
+  <div class="contenido" id="contenido-bloques"></div>
+</div>
+
+<script>
+const guion = {
+  tomas: {
+    nombre: "Tomás Crisóstomo",
+    rol: "Conductor",
+    bloques: [
+      {
+        titulo: "Apertura",
+        tiempo: "2 min",
+        html: `<p>— Buenas, bienvenidos. Soy Tomás y hoy estamos acá con Diego, Ignacio y Benjamín para hablar de algo que nos afecta a todos aunque no siempre nos demos cuenta: los derechos humanos y cómo están conectados con la democracia en Chile.</p>
+<br>
+<p>— No es algo tan lejano como suena, así que quédense. Vamos a ver cosas que pasan en el día a día.</p>
+<br>
+<p><span class="senal">SEÑAL A DIEGO</span></p>
+<p>— Diego, cuéntanos cómo está la situación actualmente.</p>`
+      },
+      {
+        titulo: "Cierre",
+        tiempo: "1 min",
+        html: `<p>— Para cerrar, creo que queda claro que esto no es solo un tema de políticos o especialistas, nos toca a todos.</p>
+<br>
+<p><span class="senal">SEÑAL A DIEGO</span> — Diego.</p>
+<p><span class="senal">SEÑAL A IGNACIO</span> — Ignacio.</p>
+<p><span class="senal">SEÑAL A BENJAMÍN</span> — Benjamín.</p>
+<br>
+<p>— Gracias por escucharnos. Esperamos que les haya servido para pensar un poco más en estos temas. Hasta la próxima.</p>`
+      }
+    ]
+  },
+  diego: {
+    nombre: "Diego Palma",
+    rol: "Periodista de actualidad",
+    bloques: [
+      {
+        titulo: "Contexto",
+        tiempo: "2-3 min",
+        html: `<p>— Gracias Tomás. Para ponerlos en contexto, el Instituto Nacional de Derechos Humanos publicó en 2023 un informe donde señala que todavía hay deudas pendientes en materia de derechos, sobre todo en temas como acceso a la justicia, desigualdad y trato digno a distintos grupos de personas.</p>
+<br>
+<p>— Y no es algo lejano. Hay gente que no puede acceder a atención médica de calidad, o que siente que la justicia no funciona igual para todos. Eso también es un problema de derechos humanos.</p>
+<br>
+<p>— Entonces les pregunto: ¿creen que en Chile se respetan los derechos humanos de verdad, o es más bien un discurso que queda en el papel?</p>
+<br>
+<p><span class="senal">ESPERAR RESPUESTA DEL GRUPO</span></p>`
+      },
+      {
+        titulo: "Frase de cierre",
+        tiempo: "5 seg",
+        frase: "Informarse es el primer paso para participar."
+      }
+    ]
+  },
+  ignacio: {
+    nombre: "Ignacio Escalona",
+    rol: "Experto",
+    bloques: [
+      {
+        titulo: "Desarrollo",
+        tiempo: "2-3 min",
+        html: `<p>— Buena pregunta. Para entender bien el tema, hay que partir por lo básico: los derechos humanos son garantías fundamentales que tiene toda persona por el solo hecho de existir, independiente de dónde nació, cuánta plata tiene o cómo piensa.</p>
+<br>
+<p>— ¿Y qué tiene que ver eso con la democracia? Todo. Porque una democracia de verdad no es solo ir a votar cada cierto tiempo. Es que el Estado garantice que todos tengan acceso a educación, salud, seguridad, que puedan expresarse libremente y participar en las decisiones que los afectan.</p>
+<br>
+<p>— En Chile hay avances, no vamos a decir que no. Pero también hay brechas grandes, especialmente en regiones apartadas o en grupos que históricamente han quedado fuera. Y mientras eso pase, la democracia queda incompleta.</p>`
+      },
+      {
+        titulo: "Frase de cierre",
+        tiempo: "5 seg",
+        frase: "Los derechos no se piden, se ejercen."
+      }
+    ]
+  },
+  benja: {
+    nombre: "Benjamín Orellana",
+    rol: "Innovador ciudadano",
+    bloques: [
+      {
+        titulo: "Propuestas",
+        tiempo: "2-3 min",
+        html: `<p>— Y ahí es donde entra lo importante: ¿qué podemos hacer nosotros? Porque es fácil quedarse hablando del problema sin proponer nada.</p>
+<br>
+<p>— Lo primero es la educación cívica, pero no me refiero a memorizar leyes en el colegio. Me refiero a entender cómo funciona el sistema, qué derechos tienes y cómo exigirlos. Eso cambia la perspectiva.</p>
+<br>
+<p>— Después están las organizaciones sociales: juntas de vecinos, centros de estudiantes, colectivos. Mucha gente los subestima, pero son espacios reales donde se pueden lograr cambios concretos.</p>
+<br>
+<p>— Y también está el mundo digital. Con redes sociales y plataformas ciudadanas puedes fiscalizar, denunciar, organizarte. Hay ejemplos en Chile de personas que lograron cambios reales usando esas herramientas.</p>
+<br>
+<p>— No hay excusa para quedarse sin hacer nada.</p>`
+      },
+      {
+        titulo: "Frase de cierre",
+        tiempo: "5 seg",
+        frase: "Cada acción ciudadana, por pequeña que sea, suma."
+      }
+    ]
+  }
+};
+
+let usuarioActual = null;
+
+function entrar(nombre, key) {
+  usuarioActual = key;
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('label-usuario').textContent = nombre;
+  renderGuion(key);
+}
+
+function salir() {
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('tabs-container').innerHTML = '';
+  document.getElementById('contenido-bloques').innerHTML = '';
+}
+
+function renderGuion(key) {
+  const data = guion[key];
+  const tabs = document.getElementById('tabs-container');
+  const contenido = document.getElementById('contenido-bloques');
+  tabs.innerHTML = '';
+  contenido.innerHTML = '';
+
+  data.bloques.forEach((bloque, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'tab' + (i === 0 ? ' active' : '');
+    tab.textContent = bloque.titulo;
+    tab.onclick = () => activarTab(i, data.bloques.length);
+    tabs.appendChild(tab);
+
+    const div = document.createElement('div');
+    div.className = 'bloque' + (i === 0 ? ' visible' : '');
+    div.id = 'bloque-' + i;
+
+    let inner = `
+      <div class="bloque-header">
+        <h2>${bloque.titulo}</h2>
+        <div class="meta">
+          <span class="meta-badge">${bloque.tiempo}</span>
+          <span class="meta-badge">${data.nombre}</span>
+          <span class="meta-badge">${data.rol}</span>
+        </div>
+      </div>
+    `;
+
+    if (bloque.html) {
+      inner += `<div class="guion-texto">${bloque.html}</div>`;
+    }
+
+    if (bloque.frase) {
+      inner += `<p style="color:#888; font-size:0.9rem; margin-bottom:8px;">Tu frase para el cierre:</p>
+                <div class="frase-cierre">"${bloque.frase}"</div>`;
+    }
+
+    div.innerHTML = inner;
+    contenido.appendChild(div);
+  });
+}
+
+function activarTab(idx, total) {
+  for (let i = 0; i < total; i++) {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', i === idx);
+    document.getElementById('bloque-' + i).classList.toggle('visible', i === idx);
+  }
+  window.scrollTo({ top: 60, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', () => {
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = total > 0 ? (window.scrollY / total) * 100 : 0;
+  document.getElementById('barra-progreso').style.width = pct + '%';
+});
+</script>
+</body>
+</html>
