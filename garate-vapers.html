@@ -1996,23 +1996,10 @@ footer::before {
       <i data-lucide="map-pin" class="lucide-lg" style="color:var(--pk-b)"></i>
       <div class="pp-info">
         <div class="pp-label">Local Central</div>
-        <div class="pp-addr">Olga Norte 1313</div>
+        <div class="pp-addr">DIRECCIÓN CRISTOBAL</div>
       </div>
     </div>
-    <div class="pickup-point">
-      <i data-lucide="map-pin" class="lucide-lg" style="color:var(--pk-b)"></i>
-      <div class="pp-info">
-        <div class="pp-label">Sucursal Paul Harris</div>
-        <div class="pp-addr">Paul Harris 753</div>
-      </div>
-    </div>
-    <div class="pickup-point">
-      <i data-lucide="map-pin" class="lucide-lg" style="color:var(--pk-b)"></i>
-      <div class="pp-info">
-        <div class="pp-label">Showroom Manquehue</div>
-        <div class="pp-addr">Manquehue Norte 71</div>
-      </div>
-    </div>
+   
   </div>
 </div>
 
@@ -2139,9 +2126,7 @@ footer::before {
         <p>Vapes, pods y líquidos premium. Venta exclusiva para mayores de 18 años.</p>
         <p style="margin-bottom:14px;color:rgba(255,255,255,.4);font-size:.7rem;letter-spacing:1px;text-transform:uppercase;">Sucursales de Retiro</p>
         <p style="font-size:.78rem;color:rgba(255,255,255,.55);line-height:2;">
-          <i data-lucide="map-pin" class="lucide-sm" style="display:inline-block;vertical-align:middle;margin-right:8px"></i> Olga Norte 1313<br>
-          <i data-lucide="map-pin" class="lucide-sm" style="display:inline-block;vertical-align:middle;margin-right:8px"></i> Paul Harris 753<br>
-          <i data-lucide="map-pin" class="lucide-sm" style="display:inline-block;vertical-align:middle;margin-right:8px"></i> Manquehue Norte 71
+          <i data-lucide="map-pin" class="lucide-sm" style="display:inline-block;vertical-align:middle;margin-right:8px"></i> DIRECCIÓN CRISTOBAL<br>
         </p>
       </div>
       <div class="footer-col">
@@ -2237,8 +2222,8 @@ footer::before {
             <input type="number" id="prod-oferta" class="form-ctrl" placeholder="Opcional" min="0" step="any">
           </div>
         </div>
-        <div class="form-row2">
-          <div class="form-group">
+        <div hidden class="form-row2">
+          <div hidden class="form-group">
             <label>Dirigido a</label>
             <select id="prod-genero" class="form-ctrl">
               <option value="">-- No especificado --</option>
@@ -2255,25 +2240,12 @@ footer::before {
           </div>
         </div><br><br> <br><br><br><br> <br><br>
    <div class="form-group">
-          <label>Tallas de ropa</label>
+          <label>SABORES</label>
           <div class="sizes-wrap">
-            <input type="checkbox" class="size-cb" id="s-xs" value="XS"><label class="size-lbl" for="s-xs">XS</label>
-            <input type="checkbox" class="size-cb" id="s-s" value="S"><label class="size-lbl" for="s-s">S</label>
-            <input type="checkbox" class="size-cb" id="s-m" value="M"><label class="size-lbl" for="s-m">M</label>
-            <input type="checkbox" class="size-cb" id="s-l" value="L"><label class="size-lbl" for="s-l">L</label>
-            <input type="checkbox" class="size-cb" id="s-xl" value="XL"><label class="size-lbl" for="s-xl">XL</label>
-            <input type="checkbox" class="size-cb" id="s-xxl" value="XXL"><label class="size-lbl" for="s-xxl">XXL</label>
-            <input type="checkbox" class="size-cb" id="s-xxxl" value="XXXL"><label class="size-lbl" for="s-xxxl">XXXL</label>
-     
-         <input type="checkbox" class="size-cb" id="s-32" value="32"><label class="size-lbl" for="s-32">32</label>
-            <input type="checkbox" class="size-cb" id="s-34" value="34"><label class="size-lbl" for="s-34">34</label>
-            <input type="checkbox" class="size-cb" id="s-36" value="36"><label class="size-lbl" for="s-36">36</label>
-            <input type="checkbox" class="size-cb" id="s-38" value="38"><label class="size-lbl" for="s-38">38</label>
-            <input type="checkbox" class="size-cb" id="s-40" value="40"><label class="size-lbl" for="s-40">40</label>
-  
+            
               <span id="custom-sizes-create"></span>
               <button type="button" class="size-lbl" style="cursor:pointer;background:transparent;border-style:dashed;" onclick="addCustomSize('create')">+ Añadir</button>
-         <br><br>            <input type="checkbox" class="size-cb" id="s-unico" value="Único"><label class="size-lbl" for="s-unico">ACCESORIO | SIN TALLA</label>
+         <br><br>            
    </div>
         </div>
       <div class="form-group">
@@ -2714,8 +2686,8 @@ footer::before {
             <input type="number" id="edit-oferta" class="form-ctrl" min="0" step="any">
           </div>
         </div>
-        <div class="form-row2">
-          <div class="form-group">
+        <div hidden class="form-row2">
+          <div hidden class="form-group">
             <label>Dirigido a</label>
             <select id="edit-genero" class="form-ctrl">
               <option value="">-- No especificado --</option>
@@ -2800,33 +2772,22 @@ footer::before {
    → copia el objeto firebaseConfig que te entrega y pégalo aquí abajo.
 ──────────────────────────────────────────────────────────────── */
 const firebaseConfig = {
-  apiKey: "TU_API_KEY_AQUI",
-  authDomain: "TU_PROYECTO.firebaseapp.com",
-  databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
-  projectId: "TU_PROYECTO",
-  storageBucket: "TU_PROYECTO.firebasestorage.app",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyA2-ryuA2hzg8sMig1PqaRAAAL6hv9tLOQ",
+  authDomain: "garate-78386.firebaseapp.com",
+  databaseURL: "https://garate-78386-default-rtdb.firebaseio.com",
+  projectId: "garate-78386",
+  storageBucket: "garate-78386.firebasestorage.app",
+  messagingSenderId: "197255768197",
+  appId: "1:197255768197:web:f24663c800dfafcd9661ec",
+  measurementId: "G-7K1YRS5396"
 };
 
-/* ────────────────────────────────────────────────────────────────
-   👉 PASO 2: reemplaza esto con TU propia cuenta de Cloudinary
-   (sirve para guardar las fotos de los productos).
-   Consíguelo en https://cloudinary.com (plan gratis alcanza de sobra)
-   → Dashboard → copia tu "Cloud Name"
-   → Settings ⚙️ → Upload → "Upload presets" → Add upload preset
-     → Signing Mode: "Unsigned" → guarda y copia el nombre del preset
-──────────────────────────────────────────────────────────────── */
-const CLOUD_NAME    = "TU_CLOUD_NAME";
-const UPLOAD_PRESET = "TU_UPLOAD_PRESET";
-
-/* 👉 PASO 3: cambia esta contraseña por una que solo conozca Cristóbal */
-const ADMIN_PASS    = "vapes2026";
-
-/* 👉 PASO 4: pon aquí el número de WhatsApp de Gárate Vapes (con código de país, sin + ni espacios) */
-const WA_NUMBER     = "56900000000";
-
+const CLOUD_NAME    = "dkszomv2f";
+const UPLOAD_PRESET = "tienda_de_ropa";
+const ADMIN_PASS    = "1234";
+const WA_NUMBER     = "56954998792";
 const PRODUCTS_PER_PAGE = 6;
+
 
 /* ================================================
    STATE
