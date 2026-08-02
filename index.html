@@ -2,128 +2,233 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Familia - Llamar al PEDRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Llamar al PEDRO - Familia</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
-  body { background:#f2f4f8; color:#1a1a2e; min-height: 100vh; display: flex; flex-direction: column; }
+  :root {
+    --bg-app: #0c1017;
+    --surface: #161b22;
+    --surface-glass: rgba(22, 27, 34, 0.85);
+    --primary: #3b82f6;
+    --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    --success: #10b981;
+    --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --danger: #ef4444;
+    --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --border: rgba(255, 255, 255, 0.08);
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 12px;
+    --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  }
 
-  header { background:linear-gradient(135deg,#1e3c72,#2a5298); color:#fff; padding:16px; text-align:center; flex-shrink: 0; }
-  header h1 { font-size:1.2rem; }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg-app); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
 
-  /* Contenedor principal ordenado en columna */
+  header { 
+    background: var(--surface-glass); 
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px; 
+    text-align: center; 
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  header h1 { font-size: 1rem; font-weight: 600; color: var(--text-main); letter-spacing: 0.02em; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
   #appContainer {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px;
-    max-width: 600px;
+    gap: 16px;
+    padding: 20px 16px;
+    max-width: 480px;
     margin: 0 auto;
     width: 100%;
     flex-grow: 1;
   }
 
-  /* Selector de perfiles */
-  #selectorPerfil { background:#fff; padding:14px; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-  #selectorPerfil h2 { font-size:0.95rem; margin-bottom:8px; color:#333; text-align: center; }
-  .perfiles { display:flex; gap:8px; justify-content: center; flex-wrap:wrap; }
-  .perfilBtn { border:2px solid #dde3ee; background:#fafbfe; border-radius:12px; padding:10px 14px; text-align:center; cursor:pointer; font-size:.85rem; }
-  .perfilBtn .emoji { font-size:1.5rem; display:block; margin-bottom:2px; }
-  .perfilBtn.activo { border-color:#2a5298; background:#e8edfb; font-weight:700; }
+  #selectorPerfil { 
+    background: var(--surface); 
+    padding: 20px; 
+    border-radius: var(--radius-lg); 
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow); 
+    animation: fadeIn 0.4s ease;
+  }
+  #selectorPerfil h2 { font-size: 0.8rem; font-weight: 600; margin-bottom: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; text-align: center; }
+  .perfiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  
+  .perfilBtn { 
+    border: 1px solid var(--border); 
+    background: rgba(255, 255, 255, 0.02); 
+    border-radius: var(--radius-sm); 
+    padding: 10px 4px; 
+    text-align: center; 
+    cursor: pointer; 
+    font-size: 0.75rem; 
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Estilo para las fotos de perfil circulares */
+  .perfilBtn img { 
+    width: 48px; 
+    height: 48px; 
+    border-radius: 50%; 
+    object-fit: cover; 
+    display: block; 
+    margin: 0 auto 6px auto; 
+    border: 2px solid var(--border);
+    transition: transform 0.2s, border-color 0.2s; 
+  }
+  
+  .perfilBtn:hover { border-color: var(--primary); color: var(--text-main); background: rgba(59, 130, 246, 0.05); }
+  .perfilBtn:hover img { transform: scale(1.08); border-color: var(--primary); }
+  .perfilBtn.activo { border-color: var(--primary); background: rgba(59, 130, 246, 0.15); color: var(--text-main); font-weight: 600; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+  .perfilBtn.activo img { border-color: var(--primary); }
 
-  /* Panel de control y botones */
   #panelControl { width: 100%; }
-  .btnGrande { width:100%; border:none; border-radius:16px; color:#fff; font-size:1.2rem; font-weight:800; padding:20px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.15); text-align: center; }
-  .btnLlamar   { background:#1fa855; display: none; animation: pulse 1.5s infinite; }
-  .btnCancelar { background:#e63946; }
-  .btnSumarse  { background:#2266dd; }
-  .btnFinalizar{ background:#8d0801; font-size:0.95rem; padding: 14px; }
-
-  #estadoTexto { text-align:center; font-size:0.95rem; font-weight:600; color:#333; }
-
-  /* Contenedor del Mapa compacto y ordenado */
-  #seccionMapa { background: #fff; border-radius: 16px; overflow: hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-  #mapa { width:100%; height:220px; z-index: 1; }
-  #ultimaUbicacion {
-    text-align:center; padding:8px 12px; font-size:.8rem; color:#1e3c72; background:#e9edf5;
-    border-top: 1px solid #cbd5e1; font-weight: 600;
-  }
-  #direccionTexto { display: block; font-size: 0.85rem; font-weight: 700; color: #0f172a; margin-top: 2px; }
-
-  /* Grilla de Videollamada Adaptativa a Pantalla Completa */
-  #videoGrid {
-    display: none; /* Se oculta por defecto */
-    position: fixed;
-    inset: 0;
-    background: #0f172a;
-    z-index: 9999;
-    padding: 10px;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    align-content: center;
-    justify-content: center;
-  }
-  body.en-videollamada #videoGrid { display: grid; }
-  body.en-videollamada #appContainer { display: none; } /* Oculta todo lo demás para usar 100% de pantalla */
-
-  .videoBox {
-    position: relative;
-    background: #1e293b;
-    border-radius: 14px;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    min-height: 200px;
+  
+  .btnGrande { 
+    width: 100%; 
+    border: none; 
+    border-radius: var(--radius-lg); 
+    color: #fff; 
+    font-size: 1rem; 
+    font-weight: 600; 
+    padding: 18px 24px; 
+    cursor: pointer; 
+    box-shadow: var(--shadow); 
+    text-align: center; 
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .videoBox video { width:100%; height: 100%; object-fit: cover; }
-  .videoBox .etiqueta { 
-    position:absolute; bottom:10px; left:10px; color:#fff; font-size:.85rem; 
-    background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:8px; font-weight: 600;
+  .btnGrande:active { transform: scale(0.97); }
+  
+  .btnLlamar   { background: var(--success-gradient); display: none; animation: pulseGlow 2s infinite; }
+  .btnCancelar { background: var(--danger-gradient); }
+  .btnSumarse  { background: var(--primary-gradient); }
+  .btnFinalizar{ 
+    background: var(--danger-gradient); 
+    font-size: 1.1rem; 
+    padding: 16px 32px; 
+    border-radius: 40px; 
+    width: auto; 
+    min-width: 220px; 
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.5); 
+    letter-spacing: 0.02em;
   }
 
-  /* Controles flotantes dentro de la videollamada */
+  #estadoTexto { text-align: center; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); min-height: 20px; }
+
+  #seccionMapa { 
+    background: var(--surface); 
+    border-radius: var(--radius-lg); 
+    overflow: hidden; 
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow); 
+  }
+  #mapa { width: 100%; height: 240px; z-index: 1; }
+  #ultimaUbicacion {
+    text-align: center; padding: 14px; font-size: 0.75rem; color: var(--text-muted); background: var(--surface);
+    border-top: 1px solid var(--border); font-weight: 500;
+  }
+  #direccionTexto { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-main); margin-top: 3px; }
+
+  #videoGrid {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #07090e;
+    z-index: 9999;
+    padding: 20px;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-content: center;
+    justify-content: center;
+  }
+  body.en-videollamada #videoGrid { display: grid; animation: fadeIn 0.3s ease; }
+  body.en-videollamada #appContainer { display: none; }
+
+  .videoBox {
+    position: relative;
+    background: #111827;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  }
+  .videoBox video { width: 100%; height: 100%; object-fit: cover; }
+  .videoBox .etiqueta { 
+    position: absolute; bottom: 14px; left: 14px; color: #fff; font-size: 0.85rem; 
+    background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); padding: 6px 14px; border-radius: var(--radius-sm); font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
   #controlesVideollamada {
     position: fixed;
-    bottom: 20px;
+    bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10000;
     display: none;
-    width: 90%;
-    max-width: 400px;
+    justify-content: center;
+    width: 100%;
   }
-  body.en-videollamada #controlesVideollamada { display: block; }
+  body.en-videollamada #controlesVideollamada { display: flex; }
 
-  /* Pantalla GPS exclusiva para el PEDRO */
-  #pantallaGPS { position:fixed; inset:0; background:#1e3c72; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; z-index: 9999; }
-  #pantallaGPS h1 { font-size:1.6rem; margin-bottom:20px; }
-  #pantallaGPS p { font-size:1rem; opacity:.9; }
-  #estadoGPS { margin-top:30px; font-size:1.1rem; font-weight:700; }
+  #pantallaGPS { 
+    position: fixed; inset: 0; background: var(--bg-app); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px; z-index: 9999; 
+  }
+  #pantallaGPS h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; }
+  #pantallaGPS p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; max-width: 360px; }
+  #estadoGPS { margin-top: 24px; font-size: 0.85rem; font-weight: 500; background: var(--surface); border: 1px solid var(--border); padding: 10px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow); }
 
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.01); }
-    100% { transform: scale(1); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
   }
 
-  /* Estilos personalizados para marcador y popup de mapas */
   .foto-marcador {
     border-radius: 50%;
-    border: 3px solid #2a5298;
-    background-color: white;
+    border: 2px solid var(--primary);
+    background-color: var(--surface);
     object-fit: cover;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    box-shadow: var(--shadow);
   }
-  .popup-maps { text-align: center; font-family: 'Segoe UI', Arial, sans-serif; }
-  .popup-maps p { margin-bottom: 6px; font-weight: bold; font-size: 13px; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    background: var(--surface) !important;
+    color: var(--text-main) !important;
+    border-radius: var(--radius-sm) !important;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow) !important;
+  }
+  .popup-maps { text-align: center; font-family: inherit; }
+  .popup-maps p { margin-bottom: 8px; font-weight: 600; font-size: 12px; color: var(--text-main); }
   .popup-maps .btn-maps {
-    background: #1fa855; color: white; text-decoration: none; padding: 6px 10px;
-    border-radius: 6px; display: inline-block; font-weight: bold; font-size: 12px;
+    background: var(--success-gradient); color: white; text-decoration: none; padding: 6px 12px;
+    border-radius: 8px; display: inline-block; font-weight: 600; font-size: 11px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
   }
 </style>
 </head>
@@ -131,28 +236,35 @@
 
 <div id="pantallaGPS" style="display:none;">
   <h1>📍 Ubicación del PEDRO</h1>
-  <p>Esta pantalla envía su ubicación a la familia automáticamente.<br>No es necesario tocar nada más.</p>
-  <div id="estadoGPS">Iniciando...</div>
+  <p>Transmitiendo ubicación en segundo plano de manera segura para la tranquilidad familiar.</p>
+  <div id="estadoGPS">Iniciando sistema GPS...</div>
 </div>
 
 <div id="appContainer">
-  <header><h1>👨‍👩‍👧‍👦 Familia del PEDRO</h1></header>
+  <header><h1>📞 Familia del PEDRO</h1></header>
 
-  <!-- 1. Selector de perfil arriba -->
+  <!-- Selector de perfil con fotos reales -->
   <div id="selectorPerfil">
     <h2>¿Quién está llamando?</h2>
     <div class="perfiles">
-      <div class="perfilBtn" data-nombre="Diego" data-emoji="👨‍💻"><span class="emoji">👨‍💻</span>Diego</div>
-      <div class="perfilBtn" data-nombre="Matias" data-emoji="🙋‍♂️"><span class="emoji">🙋‍♂️</span>Matias</div>
-      <div class="perfilBtn" data-nombre="María" data-emoji="👩"><span class="emoji">👩</span>María</div>
-      <div class="perfilBtn" data-nombre="Ingrid" data-emoji="👩‍🦰"><span class="emoji">👩‍🦰</span>Ingrid</div>
+      <div class="perfilBtn" data-nombre="Diego" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
+        <img src="diegofoto.enc" alt="Diego">Diego
+      </div>
+      <div class="perfilBtn" data-nombre="Matias" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
+        <img src="matiasfoto.enc" alt="Matias">Matias
+      </div>
+      <div class="perfilBtn" data-nombre="María" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
+        <img src="mariafoto.enc" alt="María">María
+      </div>
+      <div class="perfilBtn" data-nombre="Ingrid" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
+        <img src="ingridfoto.enc" alt="Ingrid">Ingrid
+      </div>
     </div>
   </div>
 
   <div id="estadoTexto"></div>
   <div id="panelControl"></div>
 
-  <!-- 2. Mapa centrado y limpio abajo -->
   <div id="seccionMapa">
     <div id="mapa"></div>
     <div id="ultimaUbicacion">
@@ -162,7 +274,6 @@
   </div>
 </div>
 
-<!-- Grilla de video a pantalla completa cuando hay llamada -->
 <div id="videoGrid"></div>
 <div id="controlesVideollamada"></div>
 
@@ -222,7 +333,7 @@ function iniciarEnvioGPS(){
       const payload = { lat: pos.coords.latitude, lng: pos.coords.longitude, precision: pos.coords.accuracy, ultimaActualizacion: hora };
       db.ref('ubicacion_tata').set(payload);
       db.ref('ubicacion').set(payload);
-      estadoGPS.textContent = `✅ Ubicación enviada (${hora})`;
+      estadoGPS.textContent = `✅ Transmitiendo señal (${hora})`;
     },
     (err) => { estadoGPS.textContent = '⚠️ Active el permiso de ubicación.'; },
     { enableHighAccuracy:true, maximumAge:15000, timeout:20000 }
@@ -237,14 +348,14 @@ function iniciarAppFamiliar(){
 }
 
 function inicializarMapa(){
-  mapaLeaflet = L.map('mapa').setView([-33.4372, -70.6506], 17);
+  mapaLeaflet = L.map('mapa', { zoomControl: false }).setView([-33.4372, -70.6506], 17);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution:'&copy; OpenStreetMap' }).addTo(mapaLeaflet);
 }
 
 function escucharUbicacion(){
   const iconoTata = L.icon({
-    iconUrl: 'https://i.ibb.co/68Z7442/tata-avatar.png', // Reemplaza con tu enlace de foto si deseas
-    iconSize: [50, 50], iconAnchor: [25, 25], popupAnchor: [0, -28], className: 'foto-marcador'
+    iconUrl: 'https://i.ibb.co/68Z7442/tata-avatar.png',
+    iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -24], className: 'foto-marcador'
   });
 
   const procesarUbicacion = (snap) => {
@@ -257,13 +368,13 @@ function escucharUbicacion(){
       ultimaLat = lat; ultimaLng = lng;
       obtenerDireccionTexto(lat, lng);
     }
-
+    
     const urlMaps = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    const popupHtml = `<div class="popup-maps"><p>👨‍🦳 PEDRO está aquí</p><a href="${urlMaps}" target="_blank" class="btn-maps">🗺️ Ir en Google Maps</a></div>`;
+    const popupHtml = `<div class="popup-maps"><p>👨‍🦳 PEDRO está aquí</p><a href="${urlMaps}" target="_blank" class="btn-maps">🗺️ Abrir Maps</a></div>`;
 
     if (!marcadorTata) {
       marcadorTata = L.marker([lat, lng], { icon: iconoTata }).addTo(mapaLeaflet).bindPopup(popupHtml);
-      if (precision) circuloPrecision = L.circle([lat, lng], { radius: precision, color: '#1e3c72', fillColor: '#2a5298', fillOpacity: 0.15 }).addTo(mapaLeaflet);
+      if (precision) circuloPrecision = L.circle([lat, lng], { radius: precision, color: '#3b82f6', fillColor: '#60a5fa', fillOpacity: 0.15 }).addTo(mapaLeaflet);
     } else {
       marcadorTata.setLatLng([lat, lng]);
       marcadorTata.setPopupContent(popupHtml);
@@ -294,10 +405,10 @@ function configurarSelectorPerfil(){
     btn.addEventListener('click', () => {
       botones.forEach(b => b.classList.remove('activo'));
       btn.classList.add('activo');
-      perfilSeleccionado = { nombre: btn.dataset.nombre, emoji: btn.dataset.emoji };
+      perfilSeleccionado = { nombre: btn.dataset.nombre, foto: btn.dataset.foto };
       localStorage.setItem('perfilFamilia', JSON.stringify(perfilSeleccionado));
       const btnLlamar = document.querySelector('.btnLlamar');
-      if (btnLlamar) btnLlamar.style.display = 'block';
+      if (btnLlamar) btnLlamar.style.display = 'flex';
     });
   });
 }
@@ -307,7 +418,9 @@ function escucharEstadoLlamada(){
     const datos = snap.val() || { estado:'inactiva' };
     estadoLlamadaActual = datos.estado || 'inactiva';
     renderizarPanel(datos);
-    if (estadoLlamadaActual === 'inactiva' && enSala) salirDeLlamada();
+    if (estadoLlamadaActual === 'inactiva' && enSala) {
+      salirDeLlamada();
+    }
   });
 }
 
@@ -321,7 +434,7 @@ function renderizarPanel(datos){
   if (estadoLlamadaActual === 'inactiva') {
     estadoTexto.textContent = '';
     const btn = crearBoton('btnLlamar', '📞 LLAMAR AL PEDRO', llamarTata);
-    if (perfilSeleccionado) btn.style.display = 'block';
+    if (perfilSeleccionado) btn.style.display = 'flex';
     panel.appendChild(btn);
   }
   else if (estadoLlamadaActual === 'llamando') {
@@ -330,9 +443,7 @@ function renderizarPanel(datos){
   }
   else if (estadoLlamadaActual === 'en_llamada') {
     estadoTexto.textContent = '🟢 El PEDRO está en llamada';
-    if (!enSala) panel.appendChild(crearBoton('btnSumarse', '➕ SUMARSE A LA LLAMADA GRUPAL', sumarseALlamada));
-    
-    // Botón para colgar solo tu usuario en los controles flotantes de la videollamada
+    if (!enSala) panel.appendChild(crearBoton('btnSumarse', '➕ SUMARSE A LA LLAMADA', sumarseALlamada));
     controlesVideo.appendChild(crearBoton('btnFinalizar', '🔴 COLGAR LLAMADA', salirDeLlamadaIndividual));
   }
 }
@@ -346,27 +457,23 @@ function crearBoton(clase, texto, accion){
 }
 
 function llamarTata(){
-  if (!perfilSeleccionado) { alert('Elige quién está llamando primero 🙂'); return; }
-  refLlamada.set({ estado:'llamando', llamadorNombre: perfilSeleccionado.nombre, llamadorFoto: perfilSeleccionado.emoji });
+  if (!perfilSeleccionado) { alert('Selecciona quién está llamando primero 🙂'); return; }
+  refLlamada.set({ estado:'llamando', llamadorNombre: perfilSeleccionado.nombre, llamadorFoto: perfilSeleccionado.foto });
   unirseALlamada();
 }
 
 function sumarseALlamada(){ unirseALlamada(); }
 
-// Mata la llamada global para todos (cuando cancelan o cuelgan estando solos)
 function finalizarLlamadaParaTodos(){
   refLlamada.set({ estado:'inactiva', llamadorNombre:'', llamadorFoto:'' });
   refSala.remove();
   salirDeLlamada();
 }
 
-// Salida individual: Solo saca al usuario actual de la sala
 async function salirDeLlamadaIndividual(){
   salirDeLlamada();
-  // Revisar si quedan más participantes en la sala
   const snap = await refParticipantes.once('value');
   if (!snap.exists() || snap.numChildren() === 0) {
-    // Si ya no queda nadie, cerramos la llamada globalmente
     refLlamada.set({ estado:'inactiva', llamadorNombre:'', llamadorFoto:'' });
     refSala.remove();
   }
@@ -394,7 +501,19 @@ async function unirseALlamada(){
     if (otroId === MI_ID || conexiones[otroId]) return;
     conectarConPeer(otroId, (snap.val() || {}).nombre || 'Familiar');
   });
-  refParticipantes.on('child_removed', (snap) => cerrarConexionPeer(snap.key));
+
+  refParticipantes.on('child_removed', (snap) => {
+    cerrarConexionPeer(snap.key);
+    verificarAutoCierre();
+  });
+}
+
+async function verificarAutoCierre() {
+  if (!enSala) return;
+  const snap = await refParticipantes.once('value');
+  if (snap.exists() && snap.numChildren() <= 1) {
+    finalizarLlamadaParaTodos();
+  }
 }
 
 function agregarCajaVideo(id, stream, nombre, esLocal){
