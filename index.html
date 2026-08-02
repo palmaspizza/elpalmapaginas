@@ -204,6 +204,15 @@ function inicializarMapa(){
 
 /* ESCUCHA AMBOS NODOS PARA EVITAR DESSINCRO */
 function escucharUbicacion(){
+  // 1. Configuramos el ícono personalizado con la foto
+  const iconoTata = L.icon({
+    iconUrl: 'fotopedro.jpg', // <--- REEMPLAZA ESTO CON EL LINK DE LA FOTO DEL TATA
+    iconSize: [56, 56], // Tamaño de la foto
+    iconAnchor: [28, 28], // Mitad del tamaño para que quede centrada
+    popupAnchor: [0, -30], // Dónde aparece la burbuja respecto a la foto
+    className: 'foto-marcador'
+  });
+
   const procesarUbicacion = (snap) => {
     const datos = snap.val();
     if (!datos || datos.lat == null || datos.lng == null) return;
@@ -222,13 +231,32 @@ function escucharUbicacion(){
       obtenerDireccionTexto(lat, lng);
     }
 
+    // 2. Armamos la burbuja (Popup) con el botón de Google Maps
+    const urlGoogleMaps = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    const contenidoPopup = `
+      <div class="popup-maps">
+        <p>👨‍🦳 Tata está aquí</p>
+        <a href="${urlGoogleMaps}" target="_blank" class="btn-maps">
+          🗺️ Ir en Google Maps
+        </a>
+      </div>
+    `;
+
+    // 3. Dibujamos o actualizamos el marcador
     if (!marcadorTata) {
-      marcadorTata = L.marker([lat, lng]).addTo(mapaLeaflet).bindPopup('📍 Tata está aquí');
+      // Si no existe, lo creamos con el ícono de la foto
+      marcadorTata = L.marker([lat, lng], { icon: iconoTata })
+        .addTo(mapaLeaflet)
+        .bindPopup(contenidoPopup);
+        
       if (precision) {
         circuloPrecision = L.circle([lat, lng], { radius: precision, color: '#1e3c72', fillColor: '#2a5298', fillOpacity: 0.15 }).addTo(mapaLeaflet);
       }
     } else {
+      // Si ya existe, solo lo movemos y actualizamos la burbuja
       marcadorTata.setLatLng([lat, lng]);
+      marcadorTata.setPopupContent(contenidoPopup);
+      
       if (circuloPrecision) {
         circuloPrecision.setLatLng([lat, lng]);
         if (precision) circuloPrecision.setRadius(precision);
@@ -448,5 +476,36 @@ function salirDeLlamada(){
   document.getElementById('videoGrid').innerHTML = '';
 }
 </script>
+<style>
+  /* Estilos para el marcador con foto del Tata */
+  .foto-marcador {
+    border-radius: 50%;
+    border: 3px solid #2a5298; /* Borde azul para que resalte */
+    background-color: white;
+    object-fit: cover;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  }
+  
+  /* Estilos para el cuadrito (popup) que pregunta si ir a Maps */
+  .popup-maps {
+    text-align: center;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .popup-maps p {
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .popup-maps .btn-maps {
+    background: #1fa855;
+    color: white;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    display: inline-block;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+</style>
 </body>
 </html>
