@@ -243,7 +243,6 @@
   <div id="selectorPerfil">
     <h2>¿Quién está llamando?</h2>
     <div class="perfiles">
-      <!-- Reemplaza los enlaces src por tus fotos reales -->
       <div class="perfilBtn" data-nombre="Diego" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
         <img src="https://i.ibb.co/68Z7442/tata-avatar.png" alt="Diego">Diego
       </div>
@@ -421,6 +420,8 @@ function escucharEstadoLlamada(){
     renderizarPanel(datos);
     if (estadoLlamadaActual === 'inactiva' && enSala) {
       salirDeLlamada();
+    } else if (estadoLlamadaActual === 'en_llamada' && !enSala) {
+      unirseALlamada();
     }
   });
 }
@@ -460,7 +461,7 @@ function crearBoton(clase, texto, accion){
 function llamarTata(){
   if (!perfilSeleccionado) { alert('Selecciona quién está llamando primero 🙂'); return; }
   refLlamada.set({ 
-    estado: 'llamando', 
+    estado: 'en_llamada', 
     llamadorNombre: perfilSeleccionado.nombre || 'Familiar', 
     llamadorFoto: perfilSeleccionado.foto || '' 
   });
@@ -500,6 +501,8 @@ async function unirseALlamada(){
   const miRef = refParticipantes.child(MI_ID);
   miRef.set({ nombre: perfilSeleccionado ? perfilSeleccionado.nombre : 'Familiar' });
   miRef.onDisconnect().remove();
+
+  refLlamada.update({ estado: 'en_llamada' });
 
   refParticipantes.on('child_added', (snap) => {
     const otroId = snap.key;
