@@ -75,8 +75,6 @@
     color: var(--text-muted);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
-  /* Estilo para las fotos de perfil circulares */
   .perfilBtn img { 
     width: 48px; 
     height: 48px; 
@@ -87,7 +85,6 @@
     border: 2px solid var(--border);
     transition: transform 0.2s, border-color 0.2s; 
   }
-  
   .perfilBtn:hover { border-color: var(--primary); color: var(--text-main); background: rgba(59, 130, 246, 0.05); }
   .perfilBtn:hover img { transform: scale(1.08); border-color: var(--primary); }
   .perfilBtn.activo { border-color: var(--primary); background: rgba(59, 130, 246, 0.15); color: var(--text-main); font-weight: 600; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
@@ -243,10 +240,10 @@
 <div id="appContainer">
   <header><h1>📞 Familia del PEDRO</h1></header>
 
-  <!-- Selector de perfil con fotos reales -->
   <div id="selectorPerfil">
     <h2>¿Quién está llamando?</h2>
     <div class="perfiles">
+      <!-- Reemplaza los enlaces src por tus fotos reales -->
       <div class="perfilBtn" data-nombre="Diego" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
         <img src="https://i.ibb.co/68Z7442/tata-avatar.png" alt="Diego">Diego
       </div>
@@ -389,7 +386,6 @@ function escucharUbicacion(){
 }
 
 function obtenerDireccionTexto(lat, lng) {
-  // Usamos JSONP o un manejo seguro para evitar bloqueos CORS en producción
   fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
     headers: { 'Accept-Language': 'es' }
   })
@@ -463,7 +459,11 @@ function crearBoton(clase, texto, accion){
 
 function llamarTata(){
   if (!perfilSeleccionado) { alert('Selecciona quién está llamando primero 🙂'); return; }
-  refLlamada.set({ estado:'llamando', llamadorNombre: perfilSeleccionado.nombre, llamadorFoto: perfilSeleccionado.foto });
+  refLlamada.set({ 
+    estado: 'llamando', 
+    llamadorNombre: perfilSeleccionado.nombre || 'Familiar', 
+    llamadorFoto: perfilSeleccionado.foto || '' 
+  });
   unirseALlamada();
 }
 
