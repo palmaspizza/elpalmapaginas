@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Familia - Tata</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; }
+  html, body { width:100%; height:100%; overflow:hidden; font-family:'Segoe UI', Arial, sans-serif; background:#0b1220; }
+  #app { width:100vw; height:100vh; position:relative; }
+
+  #pantallaInicio {
+    position:fixed; inset:0; background:#0b1220; color:#fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:9999; text-align:center; padding:40px;
+  }
+  #pantallaInicio h1 { font-size:3vw; margin-bottom:30px; }
+  #btnIniciar {
+    background:#2e7d32; color:#fff; border:none; border-radius:30px;
+    font-size:2.6vw; padding:35px 70px; cursor:pointer; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+
+  #pantallaInactiva {
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center;
+    background:linear-gradient(160deg,#1e3c72,#2a5298);
+    color:#fff;
+  }
+  #saludo { font-size:6vw; font-weight:700; margin-bottom:20px; }
+  #reloj { font-size:9vw; font-weight:800; letter-spacing:4px; }
+  #fecha { font-size:2.2vw; margin-top:10px; opacity:.9; }
+  #mensajeTranquilo { font-size:2.6vw; margin-top:40px; opacity:.95; }
+
+  /* ---- Botones gigantes de entretenimiento (abren en pestaña nueva) ---- */
+  #barraEntretenimiento {
+    display:flex; gap:24px; margin-top:50px; flex-wrap:wrap; justify-content:center;
+  }
+  .botonEntretenimiento {
+    border:none; border-radius:24px; color:#fff; font-weight:800;
+    font-size:1.6vw; padding:26px 30px; cursor:pointer;
+    box-shadow:0 8px 20px rgba(0,0,0,.35);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    min-width:170px;
+  }
+  .botonEntretenimiento .iconoEnt { font-size:3.2vw; }
+  #btnYoutube  { background:#cc0000; }
+  #btnSpotify  { background:#1db954; }
+  #btnFacebook { background:#1877f2; }
+
+  #btnPantallaNegra {
+    position:fixed; bottom:20px; right:20px; width:60px; height:60px;
+    border-radius:50%; background:rgba(255,255,255,.15); border:2px solid rgba(255,255,255,.4);
+    color:#fff; font-size:26px; cursor:pointer; z-index:50;
+  }
+
+  #pantallaNegra {
+    position:fixed; inset:0; background:#000; z-index:200; display:none;
+    align-items:center; justify-content:center;
+  }
+  #pantallaNegra span { color:#222; font-size:1.4vw; }
+
+  #pantallaLlamando {
+    position:fixed; inset:0; display:none; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; color:#fff;
+    background: radial-gradient(circle at 50% 30%, #ff512f, #a5252c 70%);
+    animation: pulseFondo 1.4s infinite ease-in-out;
+  }
+  @keyframes pulseFondo { 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.25);} }
+  #avatarLlamador { font-size:14vw; line-height:1; margin-bottom:10px; animation: pulseAvatar 1s infinite ease-in-out; }
+  @keyframes pulseAvatar { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+  #textoLlamador { font-size:5vw; font-weight:800; margin-bottom:10px; text-shadow:0 4px 10px rgba(0,0,0,.4); }
+  #contador { font-size:2vw; opacity:.9; margin-bottom:40px; }
+  #botonesLlamada { display:flex; gap:60px; }
+  .btnLlamada {
+    border:none; border-radius:40px; font-size:2.4vw; font-weight:800; color:#fff;
+    padding:35px 55px; cursor:pointer; box-shadow:0 10px 25px rgba(0,0,0,.4);
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .btnLlamada .icono { font-size:5vw; }
+  #btnContestar { background:#1fa855; }
+  #btnRechazar { background:#e63946; }
+
+  #pantallaEnLlamada { position:fixed; inset:0; display:none; flex-direction:column; background:#000; }
+  #videoGrid {
+    flex:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
+    gap:8px; padding:8px; overflow:auto;
+  }
+  .videoBox { position:relative; background:#111; border-radius:14px; overflow:hidden; }
+  .videoBox video { width:100%; height:100%; object-fit:cover; display:block; }
+  .videoBox .etiqueta {
+    position:absolute; bottom:6px; left:10px; color:#fff; font-size:1.1vw;
+    background:rgba(0,0,0,.5); padding:2px 10px; border-radius:8px;
+  }
+  #videoGrid .videoBox { width:min(45vw, 420px); height:min(45vw, 320px); }
+  #videoLocalBox { width:160px; height:120px; position:absolute; bottom:14vh; right:20px; z-index:5; border:2px solid #fff; }
+
+  #barraColgar { height:12vh; display:flex; align-items:center; justify-content:center; background:#111; }
+  #btnColgar { background:#e63946; color:#fff; border:none; border-radius:30px; font-size:2.4vw; font-weight:800; padding:18px 60px; cursor:pointer; }
+
+  @media (max-width: 900px) {
+    #saludo, #textoLlamador { font-size:8vw; }
+    #reloj { font-size:14vw; }
+    .btnLlamada { font-size:4vw; padding:26px 36px; }
+    .videoBox .etiqueta { font-size:3vw; }
+    .botonEntretenimiento { font-size:3.6vw; min-width:120px; }
+    .botonEntretenimiento .iconoEnt { font-size:7vw; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div id="pantallaInicio">
+    <h1>Sistema de Videollamadas Familiares</h1>
+    <button id="btnIniciar">▶ TOCAR AQUÍ PARA INICIAR</button>
+  </div>
+
+  <div id="pantallaInactiva">
+    <div id="saludo">¡Hola Tata! 💛</div>
+    <div id="reloj">--:--</div>
+    <div id="fecha"></div>
+    <div id="mensajeTranquilo">Todo está bien en casa. Te queremos mucho.</div>
+
+    <div id="barraEntretenimiento">
+      <button class="botonEntretenimiento" id="btnYoutube"><span class="iconoEnt">▶️</span>VER YOUTUBE</button>
+      <button class="botonEntretenimiento" id="btnSpotify"><span class="iconoEnt">🎵</span>ESCUCHAR MÚSICA</button>
+      <button class="botonEntretenimiento" id="btnFacebook"><span class="iconoEnt">👥</span>FACEBOOK</button>
+    </div>
+  </div>
+
+  <button id="btnPantallaNegra" title="Modo descanso">🌙</button>
+  <div id="pantallaNegra"><span>Toca en cualquier parte para volver</span></div>
+
+  <div id="pantallaLlamando">
+    <div id="avatarLlamador">📞</div>
+    <div id="textoLlamador">¡TE ESTÁ LLAMANDO...!</div>
+    <div id="contador">Se contestará solo en 20 segundos...</div>
+    <div id="botonesLlamada">
+      <button class="btnLlamada" id="btnContestar"><span class="icono">✅</span>CONTESTAR<br><small>(Presiona ENTER)</small></button>
+      <button class="btnLlamada" id="btnRechazar"><span class="icono">❌</span>RECHAZAR<br><small>(Presiona ESPACIO)</small></button>
+    </div>
+  </div>
+
+  <div id="pantallaEnLlamada">
+    <div id="videoGrid"></div>
+    <div id="videoLocalBox" class="videoBox">
+      <video id="videoLocal" autoplay playsinline muted></video>
+      <div class="etiqueta">Tú (Tata)</div>
+    </div>
+    <div id="barraColgar">
+      <button id="btnColgar">🔴 COLGAR (Presiona ESPACIO)</button>
+    </div>
+  </div>
+
+</div>
+<!-- Agrega esta línea en el HTML -->
+<audio id="miAudioTimbre" src="tonollamada.mp3" loop preload="auto"></audio>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN DE FIREBASE
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDaarm67ndNx64YwmsEqhyEE-JI3G0zYpo",
+  authDomain: "pedrollamadas-f8e8c.firebaseapp.com",
+  databaseURL: "https://pedrollamadas-f8e8c-default-rtdb.firebaseio.com",
+  projectId: "pedrollamadas-f8e8c",
+  storageBucket: "pedrollamadas-f8e8c.firebasestorage.app",
+  messagingSenderId: "910857723610",
+  appId: "1:910857723610:web:94ba7b9c68d9c1c7d60fe3",
+  measurementId: "G-E2F40V1GZG"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const refLlamada = db.ref('llamada');
+const refSala = db.ref('sala');
+const refParticipantes = refSala.child('participantes');
+const refPares = refSala.child('pares');
+
+const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const MI_ID = 'tata_' + Math.random().toString(36).slice(2,10);
+
+/* ============================================================
+   ELEMENTOS DEL DOM
+   ============================================================ */
+const pantallaInicio     = document.getElementById('pantallaInicio');
+const btnIniciar         = document.getElementById('btnIniciar');
+const pantallaInactiva   = document.getElementById('pantallaInactiva');
+const pantallaLlamando   = document.getElementById('pantallaLlamando');
+const pantallaEnLlamada  = document.getElementById('pantallaEnLlamada');
+const pantallaNegra      = document.getElementById('pantallaNegra');
+const btnPantallaNegra   = document.getElementById('btnPantallaNegra');
+const relojEl            = document.getElementById('reloj');
+const fechaEl             = document.getElementById('fecha');
+const avatarLlamadorEl    = document.getElementById('avatarLlamador');
+const textoLlamadorEl     = document.getElementById('textoLlamador');
+const contadorEl          = document.getElementById('contador');
+const btnContestar        = document.getElementById('btnContestar');
+const btnRechazar         = document.getElementById('btnRechazar');
+const btnColgar           = document.getElementById('btnColgar');
+const videoGrid           = document.getElementById('videoGrid');
+const videoLocal          = document.getElementById('videoLocal');
+const btnYoutube          = document.getElementById('btnYoutube');
+const btnSpotify          = document.getElementById('btnSpotify');
+const btnFacebook         = document.getElementById('btnFacebook');
+
+/* ============================================================
+   ENTRETENIMIENTO: cada botón abre el sitio en una pestaña nueva
+   del navegador (fuera de tata.html). Es la forma más simple y
+   confiable: YouTube, Spotify y Facebook no siempre permiten
+   mostrarse "adentro" de otra página (iframe), pero SIEMPRE se
+   pueden abrir en su propia pestaña.
+   ============================================================ */
+const URL_YOUTUBE  = 'https://youtube.com';
+const URL_SPOTIFY  = 'https://open.spotify.com';
+const URL_FACEBOOK = 'https://facebook.com';
+
+btnYoutube.addEventListener('click',  () => window.open(URL_YOUTUBE,  '_blank'));
+btnSpotify.addEventListener('click',  () => window.open(URL_SPOTIFY,  '_blank'));
+btnFacebook.addEventListener('click', () => window.open(URL_FACEBOOK, '_blank'));
+
+/* Título normal de la pestaña vs. título "marcador" durante una llamada.
+   El script vigilante.sh vigila este marcador desde fuera del navegador
+   (Linux) para traer la ventana al frente de CUALQUIER otra aplicación
+   abierta en el PC, incluso si el Tata quedó viendo YouTube/Spotify/Facebook
+   en otra pestaña. */
+const TITULO_NORMAL   = 'Familia - Tata';
+const TITULO_LLAMADA  = '⚡LLAMADA_Pedro_ACTIVA⚡';
+
+let estadoActual = 'inactiva';
+let timerAutoContestar = null;
+let intervaloContador = null;
+let segundosRestantes = 20;
+let audioCtx = null;
+let osciladorActivo = null;
+
+let streamLocal = null;
+let conexiones = {};        // { otroId: RTCPeerConnection }
+let listenersPares = {};    // { otroId: [refs con .on() para poder quitarlos] }
+let enSala = false;
+
+/* ---------- RELOJ ---------- */
+function actualizarReloj(){
+  const ahora = new Date();
+  const hh = String(ahora.getHours()).padStart(2,'0');
+  const mm = String(ahora.getMinutes()).padStart(2,'0');
+  relojEl.textContent = `${hh}:${mm}`;
+  fechaEl.textContent = ahora.toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+}
+setInterval(actualizarReloj, 1000);
+actualizarReloj();
+
+/* ---------- PANTALLA DE INICIO ---------- */
+function iniciarSistema(){
+  pantallaInicio.style.display = 'none';
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+}
+btnIniciar.addEventListener('click', iniciarSistema);
+
+/* Auto-inicio: apenas carga la página, arranca todo solo, sin tocar nada.
+   Para que el sonido del timbre (mp3) pueda reproducirse sin un clic
+   humano, Chrome se debe abrir con el flag --autoplay-policy=no-user-gesture-required
+   (ver instrucciones de instalación). Si por algún motivo el navegador
+   igual bloquea algo, el botón "TOCAR AQUÍ PARA INICIAR" sigue ahí de respaldo. */
+window.addEventListener('DOMContentLoaded', iniciarSistema);
+
+/* ---------- MODO PANTALLA NEGRA ---------- */
+btnPantallaNegra.addEventListener('click', () => { pantallaNegra.style.display = 'flex'; });
+pantallaNegra.addEventListener('click', () => { pantallaNegra.style.display = 'none'; });
+function salirDePantallaNegra(){ pantallaNegra.style.display = 'none'; }
+
+/* ---------- TIMBRE ---------- */
+/* ---------- TIMBRE CON MP3 ---------- */
+const miAudioTimbre = document.getElementById('miAudioTimbre');
+
+function iniciarTimbre(){
+  detenerTimbre();
+  if (miAudioTimbre) {
+    miAudioTimbre.currentTime = 0; // Reinicia el audio desde el principio
+    miAudioTimbre.play().catch(err => {
+      console.warn("El navegador bloqueó el autoplay del audio:", err);
+    });
+  }
+}
+
+function detenerTimbre(){
+  if (miAudioTimbre) {
+    miAudioTimbre.pause();
+    miAudioTimbre.currentTime = 0;
+  }
+}
+/* ---------- CAMBIO DE PANTALLAS ---------- */
+function mostrarPantalla(estado){
+  pantallaInactiva.style.display  = (estado === 'inactiva')   ? 'flex' : 'none';
+  pantallaLlamando.style.display  = (estado === 'llamando')   ? 'flex' : 'none';
+  pantallaEnLlamada.style.display = (estado === 'en_llamada') ? 'flex' : 'none';
+}
+
+/* ============================================================
+   LISTENER DE FIREBASE: /llamada
+   ============================================================ */
+refLlamada.on('value', (snapshot) => {
+  const datos = snapshot.val() || { estado:'inactiva' };
+  const estadoNuevo = datos.estado || 'inactiva';
+  const estadoAnterior = estadoActual;
+  estadoActual = estadoNuevo;
+
+  if (estadoNuevo === 'llamando') {
+    document.title = TITULO_LLAMADA;
+    salirDePantallaNegra();
+    avatarLlamadorEl.textContent = datos.llamadorFoto || '👤';
+    textoLlamadorEl.textContent = `¡TE ESTÁ LLAMANDO ${(datos.llamadorNombre || 'UN FAMILIAR').toUpperCase()}!`;
+    mostrarPantalla('llamando');
+    if (estadoAnterior !== 'llamando') {
+      iniciarTimbre();
+      iniciarCuentaRegresiva();
+    }
+  }
+  else if (estadoNuevo === 'en_llamada') {
+    document.title = TITULO_LLAMADA;
+    salirDePantallaNegra();
+    detenerTimbre();
+    detenerCuentaRegresiva();
+    mostrarPantalla('en_llamada');
+    if (!enSala) unirseALlamada();
+  }
+  else {
+    document.title = TITULO_NORMAL;
+    detenerTimbre();
+    detenerCuentaRegresiva();
+    mostrarPantalla('inactiva');
+    if (enSala) salirDeLlamada();
+  }
+});
+
+/* ---------- CUENTA REGRESIVA / AUTO-CONTESTAR ---------- */
+function iniciarCuentaRegresiva(){
+  segundosRestantes = 20;
+  contadorEl.textContent = `Se contestará solo en ${segundosRestantes} segundos...`;
+  detenerCuentaRegresiva();
+  intervaloContador = setInterval(() => {
+    segundosRestantes--;
+    if (segundosRestantes > 0) contadorEl.textContent = `Se contestará solo en ${segundosRestantes} segundos...`;
+  }, 1000);
+  timerAutoContestar = setTimeout(() => { if (estadoActual === 'llamando') contestarLlamada(); }, 20000);
+}
+function detenerCuentaRegresiva(){
+  if (timerAutoContestar) clearTimeout(timerAutoContestar);
+  if (intervaloContador) clearInterval(intervaloContador);
+  timerAutoContestar = null; intervaloContador = null;
+}
+
+/* ---------- ACCIONES ---------- */
+function contestarLlamada(){
+  detenerTimbre(); detenerCuentaRegresiva();
+  refLlamada.update({ estado: 'en_llamada' });
+}
+function rechazarLlamada(){
+  detenerTimbre(); detenerCuentaRegresiva();
+  refLlamada.set({ estado:'inactiva', llamadorNombre:'', llamadorFoto:'' });
+}
+function colgarLlamada(){
+  refLlamada.set({ estado:'inactiva', llamadorNombre:'', llamadorFoto:'' });
+  refSala.remove(); // limpia toda la señalización para la próxima llamada
+}
+btnContestar.addEventListener('click', contestarLlamada);
+btnRechazar.addEventListener('click', rechazarLlamada);
+btnColgar.addEventListener('click', colgarLlamada);
+
+/* ---------- TECLADO INTELIGENTE ---------- */
+document.addEventListener('keydown', (e) => {
+  if (estadoActual === 'llamando') {
+    if (e.code === 'Enter') { e.preventDefault(); contestarLlamada(); }
+    else if (e.code === 'Space') { e.preventDefault(); rechazarLlamada(); }
+  } else if (estadoActual === 'en_llamada') {
+    if (e.code === 'Space') { e.preventDefault(); colgarLlamada(); }
+  }
+});
+
+/* ============================================================
+   WEBRTC + FIREBASE (mesh, sin librerías externas)
+   ============================================================ */
+async function unirseALlamada(){
+  enSala = true;
+  try {
+    streamLocal = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+  } catch(e){
+    console.warn('Sin cámara/micrófono, se intenta solo audio', e);
+    try { streamLocal = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+    catch(e2){ alert('No se pudo acceder a la cámara ni al micrófono.'); return; }
+  }
+  videoLocal.srcObject = streamLocal;
+
+  const miRef = refParticipantes.child(MI_ID);
+  miRef.set({ nombre:'Tata' });
+  miRef.onDisconnect().remove();
+
+  refParticipantes.on('child_added', (snap) => {
+    const otroId = snap.key;
+    if (otroId === MI_ID || conexiones[otroId]) return;
+    conectarConPeer(otroId, (snap.val() || {}).nombre || 'Familiar');
+  });
+  refParticipantes.on('child_removed', (snap) => {
+    const otroId = snap.key;
+    cerrarConexionPeer(otroId);
+  });
+}
+
+function conectarConPeer(otroId, nombreOtro){
+  const pairKey = [MI_ID, otroId].sort().join('__');
+  const soyA = MI_ID < otroId;
+  const pc = new RTCPeerConnection(ICE_SERVERS);
+  conexiones[otroId] = pc;
+  listenersPares[otroId] = [];
+
+  streamLocal.getTracks().forEach(track => pc.addTrack(track, streamLocal));
+
+  pc.ontrack = (event) => {
+    let box = document.getElementById('caja_' + otroId);
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'videoBox';
+      box.id = 'caja_' + otroId;
+      box.innerHTML = `<video id="video_${otroId}" autoplay playsinline></video><div class="etiqueta">${nombreOtro}</div>`;
+      videoGrid.appendChild(box);
+    }
+    document.getElementById('video_' + otroId).srcObject = event.streams[0];
+  };
+
+  const refParPropio = refPares.child(pairKey).child(soyA ? 'candidatosA' : 'candidatosB');
+  pc.onicecandidate = (event) => {
+    if (event.candidate) refParPropio.push(event.candidate.toJSON());
+  };
+
+  if (soyA) {
+    pc.createOffer().then(offer => {
+      pc.setLocalDescription(offer);
+      refPares.child(pairKey).child('oferta').set(offer.toJSON ? offer.toJSON() : { type:offer.type, sdp:offer.sdp });
+    });
+    const refRespuesta = refPares.child(pairKey).child('respuesta');
+    const cbRespuesta = refRespuesta.on('value', (snap) => {
+      const val = snap.val();
+      if (val && !pc.currentRemoteDescription) {
+        pc.setRemoteDescription(new RTCSessionDescription(val));
+      }
+    });
+    listenersPares[otroId].push([refRespuesta, cbRespuesta]);
+
+    const refCandB = refPares.child(pairKey).child('candidatosB');
+    const cbCandB = refCandB.on('child_added', (snap) => {
+      pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
+    });
+    listenersPares[otroId].push([refCandB, cbCandB]);
+  } else {
+    const refOferta = refPares.child(pairKey).child('oferta');
+    const cbOferta = refOferta.on('value', async (snap) => {
+      const val = snap.val();
+      if (val && !pc.currentRemoteDescription) {
+        await pc.setRemoteDescription(new RTCSessionDescription(val));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        refPares.child(pairKey).child('respuesta').set({ type:answer.type, sdp:answer.sdp });
+      }
+    });
+    listenersPares[otroId].push([refOferta, cbOferta]);
+
+    const refCandA = refPares.child(pairKey).child('candidatosA');
+    const cbCandA = refCandA.on('child_added', (snap) => {
+      pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
+    });
+    listenersPares[otroId].push([refCandA, cbCandA]);
+  }
+}
+
+function cerrarConexionPeer(otroId){
+  const pc = conexiones[otroId];
+  if (pc) { pc.close(); delete conexiones[otroId]; }
+  (listenersPares[otroId] || []).forEach(([ref, cb]) => ref.off('value', cb));
+  delete listenersPares[otroId];
+  const box = document.getElementById('caja_' + otroId);
+  if (box) box.remove();
+}
+
+function salirDeLlamada(){
+  enSala = false;
+  refParticipantes.off('child_added');
+  refParticipantes.off('child_removed');
+  Object.keys(conexiones).forEach(cerrarConexionPeer);
+  conexiones = {}; listenersPares = {};
+  if (streamLocal) { streamLocal.getTracks().forEach(t => t.stop()); streamLocal = null; }
+  videoLocal.srcObject = null;
+  refParticipantes.child(MI_ID).remove();
+  videoGrid.innerHTML = '';
+}
+</script>
+</body>
+</html>
