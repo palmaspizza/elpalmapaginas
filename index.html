@@ -484,17 +484,27 @@ async function unirseALlamada(){
   document.body.classList.add('en-videollamada');
 
   try {
-    streamLocal = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    streamLocal = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   } catch(e){
-    try { streamLocal = await navigator.mediaDevices.getUserMedia({ audio:true }); }
-    catch(e2){ alert('Sin acceso a cámara ni micrófono.'); enSala = false; document.body.classList.remove('en-videollamada'); return; }
+    try { 
+      streamLocal = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+    } catch(e2){ 
+      alert('Sin acceso a cámara ni micrófono. Revisa los permisos del navegador.'); 
+      enSala = false; 
+      document.body.classList.remove('en-videollamada'); 
+      return; 
+    }
   }
+  
+  // Muestra tu propio video de inmediato
   agregarCajaVideo('local', streamLocal, perfilSeleccionado ? perfilSeleccionado.nombre : 'Tú', true);
 
+  // Registramos al participante en la base de datos de manera limpia
   const miRef = refParticipantes.child(MI_ID);
-  miRef.set({ nombre: perfilSeleccionado ? perfilSeleccionado.nombre : 'Familiar' });
+  await miRef.set({ nombre: perfilSeleccionado ? perfilSeleccionado.nombre : 'Familiar' });
   miRef.onDisconnect().remove();
 
+  // Escuchamos quién más está en la sala o va entrando
   refParticipantes.on('child_added', (snap) => {
     const otroId = snap.key;
     if (otroId === MI_ID || conexiones[otroId]) return;
