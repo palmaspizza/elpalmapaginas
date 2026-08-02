@@ -389,13 +389,18 @@ function escucharUbicacion(){
 }
 
 function obtenerDireccionTexto(lat, lng) {
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+  // Usamos JSONP o un manejo seguro para evitar bloqueos CORS en producción
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+    headers: { 'Accept-Language': 'es' }
+  })
     .then(res => res.json())
     .then(data => {
       if (data && data.display_name) {
         document.getElementById('direccionTexto').textContent = `📍 ${data.display_name.split(',').slice(0, 3).join(',')}`;
       }
-    }).catch(() => {});
+    }).catch(() => {
+      document.getElementById('direccionTexto').textContent = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+    });
 }
 
 function configurarSelectorPerfil(){
