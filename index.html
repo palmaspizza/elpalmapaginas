@@ -2,107 +2,313 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Familia - Llamar al Tata</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Familia · Videollamada con el Pedro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
-  body { background:#f2f4f8; color:#1a1a2e; padding-bottom:40px; }
-
-  header { background:linear-gradient(135deg,#1e3c72,#2a5298); color:#fff; padding:18px 16px; text-align:center; }
-  header h1 { font-size:1.3rem; }
-
-  /* Contenedor interactivo del mapa */
-  #contenedorMapa {
-    position: relative;
-    width: 100%;
-    transition: all 0.3s ease;
+  :root {
+    --azul-oscuro: #005cfc;
+    --azul-medio: #2a5298;
+    --azul-claro: #eef3fc;
+    --fondo: #3b3b3b;
+    --tarjeta: #a5a5a5;
+    --texto: #17203a;
+    --texto-suave: #fff;
+    --linea: #e3e8f4;
+    --verde: #1fa855;
+    --verde-fuerte: #17924a;
+    --rojo: #e5484d;
+    --rojo-fuerte: #c73338;
+    --ambar: #f5a623;
+    --sombra: 0 10px 30px rgba(22, 48, 94, .10);
+    --sombra-suave: 0 4px 14px rgba(22, 48, 94, .08);
+    --radio: 20px;
   }
-  #mapa { width:100%; height:280px; cursor:pointer; transition: height 0.3s ease; z-index: 1; }
-  
-  /* Estado de modo mapa agrandado al hacer clic */
-  body.mapaAgrandado #mapa { height: 75vh; }
-  body.mapaAgrandado #selectorPerfil,
-  body.mapaAgrandado #estadoTexto,
-  body.mapaAgrandado #panelControl,
-  body.mapaAgrandado #videoGrid { display: none !important; }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    font-family:'Nunito', 'Segoe UI', Arial, sans-serif;
+    background:var(--fondo);
+    color:var(--texto);
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font-family: inherit; }
+
+  /* ============================================================
+     ENCABEZADO
+     ============================================================ */
+  header {
+    background:linear-gradient(135deg, var(--azul-oscuro), var(--azul-medio));
+    color:#fff;
+    padding: calc(20px + env(safe-area-inset-top)) 20px 26px;
+    border-radius: 0 0 28px 28px;
+    box-shadow: var(--sombra);
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content:"";
+    position:absolute; right:-40px; top:-40px;
+    width:160px; height:160px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,255,255,.14), transparent 70%);
+  }
+  header .marca { display:flex; align-items:center; gap:12px; }
+  header .marca-icono {
+    width:44px; height:44px; border-radius:14px;
+    background:rgba(255,255,255,.18);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; flex-shrink:0;
+  }
+  header h1 { font-size:1.15rem; font-weight:800; letter-spacing:.2px; }
+  header p.subtitulo { font-size:.85rem; opacity:.85; margin-top:2px; font-weight:600; }
+
+  /* ============================================================
+     CONTENEDOR PRINCIPAL
+     ============================================================ */
+  main#vistaPrincipal {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 16px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .tarjeta {
+    background:var(--tarjeta);
+    border-radius: var(--radio);
+    box-shadow: var(--sombra-suave);
+    overflow:hidden;
+  }
+
+  .tarjeta-titulo {
+    display:flex; align-items:center; gap:8px;
+    font-size:.95rem; font-weight:800; color:var(--azul-oscuro);
+    padding: 16px 18px 8px;
+  }
+  .tarjeta-titulo .punto { font-size:1.1rem; }
+
+  /* ============================================================
+     MAPA
+     ============================================================ */
+  #contenedorMapa { position: relative; width: 100%; }
+  #mapa {
+    width:100%; height:220px; cursor:pointer;
+    transition: height .35s ease;
+    z-index: 1;
+  }
+  body.mapaAgrandado #mapa { height: 82dvh; }
+  body.mapaAgrandado #vistaPrincipal > *:not(#tarjetaMapa) { display:none !important; }
+  body.mapaAgrandado #tarjetaMapa { box-shadow:none; border-radius:0; }
+  body.mapaAgrandado main#vistaPrincipal { padding:0; max-width:100%; }
+
+  #btnCerrarMapa {
+    display:none;
+    position:absolute; top:14px; left:14px; z-index: 500;
+    background:var(--azul-oscuro); color:#5c5c5c; border:none;
+    padding: 12px 20px; border-radius: 50px; font-weight:800; font-size:.95rem;
+    box-shadow: 0 6px 16px rgba(0,0,0,.28);
+    align-items:center; gap:8px; cursor:pointer;
+  }
+  body.mapaAgrandado #btnCerrarMapa { display:flex; }
 
   #ultimaUbicacion {
-    text-align:center; padding:10px 14px; font-size:.85rem; color:#1e3c72; background:#e9edf5;
-    border-bottom: 2px solid #cbd5e1; font-weight: 600; line-height: 1.4;
+    padding:12px 18px 16px; font-size:.82rem; color:var(--texto-suave); font-weight:600; line-height:1.5;
   }
-  #direccionTexto { display: block; font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-top: 2px; }
+  #direccionTexto { display:block; font-size:.95rem; font-weight:800; color:var(--texto); margin-top:2px; }
 
-  #selectorPerfil { padding:16px; background:#fff; margin:12px; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-  #selectorPerfil h2 { font-size:1rem; margin-bottom:10px; color:#333; }
-  .perfiles { display:flex; gap:10px; flex-wrap:wrap; }
-  .perfilBtn { flex:1; min-width:70px; border:2px solid #dde3ee; background:#fafbfe; border-radius:14px; padding:12px 6px; text-align:center; cursor:pointer; font-size:.85rem; }
-  .perfilBtn .emoji { font-size:1.8rem; display:block; margin-bottom:4px; }
-  .perfilBtn.activo { border-color:#2a5298; background:#e8edfb; font-weight:700; }
-
-  #panelControl { margin:12px; }
-  .btnGrande { width:100%; border:none; border-radius:18px; color:#fff; font-size:1.3rem; font-weight:800; padding:26px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.15); margin-bottom:12px; }
-  .btnLlamar   { background:#1fa855; display: none; animation: pulse 1.5s infinite, pulseBlue 2s infinite; }
-  .btnCancelar { background:#e63946; }
-  .btnSumarse  { background:#2266dd; }
-  .btnFinalizar{ background:#8d0801; font-size:1rem; }
-
-  #estadoTexto { text-align:center; padding:16px; font-size:1.01rem; font-weight:600; color:#333; }
-
-  #videoGrid { display:flex; flex-wrap:wrap; gap:8px; margin:0 12px 12px; }
-  .videoBox { position:relative; background:#111; border-radius:12px; overflow:hidden; width:100%; }
-  .videoBox video { width:100%; display:block; max-height:260px; object-fit:cover; }
-  .videoBox .etiqueta { position:absolute; bottom:6px; left:10px; color:#fff; font-size:.8rem; background:rgba(0,0,0,.5); padding:2px 8px; border-radius:8px; }
-
-  #pantallaGPS { position:fixed; inset:0; background:#1e3c72; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; z-index: 9999; }
-  #pantallaGPS h1 { font-size:1.6rem; margin-bottom:20px; }
-  #pantallaGPS p { font-size:1rem; opacity:.9; }
-  #estadoGPS { margin-top:30px; font-size:1.1rem; font-weight:700; }
-
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.01); }
-    100% { transform: scale(1); }
+  /* ============================================================
+     SELECTOR DE PERFIL
+     ============================================================ */
+  #tarjetaPerfil { padding-bottom: 16px; }
+  .perfiles { display:flex; gap:10px; padding: 4px 16px 0; flex-wrap:wrap; }
+  .perfilBtn {
+    flex:1; min-width:74px;
+    border:2px solid var(--linea); background:var(--fondo);
+    border-radius:16px; padding:14px 6px; text-align:center; cursor:pointer;
+    font-size:.82rem; font-weight:700; color:var(--texto-suave);
+    transition: all .15s ease;
   }
-  @keyframes pulseBlue {
-    0% { transform: scale(1); background-color: #2266dd; }
-    50% { transform: scale(1.04); background-color: #3399ff; }
-    100% { transform: scale(1); background-color: #2266dd; }
+  .perfilBtn .emoji { font-size:1.7rem; display:block; margin-bottom:6px; }
+  .perfilBtn.activo {
+    border-color:var(--azul-medio); background:var(--azul-claro); color:var(--azul-oscuro);
+    box-shadow: 0 4px 10px rgba(42,82,152,.18);
+  }
+
+  /* ============================================================
+     ESTADO Y BOTONES DE ACCIÓN (pantalla principal)
+     ============================================================ */
+  #tarjetaEstado { padding: 18px; text-align:center; }
+  #estadoTexto {
+    font-size:.95rem; font-weight:700; color:var(--texto-suave);
+    min-height: 1.2em; margin-bottom: 4px;
+  }
+
+  .btnGrande {
+    width:100%; border:none; border-radius:18px; color:#fff;
+    font-size:1.08rem; font-weight:800; padding:20px;
+    cursor:pointer; box-shadow: var(--sombra-suave);
+    margin-top:12px;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    transition: transform .12s ease;
+  }
+  .btnGrande:active { transform: scale(.97); }
+  .btnGrande:first-child { margin-top:0; }
+
+  .btnLlamar { background:linear-gradient(135deg, var(--verde), var(--verde-fuerte)); position:relative; }
+  .btnLlamar::before {
+    content:""; position:absolute; inset:0; border-radius:18px;
+    box-shadow: 0 0 0 0 rgba(31,168,85,.55);
+    animation: anillo 2s infinite;
+  }
+  .btnCancelar  { background:linear-gradient(135deg, var(--rojo), var(--rojo-fuerte)); }
+  .btnSumarse   { background:linear-gradient(135deg, #2266dd, #1c4fb0); }
+  .btnFinalizar { background:linear-gradient(135deg, var(--rojo), var(--rojo-fuerte)); }
+
+  @keyframes anillo {
+    0%   { box-shadow: 0 0 0 0 rgba(31,168,85,.45); }
+    70%  { box-shadow: 0 0 0 16px rgba(31,168,85,0); }
+    100% { box-shadow: 0 0 0 0 rgba(31,168,85,0); }
+  }
+
+  .pildora-estado {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:.78rem; font-weight:800; padding:6px 14px;
+    border-radius:50px; margin-bottom:10px;
+  }
+  .pildora-estado.gris   { background:#eef1f7; color:var(--texto-suave); }
+  .pildora-estado.azul   { background:#e6edfb; color:var(--azul-medio); }
+  .pildora-estado.verde  { background:#e5f8ed; color:var(--verde-fuerte); }
+  .pildora-estado .bolita { width:8px; height:8px; border-radius:50%; background:currentColor; }
+  .pildora-estado.azul .bolita { animation: parpadeo 1.1s infinite; }
+
+  @keyframes parpadeo { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+  /* ============================================================
+     PANTALLA GPS (dispositivo del Pedro)
+     ============================================================ */
+  #pantallaGPS {
+    position:fixed; inset:0; z-index: 9999;
+    background:linear-gradient(160deg, var(--azul-oscuro), var(--azul-medio));
+    color:#fff; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:36px;
+  }
+  #pantallaGPS h1 { font-size:1.5rem; margin-bottom:16px; font-weight:800; }
+  #pantallaGPS p { font-size:1rem; opacity:.88; line-height:1.5; }
+  #estadoGPS { margin-top:26px; font-size:1.05rem; font-weight:800; }
+
+  /* ============================================================
+     PANTALLA DE LLAMADA A PANTALLA COMPLETA
+     (las cámaras ocupan toda la pantalla y se ajustan solas)
+     ============================================================ */
+  #pantallaLlamadaEnCurso {
+    position:fixed; inset:0; z-index: 2000;
+    background:#0b0f1a;
+    display:none;
+    flex-direction:column;
+  }
+  #pantallaLlamadaEnCurso.activa { display:flex; }
+
+  #videoGrid {
+    flex:1; min-height:0;
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-auto-rows: 1fr;
+    gap:3px;
+    background:#0b0f1a;
+  }
+  .videoBox { position:relative; background:#111725; overflow:hidden; min-height:0; }
+  .videoBox video {
+    width:100%; height:100%; display:block; object-fit:cover;
+  }
+  .videoBox .etiqueta {
+    position:absolute; bottom:10px; left:12px; color:#fff;
+    font-size:.8rem; font-weight:700;
+    background:rgba(0,0,0,.45); backdrop-filter: blur(4px);
+    padding:4px 12px; border-radius:50px;
+  }
+
+  #barraLlamadaOverlay {
+    background: rgba(10,14,26,.92);
+    backdrop-filter: blur(10px);
+    padding: 14px 18px calc(16px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  #estadoLlamadaOverlay { color:#fff; font-weight:800; font-size:.95rem; opacity:.92; }
+  #botonesLlamadaOverlay { width:100%; max-width:420px; }
+  #botonesLlamadaOverlay .btnGrande { margin-top:0; }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 380px) {
+    header h1 { font-size:1.02rem; }
+    .perfilBtn { font-size:.75rem; padding:12px 4px; }
+    .perfilBtn .emoji { font-size:1.5rem; }
   }
 </style>
 </head>
 <body>
 
 <div id="pantallaGPS" style="display:none;">
-  <h1>📍 Ubicación del Tata</h1>
+  <h1>📍 Ubicación del Pedro</h1>
   <p>Esta pantalla envía su ubicación a la familia automáticamente.<br>No es necesario tocar nada más.</p>
   <div id="estadoGPS">Iniciando...</div>
 </div>
 
 <div id="appFamilia">
-  <header><h1>👨‍👩‍👧‍👦 Familia del Tata</h1></header>
-
-  <div id="contenedorMapa">
-    <div id="mapa" title="Toca para agrandar/achicar el mapa"></div>
-    <div id="ultimaUbicacion">
-      <span id="textoHora">Buscando ubicación del Tata...</span>
-      <span id="direccionTexto"></span>
+  <header>
+    <div class="marca">
+      <div class="marca-icono">👨‍👩‍👧‍👦</div>
+      <div>
+        <h1>Familia del Pedro</h1>
+        <p class="subtitulo">Ubicación y videollamada en un solo lugar</p>
+      </div>
     </div>
-  </div>
+  </header>
 
-  <div id="selectorPerfil">
-    <h2>¿Quién está llamando?</h2>
-    <div class="perfiles">
-      <div class="perfilBtn" data-nombre="Diego" data-emoji="👨‍💻"><span class="emoji">👨‍💻</span>Diego</div>
-      <div class="perfilBtn" data-nombre="Matias" data-emoji="🙋‍♂️"><span class="emoji">🙋‍♂️</span>Matias</div>
-      <div class="perfilBtn" data-nombre="María" data-emoji="👩"><span class="emoji">👩</span>María</div>
-      <div class="perfilBtn" data-nombre="Ingrid" data-emoji="👩‍🦰"><span class="emoji">👩‍🦰</span>Ingrid</div>
-    </div>
-  </div>
+  <main id="vistaPrincipal">
 
-  <div id="estadoTexto"></div>
-  <div id="panelControl"></div>
+    <section id="tarjetaMapa" class="tarjeta">
+      <div id="contenedorMapa">
+        <div id="mapa" title="Toca para ver el mapa completo"></div>
+        <button id="btnCerrarMapa" type="button">✕ Volver</button>
+        <div id="ultimaUbicacion">
+          <span id="textoHora">Buscando ubicación del Tata…</span>
+          <span id="direccionTexto"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="tarjetaPerfil" class="tarjeta">
+      <div class="tarjeta-titulo"><span class="punto">🙋</span>¿Quién está llamando?</div>
+      <div class="perfiles">
+        <div class="perfilBtn" data-nombre="Diego" data-emoji="👨‍💻"><span class="emoji">👨‍💻</span>Diego</div>
+        <div class="perfilBtn" data-nombre="Matias" data-emoji="🙋‍♂️"><span class="emoji">🙋‍♂️</span>Matias</div>
+        <div class="perfilBtn" data-nombre="María" data-emoji="👩"><span class="emoji">👩</span>María</div>
+        <div class="perfilBtn" data-nombre="Ingrid" data-emoji="👩‍🦰"><span class="emoji">👩‍🦰</span>Ingrid</div>
+      </div>
+    </section>
+
+    <section id="tarjetaEstado" class="tarjeta">
+      <div id="estadoTexto"></div>
+      <div id="panelControl"></div>
+    </section>
+
+  </main>
+</div>
+
+<div id="pantallaLlamadaEnCurso">
   <div id="videoGrid"></div>
+  <div id="barraLlamadaOverlay">
+    <div id="estadoLlamadaOverlay"></div>
+    <div id="botonesLlamadaOverlay"></div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -149,7 +355,7 @@ let listenersPares = {};
 let enSala = false;
 
 /* ============================================================
-   MODO GPS (index.html?gps=1)
+   MODO GPS (pedroindex.html?gps=1)
    ============================================================ */
 const parametros = new URLSearchParams(window.location.search);
 if (parametros.get('gps') === '1') {
@@ -167,11 +373,11 @@ function iniciarEnvioGPS(){
     (pos) => {
       const ahora = new Date();
       const hora = `${String(ahora.getHours()).padStart(2,'0')}:${String(ahora.getMinutes()).padStart(2,'0')} hrs`;
-      const payload = { 
-        lat: pos.coords.latitude, 
-        lng: pos.coords.longitude, 
+      const payload = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
         precision: pos.coords.accuracy,
-        ultimaActualizacion: hora 
+        ultimaActualizacion: hora
       };
       db.ref('ubicacion_tata').set(payload);
       db.ref('ubicacion').set(payload);
@@ -196,27 +402,26 @@ function iniciarAppFamiliar(){
 /* MAPA CON ZOOM CERCANO POR DEFECTO (18) */
 function inicializarMapa(){
   mapaLeaflet = L.map('mapa').setView([-33.4372, -70.6506], 18);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution:'&copy; OpenStreetMap' 
+    attribution:'&copy; OpenStreetMap'
   }).addTo(mapaLeaflet);
 }
 
 /* ESCUCHA AMBOS NODOS PARA EVITAR DESSINCRO */
 function escucharUbicacion(){
-  // 1. Configuramos el ícono personalizado con la foto
   const iconoTata = L.icon({
     iconUrl: 'fotopedro.enc', // <--- REEMPLAZA ESTO CON EL LINK DE LA FOTO DEL TATA
-    iconSize: [56, 56], // Tamaño de la foto
-    iconAnchor: [28, 28], // Mitad del tamaño para que quede centrada
-    popupAnchor: [0, -30], // Dónde aparece la burbuja respecto a la foto
+    iconSize: [56, 56],
+    iconAnchor: [28, 28],
+    popupAnchor: [0, -30],
     className: 'foto-marcador'
   });
 
   const procesarUbicacion = (snap) => {
     const datos = snap.val();
     if (!datos || datos.lat == null || datos.lng == null) return;
-    
+
     const { lat, lng, precision, ultimaActualizacion } = datos;
     let hora = 'Reciente';
     if (typeof ultimaActualizacion === 'number') {
@@ -231,32 +436,28 @@ function escucharUbicacion(){
       obtenerDireccionTexto(lat, lng);
     }
 
-    // 2. Armamos la burbuja (Popup) con el botón de Google Maps
     const urlGoogleMaps = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     const contenidoPopup = `
       <div class="popup-maps">
-        <p>👨‍🦳 Tata está aquí</p>
+        <p>👨‍🦳 Pedro está aquí</p>
         <a href="${urlGoogleMaps}" target="_blank" class="btn-maps">
           🗺️ Ir en Google Maps
         </a>
       </div>
     `;
 
-    // 3. Dibujamos o actualizamos el marcador
     if (!marcadorTata) {
-      // Si no existe, lo creamos con el ícono de la foto
       marcadorTata = L.marker([lat, lng], { icon: iconoTata })
         .addTo(mapaLeaflet)
         .bindPopup(contenidoPopup);
-        
+
       if (precision) {
-        circuloPrecision = L.circle([lat, lng], { radius: precision, color: '#1e3c72', fillColor: '#2a5298', fillOpacity: 0.15 }).addTo(mapaLeaflet);
+        circuloPrecision = L.circle([lat, lng], { radius: precision, color: '#2a5298', fillColor: '#2a5298', fillOpacity: 0.15 }).addTo(mapaLeaflet);
       }
     } else {
-      // Si ya existe, solo lo movemos y actualizamos la burbuja
       marcadorTata.setLatLng([lat, lng]);
       marcadorTata.setPopupContent(contenidoPopup);
-      
+
       if (circuloPrecision) {
         circuloPrecision.setLatLng([lat, lng]);
         if (precision) circuloPrecision.setRadius(precision);
@@ -288,14 +489,20 @@ function obtenerDireccionTexto(lat, lng) {
     });
 }
 
-/* PINCHAR MAPA PARA PANTALLA COMPLETA */
+/* PINCHAR MAPA (o el botón Volver) PARA ENTRAR/SALIR DE PANTALLA COMPLETA */
+function toggleMapa(){
+  document.body.classList.toggle('mapaAgrandado');
+  setTimeout(() => {
+    mapaLeaflet.invalidateSize();
+    if (ultimaLat && ultimaLng) mapaLeaflet.panTo([ultimaLat, ultimaLng]);
+  }, 320);
+}
+
 function configurarClickAgrandarMapa() {
-  document.getElementById('mapa').addEventListener('click', () => {
-    document.body.classList.toggle('mapaAgrandado');
-    setTimeout(() => {
-      mapaLeaflet.invalidateSize();
-      if (ultimaLat && ultimaLng) mapaLeaflet.panTo([ultimaLat, ultimaLng]);
-    }, 300);
+  document.getElementById('mapa').addEventListener('click', toggleMapa);
+  document.getElementById('btnCerrarMapa').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMapa();
   });
 }
 
@@ -310,42 +517,76 @@ function configurarSelectorPerfil(){
       btn.classList.add('activo');
       perfilSeleccionado = { nombre: btn.dataset.nombre, emoji: btn.dataset.emoji };
       localStorage.setItem('perfilFamilia', JSON.stringify(perfilSeleccionado));
-      
+
       const btnLlamar = document.querySelector('.btnLlamar');
-      if (btnLlamar) btnLlamar.style.display = 'block';
+      if (btnLlamar) btnLlamar.style.display = 'flex';
     });
   });
 }
 
+/* ============================================================
+   ESTADO DE LA LLAMADA: pantalla principal + pantalla completa
+   ============================================================ */
 function escucharEstadoLlamada(){
   refLlamada.on('value', (snap) => {
     const datos = snap.val() || { estado:'inactiva' };
     estadoLlamadaActual = datos.estado || 'inactiva';
     renderizarPanel(datos);
+    actualizarOverlayLlamada();
+    actualizarVisibilidadPantallas();
     if (estadoLlamadaActual === 'inactiva' && enSala) salirDeLlamada();
   });
+}
+
+/* Muestra/oculta la pantalla de llamada a pantalla completa según si
+   YO estoy en la sala (enSala), no según el estado global de Firebase:
+   así cada quien ve la pantalla completa solo cuando de verdad está
+   adentro de la videollamada. */
+function actualizarVisibilidadPantallas(){
+  const overlay = document.getElementById('pantallaLlamadaEnCurso');
+  overlay.classList.toggle('activa', enSala);
+}
+
+function actualizarOverlayLlamada(){
+  const estadoOverlay = document.getElementById('estadoLlamadaOverlay');
+  const botones = document.getElementById('botonesLlamadaOverlay');
+  botones.innerHTML = '';
+
+  if (estadoLlamadaActual === 'llamando') {
+    estadoOverlay.textContent = '📞 Llamando al Tata…';
+    botones.appendChild(crearBoton('btnCancelar', '✖ Cancelar llamada', finalizarLlamada));
+  } else if (estadoLlamadaActual === 'en_llamada') {
+    estadoOverlay.textContent = '🟢 En videollamada';
+    botones.appendChild(crearBoton('btnFinalizar', '🔴 Colgar', colgarLlamada));
+  }
 }
 
 function renderizarPanel(datos){
   const panel = document.getElementById('panelControl');
   const estadoTexto = document.getElementById('estadoTexto');
   panel.innerHTML = '';
+  estadoTexto.innerHTML = '';
 
   if (estadoLlamadaActual === 'inactiva') {
-    estadoTexto.textContent = '';
-    const btn = crearBoton('btnLlamar', '📞 LLAMAR AL TATA', llamarTata);
-    if (perfilSeleccionado) btn.style.display = 'block';
+    const btn = crearBoton('btnLlamar', '📞 Llamar al Pedro', llamarTata);
+    if (perfilSeleccionado) btn.style.display = 'flex';
     panel.appendChild(btn);
   }
   else if (estadoLlamadaActual === 'llamando') {
-    estadoTexto.textContent = `Llamando al equipo del tata... (${datos.llamadorNombre || ''})`;
-    panel.appendChild(crearBoton('btnCancelar', '✖ CANCELAR LLAMADA', finalizarLlamada));
+    estadoTexto.appendChild(pildora('azul', `Llamando… (${datos.llamadorNombre || ''})`));
+    if (!enSala) panel.appendChild(crearBoton('btnCancelar', '✖ Cancelar llamada', finalizarLlamada));
   }
   else if (estadoLlamadaActual === 'en_llamada') {
-    estadoTexto.textContent = '🟢 El tata está en llamada actualmente';
-    if (!enSala) panel.appendChild(crearBoton('btnSumarse', '➕ SUMARSE A LA LLAMADA GRUPAL', sumarseALlamada));
-    panel.appendChild(crearBoton('btnFinalizar', '🔴 FINALIZAR / COLGAR PARA TODOS', finalizarLlamada));
+    estadoTexto.appendChild(pildora('verde', 'El Pedro está en llamada'));
+    if (!enSala) panel.appendChild(crearBoton('btnSumarse', '➕ Sumarse a la llamada', sumarseALlamada));
   }
+}
+
+function pildora(color, texto){
+  const p = document.createElement('div');
+  p.className = `pildora-estado ${color}`;
+  p.innerHTML = `<span class="bolita"></span>${texto}`;
+  return p;
 }
 
 function crearBoton(clase, texto, accion){
@@ -363,9 +604,38 @@ function llamarTata(){
   unirseALlamada();
 }
 function sumarseALlamada(){ unirseALlamada(); }
+
+/* Cancela una llamada que TODAVÍA no ha sido contestada por nadie
+   (nadie más alcanzó a sumarse). Siempre termina para todos, porque
+   en ese punto nadie más está conectado. */
 function finalizarLlamada(){
   refLlamada.set({ estado:'inactiva', llamadorNombre:'', llamadorFoto:'' });
   refSala.remove();
+  salirDeLlamada();
+}
+
+/* Colgar durante una llamada YA EN CURSO (posiblemente con varias
+   personas adentro). Regla pedida por la familia:
+   - Si en este momento hay MÁS de 2 personas en la sala (el Pedro +
+     2 o más familiares), al colgar solo me desconecto yo; el resto
+     sigue en la llamada tranquilamente.
+   - Si en este momento solo quedan 2 personas (el Pedro y yo), al
+     colgar se corta la llamada para ambos. */
+async function colgarLlamada(){
+  try {
+    const snap = await refParticipantes.once('value');
+    const cantidadActual = snap.numChildren();
+    if (cantidadActual <= 2) {
+      // Solo estábamos el Pedro y yo: se corta la llamada para los dos
+      refLlamada.set({ estado:'inactiva', llamadorNombre:'', llamadorFoto:'' });
+      refSala.remove();
+    }
+    // Si éramos 3 o más, no tocamos refLlamada ni refSala:
+    // el resto de la familia y el Pedro quedan conectados igual.
+  } catch (e) {
+    // Si por algún motivo no se pudo leer la cantidad de participantes,
+    // no arriesgamos cortar la llamada de los demás: solo nos vamos nosotros.
+  }
   salirDeLlamada();
 }
 
@@ -375,11 +645,18 @@ function finalizarLlamada(){
 async function unirseALlamada(){
   if (enSala) return;
   enSala = true;
+  actualizarVisibilidadPantallas();
+  actualizarOverlayLlamada();
   try {
     streamLocal = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
   } catch(e){
     try { streamLocal = await navigator.mediaDevices.getUserMedia({ audio:true }); }
-    catch(e2){ alert('No se pudo acceder a la cámara ni al micrófono.'); enSala = false; return; }
+    catch(e2){
+      alert('No se pudo acceder a la cámara ni al micrófono.');
+      enSala = false;
+      actualizarVisibilidadPantallas();
+      return;
+    }
   }
   agregarCajaVideo('local', streamLocal, perfilSeleccionado ? perfilSeleccionado.nombre : 'Tú', true);
 
@@ -467,6 +744,7 @@ function cerrarConexionPeer(otroId){
 function salirDeLlamada(){
   if (!enSala) return;
   enSala = false;
+  actualizarVisibilidadPantallas();
   refParticipantes.off('child_added');
   refParticipantes.off('child_removed');
   Object.keys(conexiones).forEach(cerrarConexionPeer);
@@ -477,34 +755,35 @@ function salirDeLlamada(){
 }
 </script>
 <style>
-  /* Estilos para el marcador con foto del Tata */
+  /* Estilos para el marcador con foto del Pedro */
   .foto-marcador {
     border-radius: 50%;
-    border: 3px solid #2a5298; /* Borde azul para que resalte */
+    border: 3px solid #2a5298;
     background-color: white;
     object-fit: cover;
     box-shadow: 0 4px 10px rgba(0,0,0,0.4);
   }
-  
+
   /* Estilos para el cuadrito (popup) que pregunta si ir a Maps */
   .popup-maps {
     text-align: center;
-    font-family: 'Segoe UI', Arial, sans-serif;
+    font-family: 'Nunito', 'Segoe UI', Arial, sans-serif;
   }
   .popup-maps p {
     margin-bottom: 8px;
-    font-weight: bold;
+    font-weight: 800;
     font-size: 14px;
+    color:#17203a;
   }
   .popup-maps .btn-maps {
     background: #1fa855;
     color: white;
     text-decoration: none;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 9px 14px;
+    border-radius: 10px;
     display: inline-block;
-    font-weight: bold;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(0,0,0,.2);
   }
 </style>
 </body>
