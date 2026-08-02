@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Familia - Llamar al Tata</title>
+<title>Familia - Llamar al pedro</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
@@ -333,7 +333,7 @@ function renderizarPanel(datos){
 
   if (estadoLlamadaActual === 'inactiva') {
     estadoTexto.textContent = '';
-    const btn = crearBoton('btnLlamar', '📞 LLAMAR AL TATA', llamarTata);
+    const btn = crearBoton('btnLlamar', '📞 LLAMAR al pedro', llamarTata);
     if (perfilSeleccionado) btn.style.display = 'block';
     panel.appendChild(btn);
   }
