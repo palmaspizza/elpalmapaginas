@@ -75,8 +75,6 @@
     color: var(--text-muted);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
-  /* Estilo para las fotos de perfil circulares */
   .perfilBtn img { 
     width: 48px; 
     height: 48px; 
@@ -87,7 +85,6 @@
     border: 2px solid var(--border);
     transition: transform 0.2s, border-color 0.2s; 
   }
-  
   .perfilBtn:hover { border-color: var(--primary); color: var(--text-main); background: rgba(59, 130, 246, 0.05); }
   .perfilBtn:hover img { transform: scale(1.08); border-color: var(--primary); }
   .perfilBtn.activo { border-color: var(--primary); background: rgba(59, 130, 246, 0.15); color: var(--text-main); font-weight: 600; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
@@ -243,23 +240,24 @@
 <div id="appContainer">
   <header><h1>📞 Familia del PEDRO</h1></header>
 
-<div id="selectorPerfil">
-  <h2>¿Quién está llamando?</h2>
-  <div class="perfiles">
-    <div class="perfilBtn" data-nombre="Diego" data-foto="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100">
-      <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100" alt="Diego">Diego
-    </div>
-    <div class="perfilBtn" data-nombre="Matias" data-foto="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100">
-      <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100" alt="Matias">Matias
-    </div>
-    <div class="perfilBtn" data-nombre="María" data-foto="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100">
-      <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" alt="María">María
-    </div>
-    <div class="perfilBtn" data-nombre="Ingrid" data-foto="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100">
-      <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100" alt="Ingrid">Ingrid
+  <div id="selectorPerfil">
+    <h2>¿Quién está llamando?</h2>
+    <div class="perfiles">
+      <!-- Reemplaza los enlaces src por tus fotos reales -->
+      <div class="perfilBtn" data-nombre="Diego" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
+        <img src="https://i.ibb.co/68Z7442/tata-avatar.png" alt="Diego">Diego
+      </div>
+      <div class="perfilBtn" data-nombre="Matias" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
+        <img src="https://i.ibb.co/68Z7442/tata-avatar.png" alt="Matias">Matias
+      </div>
+      <div class="perfilBtn" data-nombre="María" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
+        <img src="https://i.ibb.co/68Z7442/tata-avatar.png" alt="María">María
+      </div>
+      <div class="perfilBtn" data-nombre="Ingrid" data-foto="https://i.ibb.co/68Z7442/tata-avatar.png">
+        <img src="https://i.ibb.co/68Z7442/tata-avatar.png" alt="Ingrid">Ingrid
+      </div>
     </div>
   </div>
-</div>
 
   <div id="estadoTexto"></div>
   <div id="panelControl"></div>
@@ -388,13 +386,17 @@ function escucharUbicacion(){
 }
 
 function obtenerDireccionTexto(lat, lng) {
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+    headers: { 'Accept-Language': 'es' }
+  })
     .then(res => res.json())
     .then(data => {
       if (data && data.display_name) {
         document.getElementById('direccionTexto').textContent = `📍 ${data.display_name.split(',').slice(0, 3).join(',')}`;
       }
-    }).catch(() => {});
+    }).catch(() => {
+      document.getElementById('direccionTexto').textContent = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+    });
 }
 
 function configurarSelectorPerfil(){
@@ -457,7 +459,11 @@ function crearBoton(clase, texto, accion){
 
 function llamarTata(){
   if (!perfilSeleccionado) { alert('Selecciona quién está llamando primero 🙂'); return; }
-  refLlamada.set({ estado:'llamando', llamadorNombre: perfilSeleccionado.nombre, llamadorFoto: perfilSeleccionado.foto });
+  refLlamada.set({ 
+    estado: 'llamando', 
+    llamadorNombre: perfilSeleccionado.nombre || 'Familiar', 
+    llamadorFoto: perfilSeleccionado.foto || '' 
+  });
   unirseALlamada();
 }
 
@@ -484,27 +490,17 @@ async function unirseALlamada(){
   document.body.classList.add('en-videollamada');
 
   try {
-    streamLocal = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    streamLocal = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
   } catch(e){
-    try { 
-      streamLocal = await navigator.mediaDevices.getUserMedia({ audio: true }); 
-    } catch(e2){ 
-      alert('Sin acceso a cámara ni micrófono. Revisa los permisos del navegador.'); 
-      enSala = false; 
-      document.body.classList.remove('en-videollamada'); 
-      return; 
-    }
+    try { streamLocal = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+    catch(e2){ alert('Sin acceso a cámara ni micrófono.'); enSala = false; document.body.classList.remove('en-videollamada'); return; }
   }
-  
-  // Muestra tu propio video de inmediato
   agregarCajaVideo('local', streamLocal, perfilSeleccionado ? perfilSeleccionado.nombre : 'Tú', true);
 
-  // Registramos al participante en la base de datos de manera limpia
   const miRef = refParticipantes.child(MI_ID);
-  await miRef.set({ nombre: perfilSeleccionado ? perfilSeleccionado.nombre : 'Familiar' });
+  miRef.set({ nombre: perfilSeleccionado ? perfilSeleccionado.nombre : 'Familiar' });
   miRef.onDisconnect().remove();
 
-  // Escuchamos quién más está en la sala o va entrando
   refParticipantes.on('child_added', (snap) => {
     const otroId = snap.key;
     if (otroId === MI_ID || conexiones[otroId]) return;
