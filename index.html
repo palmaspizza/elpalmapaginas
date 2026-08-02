@@ -288,11 +288,11 @@
     <section id="tarjetaPerfil" class="tarjeta">
       <div class="tarjeta-titulo"><span class="punto">🙋</span>¿Quién está llamando?</div>
       <div class="perfiles">
-        <div class="perfilBtn" data-nombre="Diego" data-emoji="👨‍💻"><span class="emoji">👨‍💻</span>Diego</div>
-        <div class="perfilBtn" data-nombre="Matias" data-emoji="🙋‍♂️"><span class="emoji">🙋‍♂️</span>Matias</div>
-        <div class="perfilBtn" data-nombre="María" data-emoji="👩"><span class="emoji">👩</span>María</div>
-        <div class="perfilBtn" data-nombre="Ingrid" data-emoji="👩‍🦰"><span class="emoji">👩‍🦰</span>Ingrid</div>
-      </div>
+  <div class="perfilBtn" data-nombre="Diego" data-emoji="👨‍💻"><img class="foto-perfil" src="fotodiego.png" alt="Diego">Diego</div>
+  <div class="perfilBtn" data-nombre="Matias" data-emoji="🙋‍♂️"><img class="foto-perfil" src="tiorenechibi.jpg" alt="Matias">Matias</div>
+  <div class="perfilBtn" data-nombre="María" data-emoji="👩"><img class="foto-perfil" src="mariafoto.enc" alt="María">María</div>
+  <div class="perfilBtn" data-nombre="Ingrid" data-emoji="👩‍🦰"><img class="foto-perfil" src="ingridfoto.enc" alt="Ingrid">Ingrid</div>
+</div>
     </section>
 
     <section id="tarjetaEstado" class="tarjeta">
@@ -785,6 +785,15 @@ function salirDeLlamada(){
     font-weight: 800;
     box-shadow: 0 2px 6px rgba(0,0,0,.2);
   }
+  .perfilBtn .foto-perfil {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto 6px;
+  border: 2px solid rgba(255,255,255,.7);
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
 </style>
 </body>
 </html>
