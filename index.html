@@ -336,7 +336,19 @@ const refSala = db.ref('sala');
 const refParticipantes = refSala.child('participantes');
 const refPares = refSala.child('pares');
 
-const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+let ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }; // respaldo mientras carga
+
+(async function cargarServidoresTurn(){
+  try {
+    const resp = await fetch('https://palmachat.metered.live/api/v1/turn/credentials?apiKey=507228bdd48481ad9e30933e1ebbf85b4f9f');
+    const servidores = await resp.json();
+    if (Array.isArray(servidores) && servidores.length) {
+      ICE_SERVERS = { iceServers: servidores };
+    }
+  } catch(e) {
+    console.warn('No se pudo cargar TURN de Metered, usando solo STUN de respaldo', e);
+  }
+})();
 const MI_ID = 'fam_' + Math.random().toString(36).slice(2,10);
 
 /* ============================================================
