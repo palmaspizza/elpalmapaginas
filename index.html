@@ -515,7 +515,7 @@ function configurarSelectorPerfil(){
     btn.addEventListener('click', () => {
       botones.forEach(b => b.classList.remove('activo'));
       btn.classList.add('activo');
-      perfilSeleccionado = { nombre: btn.dataset.nombre, emoji: btn.dataset.emoji };
+      perfilSeleccionado = { nombre: btn.dataset.nombre, emoji: btn.dataset.emoji, foto: btn.dataset.foto };
       localStorage.setItem('perfilFamilia', JSON.stringify(perfilSeleccionado));
 
       const btnLlamar = document.querySelector('.btnLlamar');
@@ -600,9 +600,15 @@ function crearBoton(clase, texto, accion){
 /* ---------- ACCIONES ---------- */
 function llamarTata(){
   if (!perfilSeleccionado) { alert('Por favor elige primero quién está llamando 🙂'); return; }
-  refLlamada.set({ estado:'llamando', llamadorNombre: perfilSeleccionado.nombre, llamadorFoto: perfilSeleccionado.emoji });
+  refLlamada.set({
+    estado:'llamando',
+    llamadorNombre: perfilSeleccionado.nombre,
+    llamadorFoto: perfilSeleccionado.emoji,
+    llamadorFotoUrl: perfilSeleccionado.foto || ''
+  });
   unirseALlamada();
 }
+
 function sumarseALlamada(){ unirseALlamada(); }
 
 /* Cancela una llamada que TODAVÍA no ha sido contestada por nadie
