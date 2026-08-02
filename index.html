@@ -3,57 +3,103 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Familia - Llamar al pedro</title>
+<title>Familia - Llamar al PEDRO</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
-  body { background:#f2f4f8; color:#1a1a2e; padding-bottom:40px; }
+  body { background:#f2f4f8; color:#1a1a2e; min-height: 100vh; display: flex; flex-direction: column; }
 
-  header { background:linear-gradient(135deg,#1e3c72,#2a5298); color:#fff; padding:18px 16px; text-align:center; }
-  header h1 { font-size:1.3rem; }
+  header { background:linear-gradient(135deg,#1e3c72,#2a5298); color:#fff; padding:16px; text-align:center; flex-shrink: 0; }
+  header h1 { font-size:1.2rem; }
 
-  /* Contenedor interactivo del mapa */
-  #contenedorMapa {
-    position: relative;
+  /* Contenedor principal ordenado en columna */
+  #appContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    max-width: 600px;
+    margin: 0 auto;
     width: 100%;
-    transition: all 0.3s ease;
+    flex-grow: 1;
   }
-  #mapa { width:100%; height:280px; cursor:pointer; transition: height 0.3s ease; z-index: 1; }
-  
-  /* Estado de modo mapa agrandado al hacer clic */
-  body.mapaAgrandado #mapa { height: 75vh; }
-  body.mapaAgrandado #selectorPerfil,
-  body.mapaAgrandado #estadoTexto,
-  body.mapaAgrandado #panelControl,
-  body.mapaAgrandado #videoGrid { display: none !important; }
 
-  #ultimaUbicacion {
-    text-align:center; padding:10px 14px; font-size:.85rem; color:#1e3c72; background:#e9edf5;
-    border-bottom: 2px solid #cbd5e1; font-weight: 600; line-height: 1.4;
-  }
-  #direccionTexto { display: block; font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-top: 2px; }
-
-  #selectorPerfil { padding:16px; background:#fff; margin:12px; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-  #selectorPerfil h2 { font-size:1rem; margin-bottom:10px; color:#333; }
-  .perfiles { display:flex; gap:10px; flex-wrap:wrap; }
-  .perfilBtn { flex:1; min-width:70px; border:2px solid #dde3ee; background:#fafbfe; border-radius:14px; padding:12px 6px; text-align:center; cursor:pointer; font-size:.85rem; }
-  .perfilBtn .emoji { font-size:1.8rem; display:block; margin-bottom:4px; }
+  /* Selector de perfiles */
+  #selectorPerfil { background:#fff; padding:14px; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  #selectorPerfil h2 { font-size:0.95rem; margin-bottom:8px; color:#333; text-align: center; }
+  .perfiles { display:flex; gap:8px; justify-content: center; flex-wrap:wrap; }
+  .perfilBtn { border:2px solid #dde3ee; background:#fafbfe; border-radius:12px; padding:10px 14px; text-align:center; cursor:pointer; font-size:.85rem; }
+  .perfilBtn .emoji { font-size:1.5rem; display:block; margin-bottom:2px; }
   .perfilBtn.activo { border-color:#2a5298; background:#e8edfb; font-weight:700; }
 
-  #panelControl { margin:12px; }
-  .btnGrande { width:100%; border:none; border-radius:18px; color:#fff; font-size:1.3rem; font-weight:800; padding:26px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.15); margin-bottom:12px; }
-  .btnLlamar   { background:#1fa855; display: none; animation: pulse 1.5s infinite, pulseBlue 2s infinite; }
+  /* Panel de control y botones */
+  #panelControl { width: 100%; }
+  .btnGrande { width:100%; border:none; border-radius:16px; color:#fff; font-size:1.2rem; font-weight:800; padding:20px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.15); text-align: center; }
+  .btnLlamar   { background:#1fa855; display: none; animation: pulse 1.5s infinite; }
   .btnCancelar { background:#e63946; }
   .btnSumarse  { background:#2266dd; }
-  .btnFinalizar{ background:#8d0801; font-size:1rem; }
+  .btnFinalizar{ background:#8d0801; font-size:0.95rem; padding: 14px; }
 
-  #estadoTexto { text-align:center; padding:16px; font-size:1.01rem; font-weight:600; color:#333; }
+  #estadoTexto { text-align:center; font-size:0.95rem; font-weight:600; color:#333; }
 
-  #videoGrid { display:flex; flex-wrap:wrap; gap:8px; margin:0 12px 12px; }
-  .videoBox { position:relative; background:#111; border-radius:12px; overflow:hidden; width:100%; }
-  .videoBox video { width:100%; display:block; max-height:260px; object-fit:cover; }
-  .videoBox .etiqueta { position:absolute; bottom:6px; left:10px; color:#fff; font-size:.8rem; background:rgba(0,0,0,.5); padding:2px 8px; border-radius:8px; }
+  /* Contenedor del Mapa compacto y ordenado */
+  #seccionMapa { background: #fff; border-radius: 16px; overflow: hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  #mapa { width:100%; height:220px; z-index: 1; }
+  #ultimaUbicacion {
+    text-align:center; padding:8px 12px; font-size:.8rem; color:#1e3c72; background:#e9edf5;
+    border-top: 1px solid #cbd5e1; font-weight: 600;
+  }
+  #direccionTexto { display: block; font-size: 0.85rem; font-weight: 700; color: #0f172a; margin-top: 2px; }
 
+  /* Grilla de Videollamada Adaptativa a Pantalla Completa */
+  #videoGrid {
+    display: none; /* Se oculta por defecto */
+    position: fixed;
+    inset: 0;
+    background: #0f172a;
+    z-index: 9999;
+    padding: 10px;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    align-content: center;
+    justify-content: center;
+  }
+  body.en-videollamada #videoGrid { display: grid; }
+  body.en-videollamada #appContainer { display: none; } /* Oculta todo lo demás para usar 100% de pantalla */
+
+  .videoBox {
+    position: relative;
+    background: #1e293b;
+    border-radius: 14px;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .videoBox video { width:100%; height: 100%; object-fit: cover; }
+  .videoBox .etiqueta { 
+    position:absolute; bottom:10px; left:10px; color:#fff; font-size:.85rem; 
+    background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:8px; font-weight: 600;
+  }
+
+  /* Controles flotantes dentro de la videollamada */
+  #controlesVideollamada {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    display: none;
+    width: 90%;
+    max-width: 400px;
+  }
+  body.en-videollamada #controlesVideollamada { display: block; }
+
+  /* Pantalla GPS exclusiva para el PEDRO */
   #pantallaGPS { position:fixed; inset:0; background:#1e3c72; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; z-index: 9999; }
   #pantallaGPS h1 { font-size:1.6rem; margin-bottom:20px; }
   #pantallaGPS p { font-size:1rem; opacity:.9; }
@@ -64,32 +110,35 @@
     50% { transform: scale(1.01); }
     100% { transform: scale(1); }
   }
-  @keyframes pulseBlue {
-    0% { transform: scale(1); background-color: #2266dd; }
-    50% { transform: scale(1.04); background-color: #3399ff; }
-    100% { transform: scale(1); background-color: #2266dd; }
+
+  /* Estilos personalizados para marcador y popup de mapas */
+  .foto-marcador {
+    border-radius: 50%;
+    border: 3px solid #2a5298;
+    background-color: white;
+    object-fit: cover;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  }
+  .popup-maps { text-align: center; font-family: 'Segoe UI', Arial, sans-serif; }
+  .popup-maps p { margin-bottom: 6px; font-weight: bold; font-size: 13px; }
+  .popup-maps .btn-maps {
+    background: #1fa855; color: white; text-decoration: none; padding: 6px 10px;
+    border-radius: 6px; display: inline-block; font-weight: bold; font-size: 12px;
   }
 </style>
 </head>
 <body>
 
 <div id="pantallaGPS" style="display:none;">
-  <h1>📍 Ubicación del Tata</h1>
+  <h1>📍 Ubicación del PEDRO</h1>
   <p>Esta pantalla envía su ubicación a la familia automáticamente.<br>No es necesario tocar nada más.</p>
   <div id="estadoGPS">Iniciando...</div>
 </div>
 
-<div id="appFamilia">
-  <header><h1>👨‍👩‍👧‍👦 Familia del Tata</h1></header>
+<div id="appContainer">
+  <header><h1>👨‍👩‍👧‍👦 Familia del PEDRO</h1></header>
 
-  <div id="contenedorMapa">
-    <div id="mapa" title="Toca para agrandar/achicar el mapa"></div>
-    <div id="ultimaUbicacion">
-      <span id="textoHora">Buscando ubicación del Tata...</span>
-      <span id="direccionTexto"></span>
-    </div>
-  </div>
-
+  <!-- 1. Selector de perfil arriba -->
   <div id="selectorPerfil">
     <h2>¿Quién está llamando?</h2>
     <div class="perfiles">
@@ -102,17 +151,26 @@
 
   <div id="estadoTexto"></div>
   <div id="panelControl"></div>
-  <div id="videoGrid"></div>
+
+  <!-- 2. Mapa centrado y limpio abajo -->
+  <div id="seccionMapa">
+    <div id="mapa"></div>
+    <div id="ultimaUbicacion">
+      <span id="textoHora">Buscando ubicación del PEDRO...</span>
+      <span id="direccionTexto"></span>
+    </div>
+  </div>
 </div>
+
+<!-- Grilla de video a pantalla completa cuando hay llamada -->
+<div id="videoGrid"></div>
+<div id="controlesVideollamada"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <script>
-/* ============================================================
-   CONFIGURACIÓN DE FIREBASE
-   ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyDaarm67ndNx64YwmsEqhyEE-JI3G0zYpo",
   authDomain: "pedrollamadas-f8e8c.firebaseapp.com",
@@ -133,9 +191,6 @@ const refPares = refSala.child('pares');
 const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 const MI_ID = 'fam_' + Math.random().toString(36).slice(2,10);
 
-/* ============================================================
-   VARIABLES DE ESTADO
-   ============================================================ */
 let perfilSeleccionado = JSON.parse(localStorage.getItem('perfilFamilia') || 'null');
 let mapaLeaflet = null;
 let marcadorTata = null;
@@ -148,12 +203,9 @@ let conexiones = {};
 let listenersPares = {};
 let enSala = false;
 
-/* ============================================================
-   MODO GPS (index.html?gps=1)
-   ============================================================ */
 const parametros = new URLSearchParams(window.location.search);
 if (parametros.get('gps') === '1') {
-  document.getElementById('appFamilia').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'none';
   document.getElementById('pantallaGPS').style.display = 'flex';
   iniciarEnvioGPS();
 } else {
@@ -162,155 +214,88 @@ if (parametros.get('gps') === '1') {
 
 function iniciarEnvioGPS(){
   const estadoGPS = document.getElementById('estadoGPS');
-  if (!('geolocation' in navigator)) { estadoGPS.textContent = 'Este teléfono no soporta ubicación GPS.'; return; }
+  if (!('geolocation' in navigator)) { estadoGPS.textContent = 'GPS no soportado.'; return; }
   navigator.geolocation.watchPosition(
     (pos) => {
       const ahora = new Date();
       const hora = `${String(ahora.getHours()).padStart(2,'0')}:${String(ahora.getMinutes()).padStart(2,'0')} hrs`;
-      const payload = { 
-        lat: pos.coords.latitude, 
-        lng: pos.coords.longitude, 
-        precision: pos.coords.accuracy,
-        ultimaActualizacion: hora 
-      };
+      const payload = { lat: pos.coords.latitude, lng: pos.coords.longitude, precision: pos.coords.accuracy, ultimaActualizacion: hora };
       db.ref('ubicacion_tata').set(payload);
       db.ref('ubicacion').set(payload);
       estadoGPS.textContent = `✅ Ubicación enviada (${hora})`;
     },
-    (err) => { estadoGPS.textContent = '⚠️ Activa el permiso de ubicación para este sitio.'; console.warn(err); },
+    (err) => { estadoGPS.textContent = '⚠️ Active el permiso de ubicación.'; },
     { enableHighAccuracy:true, maximumAge:15000, timeout:20000 }
   );
 }
 
-/* ============================================================
-   APP FAMILIAR NORMAL
-   ============================================================ */
 function iniciarAppFamiliar(){
   inicializarMapa();
   escucharUbicacion();
   configurarSelectorPerfil();
   escucharEstadoLlamada();
-  configurarClickAgrandarMapa();
 }
 
-/* MAPA CON ZOOM CERCANO POR DEFECTO (18) */
 function inicializarMapa(){
-  mapaLeaflet = L.map('mapa').setView([-33.4372, -70.6506], 18);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-    maxZoom: 19,
-    attribution:'&copy; OpenStreetMap' 
-  }).addTo(mapaLeaflet);
+  mapaLeaflet = L.map('mapa').setView([-33.4372, -70.6506], 17);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution:'&copy; OpenStreetMap' }).addTo(mapaLeaflet);
 }
 
-/* ESCUCHA AMBOS NODOS PARA EVITAR DESSINCRO */
 function escucharUbicacion(){
-  // 1. Configuramos el ícono personalizado con la foto
   const iconoTata = L.icon({
-    iconUrl: 'fotopedro.enc', // <--- REEMPLAZA ESTO CON EL LINK DE LA FOTO DEL TATA
-    iconSize: [56, 56], // Tamaño de la foto
-    iconAnchor: [28, 28], // Mitad del tamaño para que quede centrada
-    popupAnchor: [0, -30], // Dónde aparece la burbuja respecto a la foto
-    className: 'foto-marcador'
+    iconUrl: 'https://i.ibb.co/68Z7442/tata-avatar.png', // Reemplaza con tu enlace de foto si deseas
+    iconSize: [50, 50], iconAnchor: [25, 25], popupAnchor: [0, -28], className: 'foto-marcador'
   });
 
   const procesarUbicacion = (snap) => {
     const datos = snap.val();
     if (!datos || datos.lat == null || datos.lng == null) return;
-    
     const { lat, lng, precision, ultimaActualizacion } = datos;
-    let hora = 'Reciente';
-    if (typeof ultimaActualizacion === 'number') {
-      hora = new Date(ultimaActualizacion).toLocaleTimeString('es-CL');
-    } else if (typeof ultimaActualizacion === 'string') {
-      hora = ultimaActualizacion;
-    }
+    let hora = typeof ultimaActualizacion === 'string' ? ultimaActualizacion : 'Reciente';
 
     if (lat !== ultimaLat || lng !== ultimaLng) {
-      ultimaLat = lat;
-      ultimaLng = lng;
+      ultimaLat = lat; ultimaLng = lng;
       obtenerDireccionTexto(lat, lng);
     }
 
-    // 2. Armamos la burbuja (Popup) con el botón de Google Maps
-    const urlGoogleMaps = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    const contenidoPopup = `
-      <div class="popup-maps">
-        <p>👨‍🦳 Tata está aquí</p>
-        <a href="${urlGoogleMaps}" target="_blank" class="btn-maps">
-          🗺️ Ir en Google Maps
-        </a>
-      </div>
-    `;
+    const urlMaps = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    const popupHtml = `<div class="popup-maps"><p>👨‍🦳 PEDRO está aquí</p><a href="${urlMaps}" target="_blank" class="btn-maps">🗺️ Ir en Google Maps</a></div>`;
 
-    // 3. Dibujamos o actualizamos el marcador
     if (!marcadorTata) {
-      // Si no existe, lo creamos con el ícono de la foto
-      marcadorTata = L.marker([lat, lng], { icon: iconoTata })
-        .addTo(mapaLeaflet)
-        .bindPopup(contenidoPopup);
-        
-      if (precision) {
-        circuloPrecision = L.circle([lat, lng], { radius: precision, color: '#1e3c72', fillColor: '#2a5298', fillOpacity: 0.15 }).addTo(mapaLeaflet);
-      }
+      marcadorTata = L.marker([lat, lng], { icon: iconoTata }).addTo(mapaLeaflet).bindPopup(popupHtml);
+      if (precision) circuloPrecision = L.circle([lat, lng], { radius: precision, color: '#1e3c72', fillColor: '#2a5298', fillOpacity: 0.15 }).addTo(mapaLeaflet);
     } else {
-      // Si ya existe, solo lo movemos y actualizamos la burbuja
       marcadorTata.setLatLng([lat, lng]);
-      marcadorTata.setPopupContent(contenidoPopup);
-      
-      if (circuloPrecision) {
-        circuloPrecision.setLatLng([lat, lng]);
-        if (precision) circuloPrecision.setRadius(precision);
-      }
+      marcadorTata.setPopupContent(popupHtml);
+      if (circuloPrecision) { circuloPrecision.setLatLng([lat, lng]); if (precision) circuloPrecision.setRadius(precision); }
     }
-
     mapaLeaflet.panTo([lat, lng]);
-    document.getElementById('textoHora').textContent = `Última actualización: ${hora}`;
+    document.getElementById('textoHora').textContent = `Actualizado: ${hora}`;
   };
 
   db.ref('ubicacion_tata').on('value', procesarUbicacion);
   db.ref('ubicacion').on('value', procesarUbicacion);
 }
 
-/* GEOCODING: Traduce Lat/Lng a calle */
 function obtenerDireccionTexto(lat, lng) {
-  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-  fetch(url)
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
     .then(res => res.json())
     .then(data => {
       if (data && data.display_name) {
-        const partes = data.display_name.split(',');
-        const direccionCorta = partes.slice(0, 3).join(',');
-        document.getElementById('direccionTexto').textContent = `📍 ${direccionCorta}`;
+        document.getElementById('direccionTexto').textContent = `📍 ${data.display_name.split(',').slice(0, 3).join(',')}`;
       }
-    })
-    .catch(() => {
-      document.getElementById('direccionTexto').textContent = `📍 Coordenadas: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-    });
-}
-
-/* PINCHAR MAPA PARA PANTALLA COMPLETA */
-function configurarClickAgrandarMapa() {
-  document.getElementById('mapa').addEventListener('click', () => {
-    document.body.classList.toggle('mapaAgrandado');
-    setTimeout(() => {
-      mapaLeaflet.invalidateSize();
-      if (ultimaLat && ultimaLng) mapaLeaflet.panTo([ultimaLat, ultimaLng]);
-    }, 300);
-  });
+    }).catch(() => {});
 }
 
 function configurarSelectorPerfil(){
   const botones = document.querySelectorAll('.perfilBtn');
   botones.forEach(btn => {
-    if (perfilSeleccionado && btn.dataset.nombre === perfilSeleccionado.nombre) {
-      btn.classList.add('activo');
-    }
+    if (perfilSeleccionado && btn.dataset.nombre === perfilSeleccionado.nombre) btn.classList.add('activo');
     btn.addEventListener('click', () => {
       botones.forEach(b => b.classList.remove('activo'));
       btn.classList.add('activo');
       perfilSeleccionado = { nombre: btn.dataset.nombre, emoji: btn.dataset.emoji };
       localStorage.setItem('perfilFamilia', JSON.stringify(perfilSeleccionado));
-      
       const btnLlamar = document.querySelector('.btnLlamar');
       if (btnLlamar) btnLlamar.style.display = 'block';
     });
@@ -329,22 +314,26 @@ function escucharEstadoLlamada(){
 function renderizarPanel(datos){
   const panel = document.getElementById('panelControl');
   const estadoTexto = document.getElementById('estadoTexto');
+  const controlesVideo = document.getElementById('controlesVideollamada');
   panel.innerHTML = '';
+  controlesVideo.innerHTML = '';
 
   if (estadoLlamadaActual === 'inactiva') {
     estadoTexto.textContent = '';
-    const btn = crearBoton('btnLlamar', '📞 LLAMAR al pedro', llamarTata);
+    const btn = crearBoton('btnLlamar', '📞 LLAMAR AL PEDRO', llamarTata);
     if (perfilSeleccionado) btn.style.display = 'block';
     panel.appendChild(btn);
   }
   else if (estadoLlamadaActual === 'llamando') {
-    estadoTexto.textContent = `Llamando al equipo del tata... (${datos.llamadorNombre || ''})`;
-    panel.appendChild(crearBoton('btnCancelar', '✖ CANCELAR LLAMADA', finalizarLlamada));
+    estadoTexto.textContent = `Llamando al equipo... (${datos.llamadorNombre || ''})`;
+    panel.appendChild(crearBoton('btnCancelar', '✖ CANCELAR LLAMADA', finalizarLlamadaParaTodos));
   }
   else if (estadoLlamadaActual === 'en_llamada') {
-    estadoTexto.textContent = '🟢 El tata está en llamada actualmente';
+    estadoTexto.textContent = '🟢 El PEDRO está en llamada';
     if (!enSala) panel.appendChild(crearBoton('btnSumarse', '➕ SUMARSE A LA LLAMADA GRUPAL', sumarseALlamada));
-    panel.appendChild(crearBoton('btnFinalizar', '🔴 FINALIZAR / COLGAR PARA TODOS', finalizarLlamada));
+    
+    // Botón para colgar solo tu usuario en los controles flotantes de la videollamada
+    controlesVideo.appendChild(crearBoton('btnFinalizar', '🔴 COLGAR LLAMADA', salirDeLlamadaIndividual));
   }
 }
 
@@ -356,30 +345,43 @@ function crearBoton(clase, texto, accion){
   return b;
 }
 
-/* ---------- ACCIONES ---------- */
 function llamarTata(){
-  if (!perfilSeleccionado) { alert('Por favor elige primero quién está llamando 🙂'); return; }
+  if (!perfilSeleccionado) { alert('Elige quién está llamando primero 🙂'); return; }
   refLlamada.set({ estado:'llamando', llamadorNombre: perfilSeleccionado.nombre, llamadorFoto: perfilSeleccionado.emoji });
   unirseALlamada();
 }
+
 function sumarseALlamada(){ unirseALlamada(); }
-function finalizarLlamada(){
+
+// Mata la llamada global para todos (cuando cancelan o cuelgan estando solos)
+function finalizarLlamadaParaTodos(){
   refLlamada.set({ estado:'inactiva', llamadorNombre:'', llamadorFoto:'' });
   refSala.remove();
   salirDeLlamada();
 }
 
-/* ============================================================
-   WEBRTC + FIREBASE (mesh, sin librerías externas)
-   ============================================================ */
+// Salida individual: Solo saca al usuario actual de la sala
+async function salirDeLlamadaIndividual(){
+  salirDeLlamada();
+  // Revisar si quedan más participantes en la sala
+  const snap = await refParticipantes.once('value');
+  if (!snap.exists() || snap.numChildren() === 0) {
+    // Si ya no queda nadie, cerramos la llamada globalmente
+    refLlamada.set({ estado:'inactiva', llamadorNombre:'', llamadorFoto:'' });
+    refSala.remove();
+  }
+}
+
 async function unirseALlamada(){
   if (enSala) return;
   enSala = true;
+  document.body.classList.add('en-videollamada');
+
   try {
     streamLocal = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
   } catch(e){
     try { streamLocal = await navigator.mediaDevices.getUserMedia({ audio:true }); }
-    catch(e2){ alert('No se pudo acceder a la cámara ni al micrófono.'); enSala = false; return; }
+    catch(e2){ alert('Sin acceso a cámara ni micrófono.'); enSala = false; document.body.classList.remove('en-videollamada'); return; }
   }
   agregarCajaVideo('local', streamLocal, perfilSeleccionado ? perfilSeleccionado.nombre : 'Tú', true);
 
@@ -415,7 +417,6 @@ function conectarConPeer(otroId, nombreOtro){
   listenersPares[otroId] = [];
 
   streamLocal.getTracks().forEach(track => pc.addTrack(track, streamLocal));
-
   pc.ontrack = (event) => agregarCajaVideo(otroId, event.streams[0], nombreOtro, false);
 
   const refCandPropio = refPares.child(pairKey).child(soyA ? 'candidatosA' : 'candidatosB');
@@ -467,6 +468,7 @@ function cerrarConexionPeer(otroId){
 function salirDeLlamada(){
   if (!enSala) return;
   enSala = false;
+  document.body.classList.remove('en-videollamada');
   refParticipantes.off('child_added');
   refParticipantes.off('child_removed');
   Object.keys(conexiones).forEach(cerrarConexionPeer);
@@ -476,36 +478,5 @@ function salirDeLlamada(){
   document.getElementById('videoGrid').innerHTML = '';
 }
 </script>
-<style>
-  /* Estilos para el marcador con foto del Tata */
-  .foto-marcador {
-    border-radius: 50%;
-    border: 3px solid #2a5298; /* Borde azul para que resalte */
-    background-color: white;
-    object-fit: cover;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-  }
-  
-  /* Estilos para el cuadrito (popup) que pregunta si ir a Maps */
-  .popup-maps {
-    text-align: center;
-    font-family: 'Segoe UI', Arial, sans-serif;
-  }
-  .popup-maps p {
-    margin-bottom: 8px;
-    font-weight: bold;
-    font-size: 14px;
-  }
-  .popup-maps .btn-maps {
-    background: #1fa855;
-    color: white;
-    text-decoration: none;
-    padding: 8px 12px;
-    border-radius: 8px;
-    display: inline-block;
-    font-weight: bold;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  }
-</style>
 </body>
 </html>
