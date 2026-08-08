@@ -104,7 +104,7 @@
                 <h1>
                     SONIC FRONTIERS
                     <span></span>
-                    LATAM SERVERS
+                    LATAM SERVER
                 </h1>
 
                 <div class="hero-line"></div>
@@ -423,27 +423,12 @@
     <!-- =========================
          FIREBASE
     ========================== -->
-
-  <script type="module">
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
-    import { 
-        getStorage, 
-        ref as storageRef, 
-        uploadBytesResumable, 
-        getDownloadURL 
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
-    import { 
-        getDatabase, 
-        ref as dbRef, 
-        push, 
-        set, 
-        query, 
-        limitToLast, 
-        onValue, 
-        serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+    import { getDatabase, ref as dbRef, push, set, query, limitToLast, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
+    // 1. Tu configuración de base de datos
     const firebaseConfig = {
         apiKey: "AIzaSyAm48DOEgn1C9sqiGpMAxV2mJpS75SLQ6I",
         authDomain: "ayno-6dba8.firebaseapp.com",
@@ -451,22 +436,14 @@
         storageBucket: "ayno-6dba8.firebasestorage.app",
         messagingSenderId: "430650330939",
         appId: "1:430650330939:web:dab506012b48a1744bf11e",
-        measurementId: "G-4MGEKHB89K",
-        // Si tu base de datos está en una región distinta a US-Central, añade la URL explícita:
-        // databaseURL: "https://ayno-6dba8-default-rtdb.firebaseio.com"
+        measurementId: "G-4MGEKHB89K"
     };
 
     const app = initializeApp(firebaseConfig);
     const storage = getStorage(app);
     const db = getDatabase(app);
 
-    try {
-        getAnalytics(app);
-    } catch (error) {
-        console.log("Analytics unavailable:", error);
-    }
-
-    // Referencias del DOM
+    // 2. Referencias a tu diseño (UI)
     const fileInput = document.getElementById("fileInput");
     const dropZone = document.getElementById("dropZone");
     const selectedFileText = document.getElementById("selectedFile");
@@ -474,45 +451,52 @@
     const fileSizeText = document.getElementById("fileSize");
     const fileStatusText = document.getElementById("fileStatus");
     const runButton = document.getElementById("runButton");
+    const warningText = document.querySelector(".run-warning");
 
     let fileToUpload = null;
 
-    // Captura de archivo local
-    fileInput.addEventListener("change", (e) => {
-        if (e.target.files.length > 0) {
-            fileToUpload = e.target.files[0];
-            showSelectedFile(fileToUpload);
-        }
-    });
-
-    dropZone.addEventListener("dragover", (e) => e.preventDefault());
-
-    dropZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        if (e.dataTransfer.files.length > 0) {
-            fileToUpload = e.dataTransfer.files[0];
-            fileInput.files = e.dataTransfer.files;
-            showSelectedFile(fileToUpload);
-        }
-    });
-
-    function showSelectedFile(file) {
-        selectedFileText.textContent = file.name;
-        fileNameText.textContent = file.name;
-        fileSizeText.textContent = (file.size / (1024 * 1024)).toFixed(2) + " MB";
-        fileStatusText.textContent = "READY TO UPLOAD";
-        runButton.disabled = false;
+    // Formatear el peso del archivo a KB/MB
+    function formatFileSize(bytes) {
+        if (bytes === 0) return "0 Bytes";
+        const units = ["Bytes", "KB", "MB", "GB"];
+        const index = Math.floor(Math.log(bytes) / Math.log(1024));
+        return parseFloat((bytes / Math.pow(1024, index)).toFixed(2)) + " " + units[index];
     }
 
-    // Subida a Storage y escritura en Realtime Database
-    runButton.addEventListener("click", () => {
+    // Manejar cuando el usuario arrastra o elige un archivo
+    function handleFileSelection(file) {
+        if (!file) return;
+        fileToUpload = file;
+        
+        selectedFileText.textContent = file.name;
+        fileNameText.textContent = file.name;
+        fileSizeText.textContent = formatFileSize(file.size);
+        fileStatusText.textContent = "READY TO UPLOAD";
+        fileStatusText.style.color = "#00ff66";
+        warningText.textContent = "// FILE READY — CLICK BUTTON TO UPLOAD";
+        
+        runButton.disabled = false;
+        runButton.innerHTML = `<span class="run-icon">▲</span> UPLOAD TO SERVER`;
+        runButton.onclick = uploadFileToFirebase; // Asignamos función de subida
+    }
+
+    fileInput.addEventListener("change", (e) => handleFileSelection(e.target.files[0]));
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragging"); });
+    dropZone.addEventListener("dragleave", (e) => { e.preventDefault(); dropZone.classList.remove("dragging"); });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragging");
+        handleFileSelection(e.dataTransfer.files[0]);
+    });
+
+    // 3. Función para subir a Firebase Storage y registrar en Realtime DB
+    function uploadFileToFirebase() {
         if (!fileToUpload) return;
-
-        fileStatusText.textContent = "UPLOADING...";
         runButton.disabled = true;
+        warningText.textContent = "// UPLOADING TO CYBER SERVER...";
 
-        const fileStorageRef = storageRef(storage, `uploads/${Date.now()}_${fileToUpload.name}`);
-        const uploadTask = uploadBytesResumable(fileStorageRef, fileToUpload);
+        const fileRef = storageRef(storage, `uploads/${Date.now()}_${fileToUpload.name}`);
+        const uploadTask = uploadBytesResumable(fileRef, fileToUpload);
 
         uploadTask.on("state_changed", 
             (snapshot) => {
@@ -520,49 +504,44 @@
                 fileStatusText.textContent = `UPLOADING (${Math.round(progress)}%)`;
             }, 
             (error) => {
-                console.error("Error al subir archivo:", error);
-                fileStatusText.textContent = "UPLOAD ERROR";
+                console.error("Upload error:", error);
+                fileStatusText.textContent = "ERROR";
                 runButton.disabled = false;
             }, 
             async () => {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                 
-                // Guardar nodo en Realtime Database
+                // Guardar enlace en la base de datos para que todos lo vean
                 const filesListRef = dbRef(db, "server_files");
-                const newFileRef = push(filesListRef);
-
-                await set(newFileRef, {
+                await set(push(filesListRef), {
                     name: fileToUpload.name,
                     size: fileToUpload.size,
                     url: downloadURL,
                     uploadedAt: serverTimestamp()
                 });
-
-                fileStatusText.textContent = "UPLOAD COMPLETE";
+                
                 fileToUpload = null;
             }
         );
-    });
+    }
 
-    // Escuchador en TIEMPO REAL con Realtime Database
+    // 4. Escuchar el último archivo de la nube para permitir descargarlo (Multijugador/Público)
     const latestFileQuery = query(dbRef(db, "server_files"), limitToLast(1));
-
     onValue(latestFileQuery, (snapshot) => {
-        if (snapshot.exists()) {
+        if (snapshot.exists() && !fileToUpload) {
             const data = snapshot.val();
-            // Extraer el último registro del objeto devuelto por Realtime Database
-            const keys = Object.keys(data);
-            const latestKey = keys[keys.length - 1];
+            const latestKey = Object.keys(data)[0];
             const latestFile = data[latestKey];
 
             fileNameText.textContent = latestFile.name;
-            fileSizeText.textContent = (latestFile.size / (1024 * 1024)).toFixed(2) + " MB";
+            fileSizeText.textContent = formatFileSize(latestFile.size);
             fileStatusText.textContent = "ONLINE / READY";
+            fileStatusText.style.color = "#00ff66";
+            warningText.textContent = "// LATEST SERVER FILE SYNCHRONIZED";
 
             runButton.disabled = false;
-            runButton.onclick = () => {
-                window.open(latestFile.url, "_blank");
-            };
+            runButton.innerHTML = `<span class="run-icon">▶</span> DOWNLOAD & RUN ONLINE SERVER`;
+            runButton.onclick = () => window.open(latestFile.url, "_blank"); // Asignamos función de descarga
         }
     });
 </script>
