@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SONIC // ONLINE SERVER</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- =========================
+         LOADING SCREEN
+    ========================== -->
+
+    <div id="loader">
+
+        <div class="loader-grid"></div>
+
+        <div class="loader-content">
+
+            <div class="loader-logo">
+                SONIC
+            </div>
+
+            <div class="loader-subtitle">
+                ONLINE SERVER INITIALIZING...
+            </div>
+
+            <div class="loading-terminal">
+
+                <div>> BOOTING SERVER...</div>
+                <div>> LOADING CYBER CORE...</div>
+                <div>> CONNECTING TO SERVER...</div>
+                <div>> SONIC MODULE: <span>OK</span></div>
+                <div>> SHADOW MODULE: <span>OK</span></div>
+                <div>> SERVER READY</div>
+
+            </div>
+
+            <div class="progress-container">
+                <div id="progress"></div>
+            </div>
+
+            <div class="loading-percent" id="loadingPercent">
+                0%
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         BACKGROUND FX
+    ========================== -->
+
+    <div class="scanlines"></div>
+    <div class="noise"></div>
+
+
+    <!-- =========================
+         MAIN WEBSITE
+    ========================== -->
+
+    <main id="website">
+
+        <header class="topbar">
+
+            <div class="brand">
+                <span class="brand-symbol">◆</span>
+                SONIC<span class="brand-slash">//</span>SERVER
+            </div>
+
+            <div class="system-status">
+                <span class="status-dot"></span>
+                SERVER ONLINE
+            </div>
+
+        </header>
+
+
+        <!-- =========================
+             HERO
+        ========================== -->
+
+        <section class="hero">
+
+            <div class="hero-grid"></div>
+
+            <div class="hero-content">
+
+                <div class="mini-label">
+                    [ CYBERNETIC GAME SERVER ]
+                </div>
+
+                <h1>
+                    SONIC FRONTIERS
+                    <span></span>
+                    LATAM SERVERS
+                </h1>
+
+                <div class="hero-line"></div>
+
+                <p class="hero-description">
+                    ACCESS TERMINAL // ONLINE GAME SERVER
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             BANNER
+        ========================== -->
+
+        <section class="banner-section">
+
+            <div class="section-header">
+                <span>01</span>
+                GAME DATABASE
+            </div>
+
+            <div class="banner-frame">
+
+                <div class="corner corner-tl"></div>
+                <div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div>
+                <div class="corner corner-br"></div>
+
+                <div class="banner-top-info">
+                    <span>FILE://SONIC_X_SHADOW</span>
+                    <span>STATUS: ONLINE</span>
+                </div>
+
+                <div class="banner-image-container">
+
+                    <img
+                        src="banner.jpg"
+                        alt="SONIC FRONTIERS LATAM SERVER Generations"
+                        class="banner-image"
+                    >
+
+                    <div class="banner-overlay"></div>
+
+                    <div class="banner-scan"></div>
+
+                    <div class="pixel-cross cross-1">+</div>
+                    <div class="pixel-cross cross-2">+</div>
+                    <div class="pixel-cross cross-3">+</div>
+
+                </div>
+
+                <div class="banner-bottom-info">
+
+                    <span>
+                        SERVER ID:
+                        <b>SONIC_1991_X</b>
+                    </span>
+
+                    <span>
+                        CONNECTION:
+                        <b>STABLE</b>
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             GAME LINK
+        ========================== -->
+
+        <section class="game-section">
+
+            <div class="terminal-box">
+
+                <div class="terminal-header">
+
+                    <span>
+                        ROOT@SONIC-SERVER
+                    </span>
+
+                    <span>
+                        [ONLINE]
+                    </span>
+
+                </div>
+
+                <div class="terminal-body">
+
+                    <div class="terminal-line">
+                        <span class="prompt">root@server:~$</span>
+                        initialize_game
+                    </div>
+
+                    <div class="terminal-line">
+                        Loading:
+                        <span class="green">
+                            SONIC FRONTIERS LATAM SERVER Generations
+                        </span>
+                    </div>
+
+                    <div class="terminal-line">
+                        Authentication:
+                        <span class="green">
+                            BYPASSED
+                        </span>
+                    </div>
+
+                    <div class="terminal-line">
+                        Server:
+                        <span class="green">
+                            READY
+                        </span>
+                    </div>
+
+                    <br>
+
+                    <a style="color: lime; text-decoration: underline;"
+                        class="game-link"
+                        href="https://www.imdb.com/es/title/tt32368267/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Run online server [SONIC FRONTIERS LATAM SERVER Generations]
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             UPLOAD
+        ========================== -->
+
+        <section class="upload-section">
+
+            <div class="section-header">
+                <span>02</span>
+                SERVER FILE
+            </div>
+
+            <div class="upload-terminal">
+
+                <div class="upload-title">
+                    UPLOAD GAME FILE
+                </div>
+
+                <div class="upload-subtitle">
+                    SELECT A FILE TO INITIALIZE THE ONLINE SERVER
+                </div>
+
+
+                <label
+                    for="fileInput"
+                    class="file-drop"
+                    id="dropZone"
+                >
+
+                    <div class="upload-icon">
+                        ↑
+                    </div>
+
+                    <div class="upload-main-text">
+                        SELECT FILE
+                    </div>
+
+                    <div class="upload-small-text">
+                        CLICK OR DRAG FILE HERE
+                    </div>
+
+                    <div
+                        class="selected-file"
+                        id="selectedFile"
+                    >
+                        NO FILE SELECTED
+                    </div>
+
+                </label>
+
+                <input
+                    type="file"
+                    id="fileInput"
+                    hidden
+                >
+
+
+                <div class="file-info" id="fileInfo">
+
+                    <div>
+                        FILE:
+                        <span id="fileName">---</span>
+                    </div>
+
+                    <div>
+                        SIZE:
+                        <span id="fileSize">---</span>
+                    </div>
+
+                    <div>
+                        STATUS:
+                        <span id="fileStatus">WAITING</span>
+                    </div>
+
+                </div>
+
+
+                <!-- RUN ONLINE -->
+
+                <button
+                    id="runButton"
+                    class="run-button"
+                    disabled
+              style="color: #fff;"  >
+
+                    <span class="button-glitch"></span>
+
+                    <span class="run-icon">
+                        ▶
+                    </span>
+
+                    DOWNLOAD & RUN ONLINE SERVER
+
+                </button>
+
+
+                <div class="run-warning">
+                    // SELECT A FILE BEFORE INITIALIZING
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             SERVER INFO
+        ========================== -->
+
+        <section class="system-section">
+
+            <div class="system-card">
+
+                <div class="card-number">
+                    01
+                </div>
+
+                <div class="card-title">
+                    CONNECTION
+                </div>
+
+                <div class="card-value">
+                    STABLE
+                </div>
+
+            </div>
+
+            <div class="system-card">
+
+                <div class="card-number">
+                    02
+                </div>
+
+                <div class="card-title">
+                    SERVER
+                </div>
+
+                <div class="card-value">
+                    ONLINE
+                </div>
+
+            </div>
+
+            <div class="system-card">
+
+                <div class="card-number">
+                    03
+                </div>
+
+                <div class="card-title">
+                    PROTOCOL
+                </div>
+
+                <div class="card-value">
+                    CYBER-90
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <footer>
+
+            <div>
+                SONIC // SHADOW // ONLINE SERVER
+            </div>
+
+            <div>
+                SERVER VERSION 1.9.91
+            </div>
+
+        </footer>
+
+    </main>
+
+
+    <!-- =========================
+         FIREBASE
+    ========================== -->
+
+    <script type="module">
+
+        import { initializeApp }
+            from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+
+        import { getAnalytics }
+            from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
+
+
+        const firebaseConfig = {
+
+            apiKey:
+                "AIzaSyAm48DOEgn1C9sqiGpMAxV2mJpS75SLQ6I",
+
+            authDomain:
+                "ayno-6dba8.firebaseapp.com",
+
+            projectId:
+                "ayno-6dba8",
+
+            storageBucket:
+                "ayno-6dba8.firebasestorage.app",
+
+            messagingSenderId:
+                "430650330939",
+
+            appId:
+                "1:430650330939:web:dab506012b48a1744bf11e",
+
+            measurementId:
+                "G-4MGEKHB89K"
+
+        };
+
+
+        const app = initializeApp(firebaseConfig);
+
+        try {
+
+            getAnalytics(app);
+
+        } catch (error) {
+
+            console.log(
+                "Analytics unavailable:",
+                error
+            );
+
+        }
+
+        window.firebaseApp = app;
+
+    </script>
+
+
+    <script src="script.js"></script>
+
+</body>
+</html>
