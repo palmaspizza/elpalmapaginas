@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Asistente</title>
+<style>
+  :root { --fondo:#101820; --texto:#ffffff; --estado:#ffd23f; --pregunta:#7ee081; --parar:#c1121f; }
+  body { margin:0; min-height:100vh; box-sizing:border-box; padding:4vw; display:flex; flex-direction:column;
+         justify-content:center; align-items:center; gap:5vh; text-align:center;
+         background:var(--fondo); color:var(--texto); font:600 3.4vw/1.35 Verdana, "DejaVu Sans", sans-serif; }
+  #s { font-size:7vw; color:var(--estado); }
+  #m { max-width:80vw; }
+  #q { color:var(--pregunta); font-size:4.6vw; min-height:1.4em; }
+  button { font:inherit; font-size:4.4vw; padding:2.5vh 7vw; border:0; border-radius:2vw; background:var(--parar); color:#fff; }
+  button:focus-visible { outline:.6vw solid var(--estado); outline-offset:.6vw; }
+  #o { font-size:2.6vw; color:#c9d1d9; min-height:1.2em; }
+</style>
+<div id="s" role="status" aria-live="polite">Conectando…</div>
+<div id="m">Puedes pedirme que ponga música, abra YouTube o controle la tele.</div>
+<div id="q" aria-live="assertive"></div>
+<button onclick="fetch('/stop',{method:'POST'})">PARAR TODO</button>
+<div id="o"></div>
+<script>
+  const e = new EventSource('/events');
+  e.onmessage = ev => {
+    const d = JSON.parse(ev.data);
+    s.textContent = d.status;
+    m.textContent = d.msg;
+    q.textContent = d.question || '';
+    o.textContent = d.offline ? 'Sin conexión. Los comandos básicos siguen disponibles.' : '';
+  };
+  e.onerror = () => { s.textContent = 'Reconectando…'; };
+</script>

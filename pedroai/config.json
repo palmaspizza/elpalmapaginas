@@ -1,0 +1,8 @@
+{
+  "model_path": "/home/USUARIO/asistente/modelo",
+  "gemini_model": "gemini-2.5-flash",
+  "tvs": {
+    "comedor": {"ip": "192.168.1.50", "alias": ["living"]},
+    "pieza":   {"ip": "192.168.1.51", "alias": ["cuarto", "dormitorio", "habitacion"]}
+  }
+}
